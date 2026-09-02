@@ -20,6 +20,7 @@
     <canvas id="game" width="900" height="620" tabindex="0"></canvas>
 
     <div id="touch" class="hidden">
+      <button id="btnPause" type="button" aria-label="Pause">II</button>
       <div id="stick"><div id="knob"></div></div>
       <div id="touchButtons">
         <button id="btnSwap" type="button">SWITCH</button>
@@ -181,10 +182,15 @@
       <div class="panel small">
         <h2>HIGH SCORE</h2>
         <p id="hiscoreLine" class="status"></p>
-        <div id="hiscoreLetters" class="letters"></div>
+        <div class="picker">
+          <div id="hiscoreUp" class="letterRow"></div>
+          <div id="hiscoreLetters" class="letters"></div>
+          <div id="hiscoreDown" class="letterRow"></div>
+        </div>
+        <button id="hiscoreOk" class="primary">OK</button>
         <p class="fineprint">
-          Up and down for the letter, left and right to move along, kick to
-          confirm. Typing works too.
+          Tap the arrows, or use the stick: up and down for the letter, left
+          and right to move along, kick to confirm. Typing works too.
         </p>
       </div>
     </div>
