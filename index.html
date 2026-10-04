@@ -31,15 +31,11 @@
     .foot{text-align:center;color:#789083;font-size:12px;margin-top:20px}
     @media(max-width:1080px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:760px){body{padding:18px}.grid{grid-template-columns:1fr}.card{min-height:330px}h1{font-size:48px}}
-  
-    .platform-strip{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 4px}
-    .platform-pill{padding:8px 12px;border:1px solid rgba(255,255,255,.14);border-radius:999px;font-size:.86rem;opacity:.9}
-    .platform-pill strong{font-weight:700}
     .future-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
-    .future-card{border:1px dashed rgba(255,255,255,.16);border-radius:18px;padding:20px;background:rgba(255,255,255,.025)}
+    .future-card{border:1px dashed rgba(255,255,255,.16);border-radius:18px;padding:20px;background:rgba(255,255,255,.025);text-align:center}
     .future-card h3{margin:0 0 8px;font-size:1.05rem}
     .future-card p{margin:0;opacity:.72;line-height:1.5}
-    .future-tag{display:inline-block;margin-top:12px;font-size:.78rem;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
+    .future-tag{display:inline-block;margin-top:4px;font-size:.78rem;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
     @media(max-width:900px){.future-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -48,69 +44,30 @@
     <header class="brand">
       <div class="eyebrow">Pedra Lisa Games · Plataforma</div>
       <h1>PEDRA LISA<br>FUTEBOL</h1>
-      <p class="sub">Uma plataforma de jogos independentes. Começamos com Pedra Lisa PS1 e Pedra Lisa PS2 e, depois, podemos adicionar novos gêneros sem misturar o código de cada jogo.</p>
-    <div class="platform-strip">
-      <span class="platform-pill"><strong>Conta única</strong> — planejado</span>
-      <span class="platform-pill"><strong>Amigos e ranking</strong> — planejado</span>
-      <span class="platform-pill"><strong>Jogos no navegador</strong> — prioridade</span>
-      <span class="platform-pill"><strong>PC / mobile</strong> — conforme cada jogo</span>
-    </div>
+      <p class="sub">Plataforma de jogos da Pedra Lisa. Escolha um jogo e entre para jogar.</p>
     </header>
 
 
-    <section class="future-grid" aria-label="Próximos universos da plataforma">
+    <section class="future-grid" aria-label="Próximos jogos">
       <article class="future-card">
         <h3>🃏 Duelo de Cartas</h3>
-        <p>Jogo próprio de cartas colecionáveis, com regras e personagens originais.</p>
-        <span class="future-tag">Planejado</span>
+        <span class="future-tag">Em breve</span>
       </article>
       <article class="future-card">
         <h3>🐲 RPG de Criaturas</h3>
-        <p>Exploração, captura, evolução e batalhas com criaturas originais do universo Pedra Lisa.</p>
-        <span class="future-tag">Planejado</span>
+        <span class="future-tag">Em breve</span>
       </article>
       <article class="future-card">
         <h3>⚔️ Mundo OpenTibia</h3>
-        <p>Servidor separado dentro da mesma plataforma, com acesso e identidade visual integrados.</p>
-        <span class="future-tag">Planejado</span>
+        <span class="future-tag">Em breve</span>
       </article>
     </section>
 
     <section class="grid" style="margin-top:18px">
       <article class="card" style="min-height:330px">
-        <span class="badge">Finalista PS1</span>
-        <h2>PEDRA LISA PS1</h2>
-        <p>Protótipo de referência para a versão retrô: futebol 11×11, low-poly, câmera de TV e estética de fim dos anos 90.</p>
-        <ul class="features">
-          <li>Referência: Futebol 98 / Retro Soccer</li>
-          <li>Visual PS1 low-poly</li>
-          <li>Câmera lateral de transmissão</li>
-          <li>CRT / baixa resolução</li>
-          <li>Base para nossa futura versão Pedra Lisa PS1</li>
-        </ul>
-        <div class="actions"><a class="btn primary" href="https://olegk77777.github.io/retro-soccer/" target="_blank" rel="noopener noreferrer">JOGAR REFERÊNCIA PS1 ↗</a></div>
-      </article>
-
-      <article class="card" style="min-height:330px">
-        <span class="badge">PS2 Web · jogável</span>
-        <h2>PEDRA LISA PS2</h2>
-        <p>Versão própria para navegador: 11×11 em 3D, Pedra Lisa × Independência, CPU e salas online por código, sem instalar nada.</p>
-        <ul class="features">
-          <li>Joga direto no navegador</li>
-          <li>11 × 11 com CPU</li>
-          <li>Sala online por código</li>
-          <li>Controles touch no celular</li>
-          <li>PC, celular e tablet</li>
-        </ul>
-        <div class="actions"><a class="btn primary" href="./striker3d/">JOGAR PEDRA LISA PS2 WEB</a></div>
-      </article>
-    </section>
-
-    <section class="grid">
-      <article class="card">
-        <span class="badge">Estável</span>
-        <h2>Clássico 2D</h2>
-        <p>O WebSoccer personalizado que já está funcionando com Pedra Lisa e Independência.</p>
+        <span class="badge">Clássico</span>
+        <h2>CLÁSSICO 2D</h2>
+        <p>O futebol original da Pedra Lisa no navegador.</p>
         <ul class="features">
           <li>11 × 11</li>
           <li>Contra a máquina</li>
@@ -121,126 +78,35 @@
         <div class="actions"><a class="btn primary" href="./websoccer.html">JOGAR CLÁSSICO 2D</a></div>
       </article>
 
-      <article class="card">
-        <span class="badge">Em desenvolvimento</span>
-        <h2>Striker 3D</h2>
-        <p>A experiência 3D híbrida: o motor 11×11 do WebSoccer agora dirige jogadores animados, CPU, bola e regras em Three.js.</p>
+      <article class="card" style="min-height:330px">
+        <span class="badge">Finalista PS1</span>
+        <h2>PEDRA LISA PS1</h2>
+        <p>Versão retrô de futebol 11×11 com estética low-poly de fim dos anos 90.</p>
         <ul class="features">
-          <li>Motor WebSoccer 11 × 11 conectado</li>
-          <li>Three.js / WebGL + câmeras de console</li>
-          <li>Campo e estádio 3D</li>
-          <li>Pedra Lisa × Independência</li>
-          <li>Base preparada para futuras versões</li>
-        </ul>
-        <div class="actions"><a class="btn secondary" href="./striker3d/">JOGAR STRIKER 3D</a></div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste externo</span>
-        <h2>Open Soccer</h2>
-        <p>Versão pública original do World Cup 2026 / Open Soccer. Abre fora do nosso projeto apenas para comparação.</p>
-        <ul class="features">
-          <li>11 × 11</li>
-          <li>48 seleções</li>
-          <li>CPU e regras completas</li>
-          <li>Câmera estilo transmissão</li>
-          <li>Practice e controles avançados</li>
-        </ul>
-        <div class="actions"><a class="btn secondary" href="https://worldcup2026.modelence.ai/" target="_blank" rel="noopener noreferrer">TESTAR OPEN SOCCER ↗</a></div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste visual externo</span>
-        <h2>Soccer Dribble</h2>
-        <p>Projeto 3D da Sapienza University. Vamos usá-lo como comparação de jogadores, estádio, câmera e apresentação visual.</p>
-        <ul class="features">
-          <li>Jogadores 3D em GLB</li>
-          <li>Estádio 3D + grama PBR</li>
-          <li>Goleiro, árbitro e IA</li>
-          <li>Replay, clima e iluminação</li>
-          <li>Personalização de jogador</li>
-        </ul>
-        <div class="actions"><a class="btn secondary" href="https://SapienzaInteractiveGraphicsCourse.github.io/final-project-soccer-dribble/" target="_blank" rel="noopener noreferrer">TESTAR SOCCER DRIBBLE ↗</a></div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste arcade externo</span>
-        <h2>Blazing Pitch</h2>
-        <p>Projeto 3D arcade em Three.js. Abre o repositório público diretamente no StackBlitz para teste, sem copiar código para o Pedra Lisa.</p>
-        <ul class="features">
-          <li>5 × 5 3D arcade</li>
-          <li>13 equipes e 4 dificuldades</li>
-          <li>Replay e várias câmeras</li>
-          <li>Dia/noite, chuva e neve</li>
-          <li>Copa, pênaltis e clube próprio</li>
-        </ul>
-        <div class="actions"><a class="btn secondary" href="https://stackblitz.com/github/Liyucheng1997/187_game-football-match" target="_blank" rel="noopener noreferrer">TESTAR BLAZING PITCH ↗</a></div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste 3D externo</span>
-        <h2>Striker 3D original</h2>
-        <p>Projeto original Argentina × Espanha em Three.js. Serve para comparar diretamente os jogadores, animações, câmera e sensação 3D com o Blazing Pitch.</p>
-        <ul class="features">
-          <li>7 × 7 com CPU</li>
-          <li>Jogadores 3D animados</li>
-          <li>Modelo CC0 do Quaternius</li>
-          <li>Câmeras Broadcast / Behind / Tactical</li>
-          <li>Local 2 jogadores</li>
-        </ul>
-        <div class="actions"><a class="btn secondary" href="https://stackblitz.com/github/kendrekaran/striker-3d" target="_blank" rel="noopener noreferrer">TESTAR STRIKER 3D ORIGINAL ↗</a></div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste PS2</span>
-        <h2>GoalKick / GameplayFootball</h2>
-        <p>GoalKick é uma evolução moderna baseada principalmente no GameplayFootball. É o nosso teste de referência para futebol 3D com sensação de geração PS2.</p>
-        <ul class="features">
-          <li>22 jogadores e partida completa</li>
-          <li>Câmera de transmissão 3D</li>
-          <li>CPU Easy → Hard</li>
-          <li>Replay de gols</li>
-          <li>48 seleções no GoalKick</li>
-        </ul>
-        <div class="actions" style="display:grid;gap:8px">
-          <a class="btn primary" href="https://goalkick.co/" target="_blank" rel="noopener noreferrer">TESTAR / BAIXAR GOALKICK ↗</a>
-          <a class="btn secondary" href="https://github.com/vi3itor/GameplayFootball/releases/tag/beta4" target="_blank" rel="noopener noreferrer">GAMEPLAYFOOTBALL ORIGINAL ↗</a>
-        </div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste PES / Unity</span>
-        <h2>ProEvoSoccerUnity</h2>
-        <p>Projeto que tenta recriar PES 4 em Unity. Não possui build web ou release pronta; para jogar de verdade é necessário abrir o projeto no Unity.</p>
-        <ul class="features">
-          <li>Referência declarada: PES 4 / PS2</li>
-          <li>Projeto Unity</li>
-          <li>Controles por teclado e gamepad</li>
-          <li>Estrutura de jogo e UI no repositório</li>
-          <li>Assets licenciados não estão incluídos</li>
-        </ul>
-        <div class="actions">
-          <a class="btn secondary" href="https://github.com/junaid109/ProEvoSoccerUnity" target="_blank" rel="noopener noreferrer">ABRIR PROEVOSOCCERUNITY ↗</a>
-        </div>
-      </article>
-
-      <article class="card">
-        <span class="badge">Teste PS1</span>
-        <h2>Futebol 98 / Retro Soccer</h2>
-        <p>Projeto 11×11 feito especificamente para reproduzir futebol low-poly de fim dos anos 90, com visual PS1, câmera de TV e efeitos CRT.</p>
-        <ul class="features">
-          <li>11 × 11</li>
-          <li>Low-poly estilo PS1</li>
-          <li>Render de baixa resolução + CRT</li>
-          <li>Modelos e uniformes retrô</li>
+          <li>Visual PS1 low-poly</li>
           <li>Câmera lateral de transmissão</li>
+          <li>CRT / baixa resolução</li>
+          <li>11 × 11</li>
+          <li>Referência: Futebol 98 / Retro Soccer</li>
         </ul>
-        <div class="actions">
-          <a class="btn secondary" href="https://olegk77777.github.io/retro-soccer/" target="_blank" rel="noopener noreferrer">TESTAR FUTEBOL 98 ↗</a>
-        </div>
+        <div class="actions"><a class="btn primary" href="https://olegk77777.github.io/retro-soccer/" target="_blank" rel="noopener noreferrer">JOGAR REFERÊNCIA PS1 ↗</a></div>
+      </article>
+
+      <article class="card" style="min-height:330px">
+        <span class="badge">PS2 Web · jogável</span>
+        <h2>PEDRA LISA PS2</h2>
+        <p>Versão própria em 3D para navegador, sem instalar nada.</p>
+        <ul class="features">
+          <li>11 × 11 com CPU</li>
+          <li>Sala online por código</li>
+          <li>Controles touch no celular</li>
+          <li>PC, celular e tablet</li>
+          <li>Pedra Lisa × Independência</li>
+        </ul>
+        <div class="actions"><a class="btn primary" href="./striker3d/">JOGAR PEDRA LISA PS2 WEB</a></div>
       </article>
     </section>
-    <div class="foot">Pedra Lisa PS2 Web é uma versão própria baseada no nosso motor WebSoccer e em assets permitidos. Projetos externos continuam apenas como referências de comparação e não têm código copiado para este repositório.</div>
+    <div class="foot">Pedra Lisa Games · jogos próprios e projetos em desenvolvimento.</div>
   </main>
 </body>
 </html>
