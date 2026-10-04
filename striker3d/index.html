@@ -215,6 +215,7 @@ world.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from
 rect(-FIELD_L/2,-20.16,-FIELD_L/2+16.5,20.16);rect(FIELD_L/2-16.5,-20.16,FIELD_L/2,20.16);
 rect(-FIELD_L/2,-9.16,-FIELD_L/2+5.5,9.16);rect(FIELD_L/2-5.5,-9.16,FIELD_L/2,9.16);
 
+const goalNets=[];
 function buildGoal(side){
   const g=new THREE.Group();
   const postMat=new THREE.MeshStandardMaterial({color:0xf8f8f5,metalness:.14,roughness:.38});
@@ -286,7 +287,9 @@ function buildGoal(side){
     addSeg(new THREE.Vector3(x,h,-hw),new THREE.Vector3(x,h,hw));
   }
 
-  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(netPts),netMat));
+  const netMesh=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(netPts),netMat);
+  g.add(netMesh);
+  goalNets.push({side,mesh:netMesh,pulse:0,impactZ:0,impactY:0});
   world.add(g);
 }
 buildGoal(-1);buildGoal(1);
@@ -567,6 +570,13 @@ function createPremiumFootballClips(root){
     [1,{}],
   ]);
 
+  add('Volley',.76,[
+    [0,{spine_02:[-.14,-.10,0],pelvis:[0,-.10,0],thigh_r:[-.82,0,0],calf_r:[.72,0,0],upperarm_l:[.42,0,-.70],upperarm_r:[-.26,0,.62]}],
+    [.36,{spine_02:[.22,.20,0],pelvis:[0,.18,0],thigh_r:[1.34,0,0],calf_r:[-.72,0,0],foot_r:[.42,0,0],upperarm_l:[-.48,0,-.82],upperarm_r:[.42,0,.78]}],
+    [.68,{spine_02:[.10,.34,0],thigh_r:[.44,0,0],calf_r:[-.28,0,0]}],
+    [1,{}],
+  ]);
+
   add('Header',.58,[
     [0,{spine_01:[-.18,0,0],spine_03:[-.16,0,0],neck_01:[.12,0,0],upperarm_l:[0,0,-.62],upperarm_r:[0,0,.62]}],
     [.46,{spine_01:[.30,0,0],spine_03:[.34,0,0],neck_01:[-.30,0,0],Head:[-.22,0,0],upperarm_l:[-.22,0,-.78],upperarm_r:[-.22,0,.78]}],
@@ -726,10 +736,10 @@ function playBallContactSound(kind='pass'){
     const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
     const now=ac.currentTime;
     o.type='sine';
-    o.frequency.setValueAtTime(kind==='shot'?128:(kind==='header'?92:108),now);
+    o.frequency.setValueAtTime(kind==='shot'?128:(kind==='header'?92:(kind==='save'?76:108)),now);
     o.frequency.exponentialRampToValueAtTime(58,now+.075);
     f.type='lowpass';f.frequency.value=850;
-    g.gain.setValueAtTime(kind==='shot'?.14:.09,now);
+    g.gain.setValueAtTime(kind==='shot'?.14:(kind==='save'?.115:.09),now);
     g.gain.exponentialRampToValueAtTime(.0001,now+.085);
     o.connect(f);f.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.09);
   }catch{}
@@ -883,6 +893,7 @@ function processVisualEvents(){
       const v=visuals[ev.team][ev.idx];
       playBallContactSound(ev.kind);
       if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
+      else if(ev.kind==='volley')playAction(v,'volley',v.actions.Volley?'Volley':(v.actions.Shoot?'Shoot':'Punch'),.76,.36);
       else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68,.44);
       else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
       else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52,.48);
@@ -898,8 +909,19 @@ function processVisualEvents(){
           :(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'));
         playAction(v,'save',clip,.72,.44);
         v.saveSide=ev.side||1;
+        v.saveParry=ev.kind==='parry';
+        v.saveHigh=!!ev.high;
+        if(ev.kind==='parry')playBallContactSound('save');
       }
     }else if(ev.type==='goal'){
+      const gw=simToWorld(ev.x,ev.y,ev.z||0);
+      const side=gw.x<0?-1:1;
+      const net=goalNets.find(n=>n.side===side);
+      if(net){
+        net.pulse=1;
+        net.impactZ=gw.z;
+        net.impactY=gw.y;
+      }
       startGoalReplay();
       const team=ev.team;
       const scorer=(match.ball.lastTouch?.team===team)?match.ball.lastTouch.idx:match.teams[team].controlled;
@@ -959,9 +981,14 @@ function renderState(dt){
           v.root.rotation.x=-.12*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='save'){
           const s=v.saveSide||1;
-          v.root.position.y+=Math.sin(phase*Math.PI)*.34;
-          v.root.position.z+=s*Math.sin(phase*Math.PI)*.72;
-          v.root.rotation.z=-s*.52*Math.sin(phase*Math.PI);
+          const parry=v.saveParry?1.25:1;
+          const high=v.saveHigh?1.18:1;
+          v.root.position.y+=Math.sin(phase*Math.PI)*.34*high;
+          v.root.position.z+=s*Math.sin(phase*Math.PI)*.72*parry;
+          v.root.rotation.z=-s*.52*Math.sin(phase*Math.PI)*parry;
+        }else if(v.actionKind==='volley'){
+          v.root.position.y+=Math.sin(phase*Math.PI)*.08;
+          v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='shot'||v.actionKind==='cross'){
           v.root.rotation.x=-.08*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='standing-tackle'){
@@ -1029,6 +1056,21 @@ function renderState(dt){
   const phaseText=match.message||((match.phase==='kickoff')?'INÍCIO':(match.phase==='halftime'?'INTERVALO':match.phase==='fulltime'?'FIM DE JOGO':''));
   phaseEl.textContent=phaseText;
   phaseEl.style.opacity=phaseText?'1':'0';
+
+  for(const n of goalNets){
+    if(n.pulse>0){
+      n.pulse=Math.max(0,n.pulse-dt*1.55);
+      const wave=Math.sin((1-n.pulse)*Math.PI*7)*n.pulse;
+      n.mesh.position.x=n.side*(.34*n.pulse+.12*wave);
+      n.mesh.scale.z=1+.035*wave;
+      n.mesh.scale.y=1+.018*Math.abs(wave);
+      n.mesh.material.opacity=.30+.18*n.pulse;
+    }else{
+      n.mesh.position.x=0;
+      n.mesh.scale.set(1,1,1);
+      n.mesh.material.opacity=.30;
+    }
+  }
 
   const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
   focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
