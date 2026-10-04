@@ -154,6 +154,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       dirY: attackDir,
       charge: 0,
       charging: false,
+      shotStyle: 'normal',
       slide: 0,
       down: 0,
       cooldown: 0,
@@ -249,6 +250,7 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
       pl.dirY = team.attackDir;
       pl.charge = 0;
       pl.charging = false;
+      pl.shotStyle = 'normal';
       pl.slide = 0;
       pl.down = 0;
       pl.cooldown = 0;
@@ -380,6 +382,7 @@ export function hashState(state) {
     mix(team.pendingSubIdx);
     for (const p of team.players) {
       mix(p.supportRunTicks);
+      mix(p.shotStyle === 'placed' ? 1 : 0);
       mix(p.firstTouchTicks);
       mix(p.firstTouchSpeed);
       mix(p.shielding ? 1 : 0);
