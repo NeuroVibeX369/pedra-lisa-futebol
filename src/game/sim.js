@@ -277,8 +277,13 @@ const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false };
 function updatePlayers(state, inputs, frozen) {
   // Phase 0: timers that feed into the decisions below.
   for (const team of state.teams) {
+    if (state.config.premiumAI && team.oneTwoTicks > 0) {
+      team.oneTwoTicks--;
+      if (team.oneTwoTicks === 0) team.oneTwoPasser = -1;
+    }
     for (const p of team.players) {
       if (p.cooldown > 0) p.cooldown--;
+      if (state.config.premiumAI && p.supportRunTicks > 0) p.supportRunTicks--;
     }
   }
   for (let t = 0; t < 2; t++) {
@@ -322,6 +327,13 @@ function updatePlayers(state, inputs, frozen) {
       const it = intents[t][i];
       if (it.kick) {
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+        if (state.config.premiumAI && (it.kick.kind === 'pass' || it.kick.kind === 'through')) {
+          const passer = team.players[i];
+          passer.supportRunTicks = it.kick.kind === 'through' ? 126 : 102;
+          team.oneTwoPasser = i;
+          team.oneTwoTicks = 132;
+          state.events.push({ type: 'support-run', team: t, idx: i, kind: it.kick.kind });
+        }
         if (it.kick.kind) state.events.push({ type: 'action', kind: it.kick.kind, team: t, idx: i });
       }
       if (it.press) tryStandingPressure(state, t, i);
