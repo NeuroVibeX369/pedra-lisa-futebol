@@ -480,9 +480,11 @@ function ownerAction(state, teamIdx, i) {
     if (oneTwo && (pressure < skill.pressure * 1.35 || advanceOf(team, oneTwo.player.y) > advanceOf(team, p.y) + 0.06)) {
       const d = norm(oneTwo.x - p.x, oneTwo.y - p.y);
       const power = speedForDistance(clamp(oneTwo.d * 2.25, 390, 810));
-      team.oneTwoTicks = 0;
-      team.oneTwoPasser = -1;
-      return { x: d.x, y: d.y, kick: { dx: d.x, dy: d.y, power, lift: 0, kind: 'pass' } };
+      return {
+        x: d.x,
+        y: d.y,
+        kick: { dx: d.x, dy: d.y, power, lift: 0, kind: 'pass', oneTwoReturn: true },
+      };
     }
   }
 
