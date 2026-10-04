@@ -161,6 +161,44 @@ function canControl(state, team, p) {
   return dist2(b.x, b.y, p.x, p.y) < r * r;
 }
 
+function registerPossession(state, newTeam, x, y) {
+  const oldTeam = state.possessionTeam;
+
+  if (!state.config.premiumAI) {
+    state.possessionTeam = newTeam;
+    return;
+  }
+
+  if (oldTeam === newTeam) return;
+
+  if (oldTeam >= 0 && oldTeam !== newTeam && state.phase === 'play' && !state.setPiece) {
+    const winner = state.teams[newTeam];
+    const loser = state.teams[oldTeam];
+    const gainAdvance = advanceOf(winner, y);
+
+    // A recovery in our own/middle third creates a longer counter window.
+    winner.counterTicks = gainAdvance < 0.62 ? 168 : gainAdvance < 0.78 ? 132 : 96;
+    winner.pressTicks = 0;
+    loser.pressTicks = 126;
+    loser.counterTicks = 0;
+
+    winner.turnoverX = loser.turnoverX = x;
+    winner.turnoverY = loser.turnoverY = y;
+
+    state.events.push({
+      type: 'transition',
+      winner: newTeam,
+      loser: oldTeam,
+      x,
+      y,
+      counterTicks: winner.counterTicks,
+      pressTicks: loser.pressTicks,
+    });
+  }
+
+  state.possessionTeam = newTeam;
+}
+
 function updateOwnership(state) {
   const b = state.ball;
 
@@ -271,6 +309,7 @@ function updateOwnership(state) {
       });
     }
 
+    registerPossession(state, best.team, b.x, b.y);
     b.owner = best;
     b.lastTouch = { team: best.team, idx: best.idx };
     if (state.delivery) state.delivery = null;
@@ -475,6 +514,8 @@ function updatePlayers(state, inputs, frozen) {
       team.oneTwoTicks--;
       if (team.oneTwoTicks === 0) team.oneTwoPasser = -1;
     }
+    if (state.config.premiumAI && team.counterTicks > 0) team.counterTicks--;
+    if (state.config.premiumAI && team.pressTicks > 0) team.pressTicks--;
     for (const p of team.players) {
       if (p.cooldown > 0) p.cooldown--;
       if (state.config.premiumAI && p.supportRunTicks > 0) p.supportRunTicks--;
@@ -937,6 +978,7 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
     old.holdTicks = 0;
     old.charging = false;
     old.charge = 0;
+    registerPossession(state, teamIdx, b.x, b.y);
     b.owner = { team: teamIdx, idx: playerIdx };
     b.lastTouch = { team: teamIdx, idx: playerIdx };
     b.kicker = null;
@@ -1626,6 +1668,15 @@ function arrangePremiumSetPiece(state, sp) {
 
 function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   state.delivery = null;
+  state.possessionTeam = teamIdx;
+  if (state.config.premiumAI) {
+    for (const team of state.teams) {
+      team.counterTicks = 0;
+      team.pressTicks = 0;
+      team.turnoverX = x;
+      team.turnoverY = y;
+    }
+  }
   const b = state.ball;
   b.x = x;
   b.y = y;
