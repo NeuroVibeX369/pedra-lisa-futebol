@@ -1631,6 +1631,12 @@ try{
   statusEl.textContent='Motor ativo · modelo 3D indisponível, usando jogador procedural';
 }
 addEventListener('keydown',e=>{
+  if(e.code==='Escape'&&matchActive&&!presentation.active){
+    e.preventDefault();
+    if(teamScreenOpen)closeTeamScreen();else openTeamScreen('roster');
+    return;
+  }
+  if(teamScreenOpen)return;
   if(e.code==='Digit1')camMode='broadcast';
   if(e.code==='Digit2')camMode='close';
   if(e.code==='Digit3')camMode='tactical';
@@ -1725,6 +1731,11 @@ function processVisualEvents(){
       const teamName=ev.team===0?'PEDRA LISA':'INDEPENDÊNCIA';
       refToastEl.textContent=teamName+' · TÁTICA '+ev.label;
       refToastUntil=performance.now()/1000+1.35;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='formation'){
+      const teamName=ev.team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+      refToastEl.textContent=teamName+' · FORMAÇÃO '+ev.label;
+      refToastUntil=performance.now()/1000+1.45;
       refToastEl.classList.add('show');
     }else if(ev.type==='sub-pending'){
       if(ev.team===localTeam){
@@ -2141,8 +2152,9 @@ function renderState(dt){
 function frame(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
   updatePresentation(now/1000);
+  if(uiPaused)acc=0;
   let guard=0;
-  while(matchActive&&acc>=FRAME_TIME&&guard<8){
+  while(matchActive&&!uiPaused&&acc>=FRAME_TIME&&guard<8){
     const tick=match.tick;
     transport?.sample?.(tick);
     if(transport?.ready && !transport.ready(tick))break;
@@ -2153,6 +2165,10 @@ function frame(now){
     acc-=FRAME_TIME;guard++;
   }
   if(guard>=8)acc=0;
+  if(teamScreenOpen&&now-lastTeamScreenRender>220){
+    lastTeamScreenRender=now;
+    renderTeamScreen();
+  }
   renderState(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
