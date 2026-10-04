@@ -592,7 +592,8 @@ function ownerAction(state, teamIdx, i) {
   const goalY = targetGoalY(team);
   const goalX = FIELD.cx;
   const dGoal = dist(p.x, p.y, goalX, goalY);
-  const pressure = nearestOpponent(state, teamIdx, p.x, p.y).d;
+  const pressureInfo = nearestOpponent(state, teamIdx, p.x, p.y);
+  const pressure = pressureInfo.d;
 
   const sp = state.config?.premiumSetPieces && state.setPiece
     && state.setPiece.team === teamIdx && state.setPiece.taker === i
@@ -742,6 +743,26 @@ function ownerAction(state, teamIdx, i) {
     }
   }
 
+  if (state.config?.premiumBallControl && settled && pressureInfo.player
+      && pressure > 15 && pressure < 36
+      && p.skillCooldown === 0 && p.firstTouchTicks === 0
+      && ((state.tick + i * 17 + teamIdx * 11) % 4) === 0) {
+    const defender = pressureInfo.player;
+    const toward = norm(defender.x - p.x, defender.y - p.y);
+    const forward = team.attackDir;
+    const left = norm(-toward.y, toward.x + forward * 0.52);
+    const right = norm(toward.y, -toward.x + forward * 0.52);
+    const scoreSide = (d) => {
+      const tx = clamp(p.x + d.x * 46, FIELD.left + 18, FIELD.right - 18);
+      const ty = clamp(p.y + d.y * 46, FIELD.top + 18, FIELD.bottom - 18);
+      const space = nearestOpponent(state, teamIdx, tx, ty).d;
+      const progress = (advanceOf(team, ty) - advanceOf(team, p.y)) * FIELD_H;
+      return space + progress * 0.38;
+    };
+    const d = scoreSide(left) >= scoreSide(right) ? left : right;
+    return { x: d.x, y: d.y, skill: { dx: d.x, dy: d.y } };
+  }
+
   // Under pressure: pass.
   if (settled && pressure < skill.pressure) {
     const mate = findPassTarget(state, teamIdx, p);
@@ -763,6 +784,11 @@ function ownerAction(state, teamIdx, i) {
       const power = speedForDistance(clamp(dd * 2.4, 390, 830));
       return { x: d.x, y: d.y, kick: { dx: d.x, dy: d.y, power, lift: dd > 220 ? 180 : 0, kind: 'pass' } };
     }
+  }
+
+  if (state.config?.premiumBallControl && settled && pressureInfo.player && pressure < 24) {
+    const away = norm(p.x - pressureInfo.player.x, p.y - pressureInfo.player.y + team.attackDir * 18);
+    return { x: away.x * 0.58, y: away.y * 0.58, shield: true };
   }
 
   // Otherwise: dribble towards goal, going wide if the middle is crowded.
