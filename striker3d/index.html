@@ -103,7 +103,7 @@
       <input id="joinCode3d" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
       <button id="joinRoom" class="onlineBtn" type="button">ENTRAR</button>
     </div>
-    <div id="lobbyStatus3d" class="lobbyStatus">Controle/celular: × passe/pressão · ○ cruzar/carrinho · □ chute/cabeceio · △ profundidade.</div>
+    <div id="lobbyStatus3d" class="lobbyStatus">Controle/celular: × passe/pressão · ○ cruzar/carrinho · □ chute/cabeceio · △ profundidade · TROCAR/Q com bola: proteger/finta.</div>
   </div>
 </div>
 <div id="pregame" class="pregame">
@@ -166,7 +166,7 @@
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>FC Mukeka Premium · motor determinístico</b></div>
-    <div class="keys">Ataque: × passe · □ chute/cabeceio · ○ cruzar · △ profundidade · Defesa: × pressionar/desarmar · ○ carrinho</div>
+    <div class="keys">Ataque: × passe · □ chute/cabeceio · ○ cruzar · △ profundidade · TROCAR/Q: proteger; pressione com direção para finta · Defesa: × pressionar/desarmar · ○ carrinho</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
   <div class="tag">Mukeka Games · build em desenvolvimento</div>
@@ -224,6 +224,7 @@ const coinTossEl=document.getElementById('coinToss');
 const coinEl=document.getElementById('coin');
 const coinLabelEl=document.getElementById('coinLabel');
 const entranceLabelEl=document.getElementById('entranceLabel');
+const swapBtnEl=document.getElementById('btnSwap3d');
 
 const devices=new InputDevices(defaultBindings());
 devices.ps2FaceButtons=true;
@@ -653,6 +654,24 @@ function createPremiumFootballClips(root){
     [1,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
   ]);
 
+  add('FirstTouch',.38,[
+    [0,{spine_02:[.05,0,0],thigh_r:[-.22,0,0],calf_r:[.18,0,0],foot_r:[.08,0,0]}],
+    [.42,{spine_02:[-.04,.05,0],thigh_r:[.32,0,0],calf_r:[-.24,0,0],foot_r:[.28,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Shield',.74,[
+    [0,{spine_02:[.08,0,.16],pelvis:[0,0,.10],upperarm_l:[-.12,0,-.82],upperarm_r:[-.12,0,.84],thigh_l:[-.12,0,0],thigh_r:[.16,0,0]}],
+    [.5,{spine_02:[.10,0,-.14],pelvis:[0,0,-.08],upperarm_l:[-.10,0,-.92],upperarm_r:[-.14,0,.74],thigh_l:[.12,0,0],thigh_r:[-.10,0,0]}],
+    [1,{spine_02:[.08,0,.16],pelvis:[0,0,.10],upperarm_l:[-.12,0,-.82],upperarm_r:[-.12,0,.84],thigh_l:[-.12,0,0],thigh_r:[.16,0,0]}],
+  ]);
+
+  add('SkillTouch',.44,[
+    [0,{spine_02:[.08,0,-.12],pelvis:[0,0,-.08],thigh_r:[-.24,0,0],foot_r:[.12,0,0],upperarm_l:[.16,0,-.76],upperarm_r:[-.18,0,.78]}],
+    [.42,{spine_02:[.12,0,.30],pelvis:[0,0,.22],thigh_r:[.44,0,.20],calf_r:[-.18,0,0],foot_r:[.30,0,.22],upperarm_l:[-.24,0,-.88],upperarm_r:[.22,0,.72]}],
+    [1,{}],
+  ]);
+
   add('ThrowHold',.8,[
     [0,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
     [1,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
@@ -803,6 +822,7 @@ let match=createMatch({
   offside:true,
   premiumAI:true,
   premiumSetPieces:true,
+  premiumBallControl:true,
   formations:['433','433']
 });
 let transport=null;
@@ -820,6 +840,7 @@ function resetMatch(opts={}){
     offside:opts.offside!==false,
     premiumAI:true,
     premiumSetPieces:true,
+    premiumBallControl:true,
     formations:opts.formations||['433','433']
   });
   localTeam=opts.localTeam??0;
@@ -1273,6 +1294,12 @@ function processVisualEvents(){
       else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
       else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52,.48);
       else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46,.46);
+    }else if(ev.type==='first-touch' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'first-touch',v.actions.FirstTouch?'FirstTouch':(v.actions.Dribble?'Dribble':'Walk'),.38,.18);
+    }else if(ev.type==='dribble' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'skill',v.actions.SkillTouch?'SkillTouch':(v.actions.Dribble?'Dribble':'Walk'),.44,.20);
     }else if(ev.type==='tackle' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
       playAction(v,'standing-tackle',v.actions.Tackle?'Tackle':'Punch',.34);
@@ -1542,11 +1569,17 @@ function renderState(dt){
           v.root.rotation.x=-.08*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='standing-tackle'){
           v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='skill'){
+          v.root.rotation.z=.16*Math.sin(phase*Math.PI*2);
+        }else if(v.actionKind==='first-touch'){
+          v.root.rotation.x=-.06*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='celebrate'){
           v.root.position.y+=Math.sin(phase*Math.PI*2)*.10;
         }
       }else if(p.charging && v.actions.Charge){
         setAnim(v,'Charge');
+      }else if(p.shielding && ownsBall && v.actions.Shield){
+        setAnim(v,'Shield');
       }else if(p.down>0)setAnim(v,v.actions.Knockdown?'Knockdown':'Idle');
       else if(ownsBall && speed>12 && v.actions.Dribble){
         setAnim(v,'Dribble');
@@ -1566,15 +1599,17 @@ function renderState(dt){
     if(match.setPiece?.kind==='THROW-IN' && match.setPiece.team===o.team && match.setPiece.taker===o.idx){
       ball.position.set(pw.x,1.98,pw.z);
     }else{
-    const fx=-p.dirY,fz=p.dirX;
+    const simDirX=p.skillTicks>0?p.skillDirX:p.dirX;
+    const simDirY=p.skillTicks>0?p.skillDirY:p.dirY;
+    const fx=-simDirY,fz=simDirX;
     const fl=Math.hypot(fx,fz)||1;
     const dx=fx/fl,dz=fz/fl;
     const lx=-dz,lz=dx;
     const speed=Math.hypot(p.vx,p.vy);
     const stride=Math.sin(match.tick*.22);
-    const forward=speed>18?.63:.48;
-    const side=speed>18?stride*.12:0;
-    const bob=speed>18?Math.abs(Math.sin(match.tick*.22))*.025:0;
+    const forward=p.shielding?.34:p.skillTicks>0?.78:p.firstTouchTicks>0?.70:(speed>18?.63:.48);
+    const side=p.shielding?stride*.055:(speed>18?stride*.12:0);
+    const bob=p.firstTouchTicks>0?.045:(speed>18?Math.abs(Math.sin(match.tick*.22))*.025:0);
     ball.position.set(pw.x+dx*forward+lx*side,BALL_R+bob,pw.z+dz*forward+lz*side);
     }
   }else{
@@ -1592,6 +1627,11 @@ function renderState(dt){
   lastKicker=kicker;
 
   const cp=match.teams[localTeam]?.players?.[match.teams[localTeam]?.controlled??0];
+  if(touchDevice){
+    const localOwns=!!(match.ball.owner && match.ball.owner.team===localTeam);
+    if(match.setPiece?.team===localTeam)swapBtnEl.textContent='COBRADOR';
+    else swapBtnEl.textContent=localOwns?'PROTEGER':'TROCAR';
+  }
   if(!replay.active && cp?.charging){
     const pct=Math.min(100,(cp.charge/30)*100);
     powerWrapEl.style.opacity='1';
