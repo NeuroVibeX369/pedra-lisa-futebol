@@ -290,7 +290,10 @@ function updatePlayers(state, inputs, frozen) {
     const team = state.teams[t];
     for (let i = 0; i < team.players.length; i++) {
       const it = intents[t][i];
-      if (it.kick) kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+      if (it.kick) {
+        kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+        if (it.kick.kind) state.events.push({ type: 'action', kind: it.kick.kind, team: t, idx: i });
+      }
       if (it.press) tryStandingPressure(state, t, i);
       if (it.slide) startSlide(state, team.players[i]);
     }
@@ -399,20 +402,20 @@ function humanIntent(state, t, i, mask) {
       p.charge = 0;
       const shot = chargeToShot(2);
       const aimed = assistedAim(state, t, i, aimX, aimY);
-      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 0 };
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 0, kind: 'pass' };
     } else if (throughPressed) {
       p.charging = false;
       p.charge = 0;
       const shot = chargeToShot(8);
       // Through balls deliberately use less teammate magnetism: point into the
       // space you want to attack.
-      intent.kick = { dx: aimX, dy: aimY, power: shot.power, lift: 0 };
+      intent.kick = { dx: aimX, dy: aimY, power: shot.power, lift: 0, kind: 'through' };
     } else if (crossPressed) {
       p.charging = false;
       p.charge = 0;
       const shot = chargeToShot(18);
       const aimed = assistedAim(state, t, i, aimX, aimY);
-      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: Math.max(shot.lift, 145) };
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: Math.max(shot.lift, 145), kind: 'cross' };
     } else if (shoot && !prevShoot) {
       p.charging = true;
       p.charge = 0;
@@ -427,7 +430,7 @@ function humanIntent(state, t, i, mask) {
     if (headerBall) {
       const aimed = assistedAim(state, t, i, aimX, aimY);
       const shot = chargeToShot(15);
-      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 35 };
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 35, kind: 'header' };
     }
 
     // × without the ball is pressure / standing challenge. If no direction is
@@ -465,6 +468,7 @@ function humanIntent(state, t, i, mask) {
           dy: aimed.y,
           power: shot.power,
           lift: shootingAtGoal(state, t, p, aimed) ? Math.min(shot.lift, SHOT_LIFT_MAX) : shot.lift,
+          kind: 'shot',
         };
       }
     }
