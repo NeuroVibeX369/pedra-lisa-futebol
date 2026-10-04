@@ -20,7 +20,7 @@
     .phase{position:absolute;left:50%;top:82px;transform:translateX(-50%);font-size:22px;font-weight:900;letter-spacing:.09em;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .15s}
     .replay{position:absolute;left:18px;top:62px;padding:7px 11px;border-radius:7px;background:rgba(120,0,0,.85);border:1px solid rgba(255,255,255,.24);font-size:11px;font-weight:1000;letter-spacing:.16em;opacity:0;transition:opacity .12s}
     .setPieceBanner{position:absolute;left:50%;top:112px;transform:translateX(-50%) translateY(-8px);padding:8px 13px;border-radius:8px;background:rgba(7,15,10,.88);border:1px solid rgba(255,255,255,.18);font-size:10px;font-weight:1000;letter-spacing:.14em;opacity:0;transition:opacity .16s,transform .16s;white-space:nowrap}.setPieceBanner.show{opacity:1;transform:translateX(-50%) translateY(0)}
-    .cardToast{position:absolute;right:18px;top:82px;display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;background:rgba(9,14,11,.9);border:1px solid rgba(255,255,255,.16);font-size:10px;font-weight:900;opacity:0;transform:translateY(-8px);transition:opacity .16s,transform .16s}.cardToast.show{opacity:1;transform:translateY(0)}.yellowCard{width:12px;height:20px;border-radius:2px;background:#f4d84a;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+    .cardToast{position:absolute;right:18px;top:82px;display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;background:rgba(9,14,11,.9);border:1px solid rgba(255,255,255,.16);font-size:10px;font-weight:900;opacity:0;transform:translateY(-8px);transition:opacity .16s,transform .16s}.cardToast.show{opacity:1;transform:translateY(0)}.yellowCard{width:12px;height:20px;border-radius:2px;background:#f4d84a;box-shadow:0 0 0 1px rgba(0,0,0,.35)}.yellowCard.red{background:#e3453d}
     .powerWrap{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:min(260px,46vw);height:10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);overflow:hidden;opacity:0;transition:opacity .1s}
     .powerFill{height:100%;width:0;background:linear-gradient(90deg,#55d977,#f0d35c,#e85b4f)}
     .teamSide{display:flex;align-items:center;gap:7px;font-weight:1000;white-space:nowrap}
@@ -196,6 +196,7 @@ const replayLabelEl=document.getElementById('replayLabel');
 const setPieceBannerEl=document.getElementById('setPieceBanner');
 const cardToastEl=document.getElementById('cardToast');
 const cardTextEl=document.getElementById('cardText');
+const cardIconEl=cardToastEl.querySelector('.yellowCard');
 const powerWrapEl=document.getElementById('powerWrap');
 const powerFillEl=document.getElementById('powerFill');
 const lobbyEl=document.getElementById('browserLobby');
@@ -1265,8 +1266,10 @@ function processVisualEvents(){
       }
     }else if(ev.type==='card'){
       const roster=PLAYER_ROSTERS[ev.team]?.[ev.idx];
-      cardTextEl.textContent='CARTÃO AMARELO · '+(roster?.name||'JOGADOR');
-      cardToastUntil=performance.now()/1000+2.4;
+      const red=ev.color==='red';
+      cardIconEl.classList.toggle('red',red);
+      cardTextEl.textContent=(red?'CARTÃO VERMELHO':'CARTÃO AMARELO')+' · '+(roster?.name||'JOGADOR');
+      cardToastUntil=performance.now()/1000+(red?3.2:2.4);
       cardToastEl.classList.add('show');
     }else if(ev.type==='whistle'){
       playWhistle();
@@ -1335,6 +1338,8 @@ function renderState(dt){
   for(let t=0;t<2;t++){
     for(let i=0;i<11;i++){
       const p=match.teams[t].players[i],v=visuals[t][i];
+      v.root.visible=!p.sentOff;
+      if(p.sentOff)continue;
       const rp=replayFrame?.teams?.[t]?.[i];
       const px=rp?rp.x:p.x,py=rp?rp.y:p.y,pdirX=rp?rp.dirX:p.dirX,pdirY=rp?rp.dirY:p.dirY;
       const introPose=presentationPose(t,i,nowSec);
