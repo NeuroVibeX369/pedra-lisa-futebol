@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Pedra Lisa Futebol — Striker 3D</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    #app{position:fixed;inset:0}canvas{display:block}
+    #hud{position:fixed;inset:0;pointer-events:none}
+    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.13);border-radius:14px;padding:9px 14px;backdrop-filter:blur(8px);font-weight:800}
+    .score{font-size:20px}.small{font-size:11px;color:#aab9b0;letter-spacing:.08em;text-transform:uppercase}
+    .info{position:absolute;left:14px;bottom:14px;background:rgba(6,11,8,.76);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(8px);max-width:330px}
+    .info b{color:#82e3a0}.info .keys{margin-top:5px;color:#c8d3cc;font-size:12px;line-height:1.5}
+    .back{pointer-events:auto;position:absolute;right:14px;top:14px;text-decoration:none;color:#fff;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:10px 13px;font-weight:800}
+    .tag{position:absolute;right:14px;bottom:14px;background:rgba(6,11,8,.72);padding:8px 10px;border-radius:10px;font-size:11px;color:#aab9b0}
+  </style>
+  <script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
+  </script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud">
+  <div class="top"><span>PEDRA LISA</span><span class="score">0 — 0</span><span>INDEPENDÊNCIA</span><span class="small">3D</span></div>
+  <a class="back" href="../">← HUB</a>
+  <div class="info">
+    <div><b>Protótipo 3D inicial</b></div>
+    <div class="keys">WASD / setas: mover jogador selecionado · Espaço: chutar quando estiver perto da bola</div>
+  </div>
+  <div class="tag">Branch experimental · WebSoccer permanece intacto</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const app=document.getElementById('app');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9bc7e8);
+scene.fog=new THREE.Fog(0x9bc7e8,125,280);
+
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,500);
+camera.position.set(0,44,62);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+app.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe8f6ff,0x35562d,1.8));
+const sun=new THREE.DirectionalLight(0xfff3df,2.4);
+sun.position.set(-45,80,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-75;sun.shadow.camera.right=75;sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;
+scene.add(sun);
+
+const FIELD_L=105, FIELD_W=68;
+const grass=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L+18,FIELD_W+18),new THREE.MeshStandardMaterial({color:0x26733a,roughness:.95}));
+grass.rotation.x=-Math.PI/2;grass.receiveShadow=true;scene.add(grass);
+
+const stripeMatA=new THREE.MeshStandardMaterial({color:0x2e8242,roughness:.96});
+for(let i=0;i<10;i++){
+  const s=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L/10,FIELD_W),stripeMatA);
+  s.rotation.x=-Math.PI/2;s.position.set(-FIELD_L/2+FIELD_L/20+i*FIELD_L/10,.012,0);s.receiveShadow=true;scene.add(s);
+}
+const lines=new THREE.LineBasicMaterial({color:0xffffff});
+const lineY=.035;
+function rect(x1,z1,x2,z2){
+  const pts=[new THREE.Vector3(x1,lineY,z1),new THREE.Vector3(x2,lineY,z1),new THREE.Vector3(x2,lineY,z2),new THREE.Vector3(x1,lineY,z2),new THREE.Vector3(x1,lineY,z1)];
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lines));
+}
+rect(-FIELD_L/2,-FIELD_W/2,FIELD_L/2,FIELD_W/2);
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,lineY,-FIELD_W/2),new THREE.Vector3(0,lineY,FIELD_W/2)]),lines));
+const cc=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({length:64},(_,i)=>{const a=i/64*Math.PI*2;return new THREE.Vector3(Math.cos(a)*9.15,lineY,Math.sin(a)*9.15)})),lines);scene.add(cc);
+rect(-FIELD_L/2,-20.16,-FIELD_L/2+16.5,20.16);rect(FIELD_L/2-16.5,-20.16,FIELD_L/2,20.16);
+rect(-FIELD_L/2,-9.16,-FIELD_L/2+5.5,9.16);rect(FIELD_L/2-5.5,-9.16,FIELD_L/2,9.16);
+
+function goal(side){
+  const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:0xf4f4f4,metalness:.15,roughness:.45});
+  const pole=(r,h,x,y,z,rz=0)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),mat);m.position.set(x,y,z);m.rotation.z=rz;m.castShadow=true;g.add(m)};
+  const x=side*FIELD_L/2;pole(.07,2.45,x,1.22,-3.66);pole(.07,2.45,x,1.22,3.66);pole(.07,7.32,x,2.44,0,Math.PI/2);
+  scene.add(g);
+}
+goal(-1);goal(1);
+
+const standMat=new THREE.MeshStandardMaterial({color:0x2c3330,roughness:.85});
+for(const z of [-43,43]){
+  const stand=new THREE.Mesh(new THREE.BoxGeometry(120,8,11),standMat);stand.position.set(0,4,z);stand.castShadow=true;stand.receiveShadow=true;scene.add(stand);
+}
+
+function player(color,shorts,skin=0xd4a06b){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.92,8),new THREE.MeshStandardMaterial({color,roughness:.78}));
+  body.position.y=1.18;body.castShadow=true;g.add(body);
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(.39,.34,.35,8),new THREE.MeshStandardMaterial({color:shorts,roughness:.8}));
+  sh.position.y=.72;sh.castShadow=true;g.add(sh);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.24,10,8),new THREE.MeshStandardMaterial({color:skin,roughness:.65}));
+  head.position.y=1.9;head.castShadow=true;g.add(head);
+  const legMat=new THREE.MeshStandardMaterial({color:0xf1f1f1,roughness:.8});
+  for(const x of [-.16,.16]){const l=new THREE.Mesh(new THREE.CylinderGeometry(.08,.07,.58,7),legMat);l.position.set(x,.34,0);l.castShadow=true;g.add(l)}
+  g.userData.velocity=new THREE.Vector3();return g;
+}
+
+const home=[],away=[];
+const formation=[
+  [-47,0],[-35,-22],[-36,-8],[-36,8],[-35,22],[-15,-15],[-13,0],[-15,15],[12,-20],[21,0],[12,20]
+];
+formation.forEach(([x,z],i)=>{const p=player(0x178a3c,0xffffff,i===0?0xd7aa82:0xc88c61);p.position.set(x,0,z);scene.add(p);home.push(p)});
+formation.forEach(([x,z],i)=>{const p=player(0xf5f5f5,0x111111,i===0?0xe4b893:0xb9794f);p.position.set(-x,0,-z);p.rotation.y=Math.PI;scene.add(p);away.push(p)});
+
+const selected=home[6];
+const ring=new THREE.Mesh(new THREE.RingGeometry(.65,.82,32),new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.95}));
+ring.rotation.x=-Math.PI/2;ring.position.y=.035;selected.add(ring);
+
+const ball=new THREE.Mesh(new THREE.SphereGeometry(.22,18,14),new THREE.MeshStandardMaterial({color:0xf7f7f4,roughness:.55}));
+ball.position.set(0,.22,0);ball.castShadow=true;scene.add(ball);
+const ballVel=new THREE.Vector3();
+
+const keys=new Set();
+addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='Space')e.preventDefault()});
+addEventListener('keyup',e=>keys.delete(e.code));
+
+let last=performance.now();
+function tick(now){
+  const dt=Math.min(.033,(now-last)/1000);last=now;
+  const dir=new THREE.Vector3(
+    (keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),
+    0,
+    (keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)
+  );
+  if(dir.lengthSq()>0){
+    dir.normalize();selected.position.addScaledVector(dir,8*dt);selected.rotation.y=Math.atan2(dir.x,dir.z);
+  }
+  selected.position.x=THREE.MathUtils.clamp(selected.position.x,-FIELD_L/2+1,FIELD_L/2-1);
+  selected.position.z=THREE.MathUtils.clamp(selected.position.z,-FIELD_W/2+1,FIELD_W/2-1);
+  if(keys.has('Space')&&selected.position.distanceTo(ball.position)<2.1&&dir.lengthSq()>0){
+    ballVel.copy(dir).multiplyScalar(21);ballVel.y=5.2;
+  }
+  ballVel.y-=12*dt;ball.position.addScaledVector(ballVel,dt);
+  if(ball.position.y<.22){ball.position.y=.22;ballVel.y=Math.abs(ballVel.y)*.32;ballVel.x*=.988;ballVel.z*=.988}
+  if(Math.abs(ballVel.y)<.06&&ball.position.y<=.221)ballVel.y=0;
+  ball.rotation.x+=ballVel.z*dt*.9;ball.rotation.z-=ballVel.x*dt*.9;
+
+  const focusX=THREE.MathUtils.lerp(camera.userData.fx||0,(ball.position.x+selected.position.x)*.35,.05);
+  camera.userData.fx=focusX;
+  camera.position.x=focusX;camera.position.y=40;camera.position.z=58;
+  camera.lookAt(focusX,0,0);
+  renderer.render(scene,camera);requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
