@@ -1625,6 +1625,7 @@ function arrangePremiumSetPiece(state, sp) {
 }
 
 function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
+  state.delivery = null;
   const b = state.ball;
   b.x = x;
   b.y = y;
