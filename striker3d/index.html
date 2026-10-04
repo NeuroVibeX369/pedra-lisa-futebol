@@ -1294,7 +1294,7 @@ function processVisualEvents(){
             ?(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'))
             :(v.actions.Save?'Save':(v.actions.Jump?'Jump':'Punch'));
         playAction(v,'save',clip,.72,.38);
-        v.saveSide=s||1;
+        v.saveSide=s;
         v.saveParry=true;
         v.saveHigh=false;
       }
@@ -1497,7 +1497,7 @@ function renderState(dt){
           v.root.position.y+=Math.sin(phase*Math.PI)*.42;
           v.root.rotation.x=-.12*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='save'){
-          const s=v.saveSide||1;
+          const s=v.saveSide??1;
           const parry=v.saveParry?1.25:1;
           const high=v.saveHigh?1.18:1;
           v.root.position.y+=Math.sin(phase*Math.PI)*.34*high;
