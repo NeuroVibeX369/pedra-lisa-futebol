@@ -238,6 +238,8 @@ export const BTN = {
   // keeps using FIRE/SWITCH, so its controls and deterministic replays remain
   // compatible.
   PASS: 64, SHOOT: 128, CROSS: 256, THROUGH: 512,
+  // Premium-only team-management actions. Classic 2D never emits these bits.
+  TACTIC_DOWN: 1024, TACTIC_UP: 2048, SUB: 4096,
 };
 
 export const TEAM_PRESETS = [
