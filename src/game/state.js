@@ -444,6 +444,22 @@ export function hashState(state) {
     mix(team.nextBenchNumber);
     mix(team.lastAutoSubHalfTick);
     mix(team.pendingSubIdx);
+    mix(team.subArchive?.length || 0);
+    for (const rec of team.subArchive || []) {
+      mix(rec.shirtNumber || 0);
+      mix(rec.overall || 0);
+      mix(rec.matchStats?.goals || 0);
+      mix(rec.matchStats?.assists || 0);
+      mix(rec.matchStats?.shots || 0);
+      mix(rec.matchStats?.shotsOnTarget || 0);
+      mix(rec.matchStats?.passes || 0);
+      mix(rec.matchStats?.passesCompleted || 0);
+      mix(rec.matchStats?.tackles || 0);
+      mix(rec.matchStats?.saves || 0);
+      mix(rec.matchStats?.fouls || 0);
+      mix(rec.matchStats?.yellow || 0);
+      mix(rec.matchStats?.red || 0);
+    }
     const formationCodes = { '433': 1, '442diamond': 2, '442': 3, '352': 4, '532': 5, custom: 9 };
     mix(formationCodes[team.formationKey] || 9);
     for (const spot of team.formation) {
