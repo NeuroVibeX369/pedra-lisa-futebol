@@ -417,7 +417,7 @@ function fallbackVisual(data,teamIdx){
   for(const x of [-.15,.15]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.5,3,8),shorts);leg.position.set(x,.32,0);root.add(leg)}
   root.scale.set(data.build||1,data.height||1,data.build||1);
   root.traverse(o=>{if(o.isMesh)o.castShadow=true});
-  return {root,mixer:null,actions:{},active:'Idle',data};
+  return {root,mixer:null,actions:{},active:'Idle',data,actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''};
 }
 function tintRig(root,data,teamIdx){
   const kit=kitColors(teamIdx,data.gk);
@@ -450,7 +450,7 @@ function animatedVisual(data,teamIdx){
   for(const [name,clip] of Object.entries(clipMap))actions[name]=mixer.clipAction(clip);
   if(actions.Idle)actions.Idle.play();
   mixers.push(mixer);
-  return {root,mixer,actions,active:'Idle',data};
+  return {root,mixer,actions,active:'Idle',data,actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''};
 }
 function setAnim(v,name,oneShot=false){
   if(!v.mixer||(!oneShot&&v.active===name))return;
@@ -458,6 +458,14 @@ function setAnim(v,name,oneShot=false){
   const prev=v.actions[v.active];if(prev&&prev!==next)prev.fadeOut(.12);
   next.reset().setLoop(oneShot?THREE.LoopOnce:THREE.LoopRepeat,Infinity);
   next.clampWhenFinished=oneShot;next.fadeIn(.12).play();v.active=name;
+}
+function playAction(v,kind,clip,duration=.38){
+  const now=performance.now()/1000;
+  v.actionKind=kind;
+  v.actionStarted=now;
+  v.actionDuration=duration;
+  v.actionUntil=now+duration;
+  setAnim(v,clip,true);
 }
 function respawnVisuals(){
   for(const team of visuals)for(const v of team)world.remove(v.root);
@@ -591,8 +599,45 @@ function inputMask(){
 }
 
 let camMode='broadcast',acc=0,last=performance.now(),focusX=0,lastKicker='';
+const visualEvents=[];
+
+function queueVisualEvents(){
+  if(!match.events?.length)return;
+  for(const ev of match.events) visualEvents.push({...ev,tick:match.tick});
+  if(visualEvents.length>80)visualEvents.splice(0,visualEvents.length-80);
+}
+
+function processVisualEvents(){
+  while(visualEvents.length){
+    const ev=visualEvents.shift();
+    if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      if(ev.kind==='header') playAction(v,'header',v.actions.Jump?'Jump':'Punch',.56);
+      else if(ev.kind==='shot') playAction(v,'shot','Punch',.42);
+      else if(ev.kind==='cross') playAction(v,'cross','Punch',.40);
+      else if(ev.kind==='through') playAction(v,'through','Punch',.32);
+      else playAction(v,'pass','Punch',.28);
+    }else if(ev.type==='tackle' && visuals[ev.team]?.[ev.idx]){
+      playAction(visuals[ev.team][ev.idx],'standing-tackle','Punch',.30);
+    }else if(ev.type==='save'){
+      const v=visuals[ev.team]?.[0];
+      if(v)playAction(v,'save',v.actions.Jump?'Jump':'Punch',.55);
+    }else if(ev.type==='goal'){
+      const team=ev.team;
+      const scorer=(match.ball.lastTouch?.team===team)?match.ball.lastTouch.idx:match.teams[team].controlled;
+      const order=[scorer,...Array.from({length:11},(_,i)=>i).filter(i=>i!==scorer)].slice(0,4);
+      order.forEach((idx,n)=>{
+        const v=visuals[team]?.[idx];if(!v)return;
+        const clip=v.actions.Clapping?'Clapping':(v.actions.Jump?'Jump':'Idle');
+        playAction(v,'celebrate',clip,1.15+n*.08);
+      });
+    }
+  }
+}
 function renderState(dt){
   refreshControlled();
+  processVisualEvents();
+  const nowSec=performance.now()/1000;
 
   for(let t=0;t<2;t++){
     for(let i=0;i<11;i++){
@@ -613,8 +658,33 @@ function renderState(dt){
       if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
 
       const speed=Math.hypot(p.vx,p.vy);
-      if(p.slide>0)setAnim(v,'Punch');
-      else if(p.down>0)setAnim(v,'Idle');
+      // Reset presentation-only action pose before applying the current one.
+      v.root.rotation.x=0;
+      v.root.rotation.z=0;
+      const actionActive=v.actionUntil>nowSec;
+
+      if(p.slide>0){
+        setAnim(v,'Punch');
+        // A short forward body tilt makes the generic Punch clip read much more
+        // like a football slide without changing simulation/collision.
+        v.root.rotation.x=-.72;
+        v.root.position.y=.16;
+      }else if(actionActive){
+        const phase=Math.max(0,Math.min(1,(nowSec-v.actionStarted)/Math.max(.01,v.actionDuration)));
+        if(v.actionKind==='header'){
+          v.root.position.y+=Math.sin(phase*Math.PI)*.42;
+          v.root.rotation.x=-.12*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='save'){
+          v.root.position.y+=Math.sin(phase*Math.PI)*.28;
+          v.root.rotation.z=.18*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='shot'||v.actionKind==='cross'){
+          v.root.rotation.x=-.08*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='standing-tackle'){
+          v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='celebrate'){
+          v.root.position.y+=Math.sin(phase*Math.PI*2)*.10;
+        }
+      }else if(p.down>0)setAnim(v,'Idle');
       else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
       else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
       else setAnim(v,'Idle');
@@ -629,7 +699,8 @@ function renderState(dt){
   const kicker=match.ball.kicker?match.ball.kicker.team+':'+match.ball.kicker.idx:'';
   if(kicker&&kicker!==lastKicker){
     const [t,i]=kicker.split(':').map(Number);
-    setAnim(visuals[t][i],'Punch',true);
+    const v=visuals[t][i];
+    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick','Punch',.34);
   }
   lastKicker=kicker;
 
@@ -660,6 +731,7 @@ function frame(now){
     transport?.sample?.(tick);
     if(transport?.ready && !transport.ready(tick))break;
     step(match,transport?.poll?transport.poll(tick):[inputMask(),0]);
+    queueVisualEvents();
     transport?.afterStep?.(match);
     acc-=FRAME_TIME;guard++;
   }
