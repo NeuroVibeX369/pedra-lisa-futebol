@@ -311,6 +311,13 @@ export function hashState(state) {
   mix(state.advantage?.possessionTicks ?? 0);
   mix(state.advantage?.offenderTeam ?? -1);
   mix(state.advantage?.offenderIdx ?? -1);
+  mix(state.advantage?.card === 'red' ? 2 : state.advantage?.card === 'yellow' ? 1 : 0);
+  mix(state.advantage?.directRed ? 1 : 0);
+  mix(state.advantage?.foulType === 'DOGSO' ? 5
+    : state.advantage?.foulType === 'RECKLESS' ? 4
+    : state.advantage?.foulType === 'LATE' ? 3
+    : state.advantage?.foulType === 'OFFBALL' ? 2
+    : state.advantage?.foulType === 'PUSH' || state.advantage?.foulType === 'CHARGE' ? 1 : 0);
   mix(state.delivery?.team ?? -1);
   mix(state.delivery?.ticks ?? 0);
   mix(state.delivery?.kind === 'CORNER' ? 1 : state.delivery?.kind === 'FREE KICK' ? 2 : 0);
