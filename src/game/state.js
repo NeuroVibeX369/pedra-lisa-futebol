@@ -254,6 +254,10 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
       x: FIELD.cx,
       y: FIELD.cy,
       mate: 7,
+      targetIdx: 7,
+      aimX: 0,
+      aimLift: 0,
+      keeperDive: 0,
     };
   } else {
     state.setPiece = null;
@@ -296,6 +300,10 @@ export function hashState(state) {
   mix(state.setPiece ? (spCodes[state.setPiece.kind] || 9) : 0);
   mix(state.setPiece?.team ?? -1);
   mix(state.setPiece?.taker ?? -1);
+  mix(state.setPiece?.targetIdx ?? -1);
+  mix(state.setPiece?.aimX ?? 0);
+  mix(state.setPiece?.aimLift ?? 0);
+  mix(state.setPiece?.keeperDive ?? 0);
   for (const team of state.teams) {
     mix(team.oneTwoPasser);
     mix(team.oneTwoTicks);
