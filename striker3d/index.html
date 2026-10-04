@@ -760,17 +760,72 @@ function kitColors(teamIdx,isGK){
   return {shirt:colorHex(k.shirt),shorts:colorHex(k.shorts),socks:colorHex(k.trim||k.shirt)};
 }
 function fallbackVisual(data,teamIdx){
-  const root=new THREE.Group(),kit=kitColors(teamIdx,data.gk);
-  const skin=new THREE.MeshStandardMaterial({color:data.skin,roughness:.7});
-  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.78});
-  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.82});
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.62,4,10),shirt);torso.position.y=1.08;root.add(torso);
-  const hip=new THREE.Mesh(new THREE.BoxGeometry(.5,.28,.32),shorts);hip.position.y=.68;root.add(hip);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.22,12,10),skin);head.position.y=1.68;root.add(head);
-  for(const x of [-.15,.15]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.5,3,8),shorts);leg.position.set(x,.32,0);root.add(leg)}
-  root.scale.set(data.build||1,data.height||1,data.build||1);
-  root.traverse(o=>{if(o.isMesh)o.castShadow=true});
-  return {root,mixer:null,actions:{},active:'Idle',data,actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''};
+  const root=new THREE.Group();
+  const body=new THREE.Group();
+  root.add(body);
+
+  const kit=kitColors(teamIdx,data.gk);
+  const skin=new THREE.MeshStandardMaterial({color:data.skin,roughness:.78});
+  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.82});
+  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.86});
+  const socks=new THREE.MeshStandardMaterial({color:kit.socks,roughness:.86});
+  const boots=new THREE.MeshStandardMaterial({color:0x161918,roughness:.66});
+  const hair=new THREE.MeshStandardMaterial({color:data.hair,roughness:.9});
+
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.27,.31,.62,8),shirt);
+  torso.position.y=1.16;body.add(torso);
+  const shoulders=new THREE.Mesh(new THREE.BoxGeometry(.64,.16,.28),shirt);
+  shoulders.position.y=1.42;body.add(shoulders);
+  const hip=new THREE.Mesh(new THREE.BoxGeometry(.48,.28,.31),shorts);
+  hip.position.y=.76;body.add(hip);
+
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.13,8),skin);
+  neck.position.y=1.54;body.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.205,10,8),skin);
+  head.position.y=1.76;body.add(head);
+  if(!data.bald){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.208,10,6,0,Math.PI*2,0,Math.PI*.48),hair);
+    cap.position.y=1.79;body.add(cap);
+  }
+
+  const armPivots=[],legPivots=[];
+  for(const side of [-1,1]){
+    const armPivot=new THREE.Group();
+    armPivot.position.set(side*.34,1.43,0);
+    const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.18,7),shirt);
+    sleeve.position.y=-.09;armPivot.add(sleeve);
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.052,.06,.44,7),skin);
+    arm.position.y=-.37;armPivot.add(arm);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.065,7,6),skin);
+    hand.position.y=-.62;armPivot.add(hand);
+    body.add(armPivot);armPivots.push(armPivot);
+
+    const legPivot=new THREE.Group();
+    legPivot.position.set(side*.145,.66,0);
+    const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.09,.105,.36,7),shorts);
+    thigh.position.y=-.18;legPivot.add(thigh);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(.058,.072,.34,7),socks);
+    shin.position.y=-.50;legPivot.add(shin);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.13,.10,.25),boots);
+    boot.position.set(0,-.70,.055);legPivot.add(boot);
+    body.add(legPivot);legPivots.push(legPivot);
+  }
+
+  // Cheap blob shadow instead of 22 dynamic shadow-casting rigs.
+  const shadow=new THREE.Mesh(
+    new THREE.CircleGeometry(.34,16),
+    new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false})
+  );
+  shadow.rotation.x=-Math.PI/2;shadow.position.y=.012;root.add(shadow);
+
+  const h=data.height||1,b=data.build||1;
+  body.scale.set(b,h,b);
+  root.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+  return {
+    root,body,armPivots,legPivots,mixer:null,actions:{},active:'Idle',data,
+    procedural:true,limbPhase:teamIdx*.7+(data.number||0)*.19,
+    actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''
+  };
 }
 function tintRig(root,data,teamIdx){
   const kit=kitColors(teamIdx,data.gk);
