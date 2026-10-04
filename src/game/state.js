@@ -47,6 +47,8 @@ export function createMatch(options = {}) {
     restartTeam: 0,
     lastGoalTeam: -1,
     setPiece: null,
+    advantage: null,
+    delivery: null,
     ball: newBall(),
     teams: [
       makeTeam(0, opts.humans[0], -1, levelFor(opts.difficulty, 0), opts.formations[0]),
@@ -304,6 +306,14 @@ export function hashState(state) {
   mix(state.setPiece?.aimX ?? 0);
   mix(state.setPiece?.aimLift ?? 0);
   mix(state.setPiece?.keeperDive ?? 0);
+  mix(state.advantage?.team ?? -1);
+  mix(state.advantage?.ticksLeft ?? 0);
+  mix(state.advantage?.possessionTicks ?? 0);
+  mix(state.advantage?.offenderTeam ?? -1);
+  mix(state.advantage?.offenderIdx ?? -1);
+  mix(state.delivery?.team ?? -1);
+  mix(state.delivery?.ticks ?? 0);
+  mix(state.delivery?.kind === 'CORNER' ? 1 : state.delivery?.kind === 'FREE KICK' ? 2 : 0);
   for (const team of state.teams) {
     mix(team.oneTwoPasser);
     mix(team.oneTwoTicks);
