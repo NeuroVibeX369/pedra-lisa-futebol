@@ -145,7 +145,8 @@
             <li>The button <b>without the ball</b> is a slide tackle.</li>
             <li>You automatically control whoever is nearest the ball.</li>
             <li>Gamepads também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
-            <li><b>Esc</b> pauses.</li>
+            <li><b>Esc</b> pausa e abre táticas, substituição e Central da Partida.</li>
+            <li><b>Z/X</b> alteram mentalidade; <b>C</b> prepara substituição do jogador atual.</li>
           </ul>
           </details>
 
@@ -197,9 +198,45 @@
 
     <div id="pause" class="overlay hidden">
       <div class="panel small">
-        <h2>PAUSED</h2>
-        <button id="resume" class="primary">Resume</button>
-        <button id="quit">Back to menu</button>
+        <h2>PAUSADO</h2>
+        <div class="pauseMeta" id="pauseMeta">EQUILIBRADO · SUB 0/3</div>
+        <div class="pauseActions">
+          <button id="pauseDef">DEFENSIVO</button>
+          <button id="pauseBal">EQUILIBRADO</button>
+          <button id="pauseAtt">OFENSIVO</button>
+        </div>
+        <button id="pauseSub">SUBSTITUIR JOGADOR ATUAL</button>
+        <button id="openMatchCenter">CENTRAL DA PARTIDA</button>
+        <button id="resume" class="primary">CONTINUAR</button>
+        <button id="quit">Voltar ao menu</button>
+      </div>
+    </div>
+
+    <div id="matchCenter" class="overlay hidden">
+      <div class="panel matchCenterPanel">
+        <div class="matchCenterHead">
+          <div>
+            <div class="tag">FC MUKEKA · CENTRAL DA PARTIDA</div>
+            <h2 id="matchCenterTitle">INTERVALO</h2>
+          </div>
+          <button id="closeMatchCenter">FECHAR</button>
+        </div>
+        <div id="matchCenterScore" class="matchCenterScore">PEDRA LISA 0 - 0 INDEPENDÊNCIA</div>
+        <div id="matchCenterMotm" class="matchCenterMotm"></div>
+        <div class="matchCenterGrid">
+          <div>
+            <h3>ESTATÍSTICAS</h3>
+            <div id="matchStats2d" class="matchStats2d"></div>
+          </div>
+          <div>
+            <h3>NOTAS DOS JOGADORES</h3>
+            <div id="playerRatings2d" class="playerRatings2d"></div>
+          </div>
+        </div>
+        <div class="matchCenterFooter">
+          <button id="matchCenterContinue" class="primary">CONTINUAR</button>
+          <button id="matchCenterMenu">VOLTAR AO MENU</button>
+        </div>
       </div>
     </div>
 
