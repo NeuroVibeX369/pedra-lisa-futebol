@@ -17,6 +17,7 @@ export function createMatch(options = {}) {
     offside: true, // the offside rule, whistle and all
     premiumAI: false, // richer off-ball tactics; opt-in so FC Mukeka 2D stays unchanged
     premiumSetPieces: false, // console-style restarts/fouls; opt-in for Premium only
+    premiumBallControl: false, // first touch, shielding and skill touches; Premium only
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -32,6 +33,7 @@ export function createMatch(options = {}) {
       offside: opts.offside !== false,
       premiumAI: opts.premiumAI === true,
       premiumSetPieces: opts.premiumSetPieces === true,
+      premiumBallControl: opts.premiumBallControl === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
@@ -146,6 +148,13 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       cooldown: 0,
       holdTicks: 0,
       supportRunTicks: 0,
+      firstTouchTicks: 0,
+      firstTouchSpeed: 0,
+      shielding: false,
+      skillTicks: 0,
+      skillCooldown: 0,
+      skillDirX: 0,
+      skillDirY: attackDir,
       yellowCards: 0,
       sentOff: false,
       // Where the current run with the ball began, and whether it has already
@@ -231,6 +240,13 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
       pl.cooldown = 0;
       pl.holdTicks = 0;
       pl.supportRunTicks = 0;
+      pl.firstTouchTicks = 0;
+      pl.firstTouchSpeed = 0;
+      pl.shielding = false;
+      pl.skillTicks = 0;
+      pl.skillCooldown = 0;
+      pl.skillDirX = 0;
+      pl.skillDirY = team.attackDir;
       pl.offside = false;
     }
     team.controlled = 9;
@@ -345,6 +361,13 @@ export function hashState(state) {
     mix(team.turnoverY);
     for (const p of team.players) {
       mix(p.supportRunTicks);
+      mix(p.firstTouchTicks);
+      mix(p.firstTouchSpeed);
+      mix(p.shielding ? 1 : 0);
+      mix(p.skillTicks);
+      mix(p.skillCooldown);
+      mix(p.skillDirX);
+      mix(p.skillDirY);
       mix(p.yellowCards);
       mix(p.sentOff ? 1 : 0);
       mix(p.x);
