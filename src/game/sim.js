@@ -41,7 +41,7 @@ export function step(state, inputs) {
   updateProtection(state);
   updateDelivery(state);
   updateOwnership(state);
-  updatePlayers(state, inputs, frozen);
+  if (updatePlayers(state, inputs, frozen)) return state;
   separatePlayers(state);
   if (resolveTackles(state)) return state;
   updateBall(state, inputs);
@@ -574,7 +574,7 @@ function updatePlayers(state, inputs, frozen) {
         }
         if (it.kick.kind) state.events.push({ type: 'action', kind: it.kick.kind, team: t, idx: i });
       }
-      if (it.press) tryStandingPressure(state, t, i);
+      if (it.press && tryStandingPressure(state, t, i)) return true;
       if (it.slide) startSlide(state, team.players[i]);
     }
   }
@@ -604,6 +604,7 @@ function updatePlayers(state, inputs, frozen) {
     }
     if (team.human) team.prevMask = inputs[t] | 0;
   }
+  return false;
 }
 
 /** Auto-switch: you always control the player on the ball, otherwise the nearest one. */
@@ -873,13 +874,66 @@ function shootingAtGoal(state, t, p, aim) {
 function tryStandingPressure(state, teamIdx, playerIdx) {
   const b = state.ball;
   const p = state.teams[teamIdx].players[playerIdx];
-  if (p.cooldown > 0 || p.slide > 0 || b.z > CONTROL_Z) return;
-  if (dist2(b.x, b.y, p.x, p.y) > (PLAYER_R * 2.25) ** 2) return;
+  if (p.cooldown > 0 || p.slide > 0 || b.z > CONTROL_Z) return false;
+  if (dist2(b.x, b.y, p.x, p.y) > (PLAYER_R * 2.25) ** 2) return false;
 
-  // If an opponent is carrying it, a close pressure contact wins the ball.
-  // This is intentionally much shorter-ranged than a slide tackle.
   if (b.owner && b.owner.team !== teamIdx) {
-    const old = state.teams[b.owner.team].players[b.owner.idx];
+    const oldTeam = b.owner.team;
+    const old = state.teams[oldTeam].players[b.owner.idx];
+
+    if (state.config.premiumSetPieces) {
+      const vm = norm(old.vx, old.vy);
+      const rel = norm(p.x - old.x, p.y - old.y);
+      const fromBehind = vm.l > 22 && (vm.x * rel.x + vm.y * rel.y) < -0.48;
+      const relativeSpeed = len(p.vx - old.vx, p.vy - old.vy);
+
+      if (fromBehind && relativeSpeed > PLAYER_SPEED * 0.42) {
+        const penalty = inOwnBox(state, teamIdx, old);
+        const reckless = relativeSpeed > PLAYER_SPEED * 0.82;
+        const foul = {
+          type: reckless ? 'CHARGE' : 'PUSH',
+          label: reckless ? 'CARGA TEMERÁRIA' : 'EMPURRÃO POR TRÁS',
+          card: reckless ? 'yellow' : null,
+          directRed: false,
+          offenderTeam: teamIdx,
+          offenderIdx: playerIdx,
+        };
+
+        old.down = Math.max(old.down, Math.floor(DOWN_TICKS * 0.28));
+        old.vx *= 0.52;
+        old.vy *= 0.52;
+        p.cooldown = Math.max(p.cooldown, 8);
+
+        const advantage = !penalty && canPlayAdvantage(state, oldTeam, old, false);
+        state.events.push({
+          type: 'foul',
+          team: oldTeam,
+          kind: penalty ? 'PENALTY' : 'FREE KICK',
+          foulType: foul.type,
+          label: foul.label,
+          advantage,
+          x: old.x,
+          y: old.y,
+        });
+
+        if (advantage) {
+          b.owner = null;
+          b.x = old.x + old.dirX * (PLAYER_R + BALL_R + 2);
+          b.y = old.y + old.dirY * (PLAYER_R + BALL_R + 2);
+          b.vx = old.vx * 0.82;
+          b.vy = old.vy * 0.82;
+          b.vz = 0;
+          beginAdvantage(state, oldTeam, old.x, old.y, foul);
+          return false;
+        }
+
+        applyDiscipline(state, foul);
+        awardFoul(state, oldTeam, old.x, old.y, penalty, foul);
+        return true;
+      }
+    }
+
+    // Clean shoulder-to-shoulder pressure still wins the ball at contact range.
     old.holdTicks = 0;
     old.charging = false;
     old.charge = 0;
@@ -889,6 +943,7 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
     p.holdTicks = 0;
     state.events.push({ type: 'tackle', kind: 'standing', team: teamIdx, idx: playerIdx });
   }
+  return false;
 }
 
 function startSlide(state, p) {
