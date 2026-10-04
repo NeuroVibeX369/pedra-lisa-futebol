@@ -121,6 +121,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     human: !!human,
     // This team's line-up. The other side may be playing something else.
     formation,
+    formationKey: typeof lineup === 'string' ? lineup : 'custom',
     attackDir, // -1 = attacks towards the top (y decreasing), +1 = towards the bottom
     controlled: mostAdvanced(formation),
     prevMask: 0,
@@ -387,6 +388,12 @@ export function hashState(state) {
     mix(team.nextBenchNumber);
     mix(team.lastAutoSubHalfTick);
     mix(team.pendingSubIdx);
+    const formationCodes = { '433': 1, '442diamond': 2, '442': 3, '352': 4, '532': 5, custom: 9 };
+    mix(formationCodes[team.formationKey] || 9);
+    for (const spot of team.formation) {
+      mix(spot.x);
+      mix(spot.y);
+    }
     for (const p of team.players) {
       mix(p.supportRunTicks);
       mix(p.shotStyle === 'placed' ? 1 : 0);
