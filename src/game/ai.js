@@ -716,8 +716,33 @@ function ownerAction(state, teamIdx, i) {
     // consumes exactly the same random numbers as it always did.
     if (skill.aimError) aimX += randRange(state, -skill.aimError, skill.aimError);
     const d = norm(aimX - p.x, goalY - p.y);
-    const lift = dGoal > 170 ? randRange(state, 0, 90) : 0;
-    return { x: d.x, y: d.y, kick: { dx: d.x, dy: d.y, power: speedForDistance(873), lift, kind: 'shot' } };
+    let lift = dGoal > 170 ? randRange(state, 0, 90) : 0;
+    let power = speedForDistance(873);
+    let kind = 'shot';
+    let spin = 0;
+
+    if (state.config?.premiumBallControl) {
+      const keeper = state.teams[1 - teamIdx].players[0];
+      const keeperOut = Math.abs(keeper.y - goalY) > 54;
+      const wideAngle = Math.abs(p.x - FIELD.cx) > 92;
+
+      if (keeperOut && dGoal < 190) {
+        kind = 'chip-shot';
+        power *= 0.84;
+        lift = 255;
+      } else if (wideAngle) {
+        kind = 'placed-shot';
+        power *= 0.90;
+        lift = Math.min(lift, 105);
+        spin = clamp(d.x, -1, 1) * 1.02;
+      } else if (dGoal < 145 && (team.mentality || 0) > 0) {
+        kind = 'power-shot';
+        power *= 1.05;
+        lift = Math.min(lift, 150);
+      }
+    }
+
+    return { x: d.x, y: d.y, kick: { dx: d.x, dy: d.y, power, lift, spin, kind } };
   }
 
   if (premiumAI(state) && settled) {
