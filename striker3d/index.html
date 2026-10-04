@@ -629,6 +629,17 @@ function createPremiumFootballClips(root){
     [1,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
   ]);
 
+  add('ThrowHold',.8,[
+    [0,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
+    [1,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
+  ]);
+
+  add('ThrowIn',.62,[
+    [0,{spine_02:[-.12,0,0],upperarm_l:[-1.28,0,-.34],upperarm_r:[-1.28,0,.34],lowerarm_l:[-.84,0,0],lowerarm_r:[-.84,0,0]}],
+    [.52,{spine_02:[.18,0,0],upperarm_l:[-.56,0,-.48],upperarm_r:[-.56,0,.48],lowerarm_l:[-.22,0,0],lowerarm_r:[-.22,0,0]}],
+    [1,{}],
+  ]);
+
   add('Charge',.45,[
     [0,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
     [1,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
@@ -1230,7 +1241,8 @@ function processVisualEvents(){
     if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
       playBallContactSound(ev.kind);
-      if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
+      if(ev.kind==='throw-in')playAction(v,'throw-in',v.actions.ThrowIn?'ThrowIn':'Punch',.62,.46);
+      else if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
       else if(ev.kind==='volley')playAction(v,'volley',v.actions.Volley?'Volley':(v.actions.Shoot?'Shoot':'Punch'),.76,.36);
       else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68,.44);
       else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
@@ -1251,6 +1263,13 @@ function processVisualEvents(){
         v.saveHigh=!!ev.high;
         if(ev.kind==='parry')playBallContactSound('save');
       }
+    }else if(ev.type==='card'){
+      const roster=PLAYER_ROSTERS[ev.team]?.[ev.idx];
+      cardTextEl.textContent='CARTÃO AMARELO · '+(roster?.name||'JOGADOR');
+      cardToastUntil=performance.now()/1000+2.4;
+      cardToastEl.classList.add('show');
+    }else if(ev.type==='whistle'){
+      playWhistle();
     }else if(ev.type==='goal'){
       const gw=simToWorld(ev.x,ev.y,ev.z||0);
       const side=gw.x<0?-1:1;
