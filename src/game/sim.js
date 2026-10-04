@@ -42,6 +42,7 @@ export function step(state, inputs) {
   updateProtection(state);
   updateDelivery(state);
   updateOwnership(state);
+  trackPossessionTick(state);
   if (updatePlayers(state, inputs, frozen)) return state;
   separatePlayers(state);
   if (resolveTackles(state)) return state;
@@ -58,6 +59,113 @@ export function step(state, inputs) {
     updateClock(state);
   }
   return state;
+}
+
+function emptyPlayerStats() {
+  return {
+    goals:0, assists:0, shots:0, shotsOnTarget:0,
+    passes:0, passesCompleted:0, tackles:0, saves:0,
+    fouls:0, yellow:0, red:0,
+  };
+}
+
+function trackPossessionTick(state) {
+  if (!state.config.premiumStats || state.phase !== 'play') return;
+  const teamIdx = state.ball.owner?.team ?? state.possessionTeam;
+  if (teamIdx === 0 || teamIdx === 1) state.matchStats.teams[teamIdx].possessionTicks++;
+}
+
+function recordKickStats(state, teamIdx, playerIdx, kind) {
+  if (!state.config.premiumStats || !kind) return;
+  const teamStats = state.matchStats.teams[teamIdx];
+  const p = state.teams[teamIdx].players[playerIdx];
+  const passKinds = ['pass','through','cross'];
+  const shotKinds = ['shot','placed-shot','low-shot','power-shot','chip-shot','volley','header'];
+
+  if (passKinds.includes(kind)) {
+    teamStats.passes++;
+    p.matchStats.passes++;
+    state.matchStats.pendingPass = { team: teamIdx, idx: playerIdx, kind };
+    state.matchStats.lastShot = null;
+  } else if (shotKinds.includes(kind)) {
+    teamStats.shots++;
+    p.matchStats.shots++;
+    state.matchStats.lastShot = { team: teamIdx, idx: playerIdx, onTarget: false, kind };
+    state.matchStats.pendingPass = null;
+  } else if (kind !== 'throw-in') {
+    state.matchStats.pendingPass = null;
+  }
+}
+
+function settlePendingPassOnControl(state, teamIdx, playerIdx) {
+  if (!state.config.premiumStats) return;
+  const pass = state.matchStats.pendingPass;
+  if (pass) {
+    if (pass.team === teamIdx && pass.idx !== playerIdx) {
+      state.matchStats.teams[teamIdx].passesCompleted++;
+      const passer = state.teams[teamIdx].players[pass.idx];
+      if (passer) passer.matchStats.passesCompleted++;
+      state.matchStats.assistCandidate[teamIdx] = {
+        passer: pass.idx,
+        receiver: playerIdx,
+      };
+    } else if (pass.team !== teamIdx) {
+      state.matchStats.assistCandidate[pass.team] = null;
+    }
+    state.matchStats.pendingPass = null;
+  }
+
+  const shot = state.matchStats.lastShot;
+  if (shot && shot.team !== teamIdx) state.matchStats.lastShot = null;
+}
+
+function markShotOnTarget(state, attackingTeam = null) {
+  if (!state.config.premiumStats) return;
+  const shot = state.matchStats.lastShot;
+  if (!shot || shot.onTarget) return;
+  if (attackingTeam !== null && shot.team !== attackingTeam) return;
+  shot.onTarget = true;
+  state.matchStats.teams[shot.team].shotsOnTarget++;
+  const p = state.teams[shot.team].players[shot.idx];
+  if (p) p.matchStats.shotsOnTarget++;
+}
+
+function recordSaveStat(state, teamIdx, playerIdx) {
+  if (!state.config.premiumStats) return;
+  const attackingTeam = 1 - teamIdx;
+  markShotOnTarget(state, attackingTeam);
+  state.matchStats.teams[teamIdx].saves++;
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (p) p.matchStats.saves++;
+  state.matchStats.assistCandidate[attackingTeam] = null;
+  state.matchStats.pendingPass = null;
+  state.matchStats.lastShot = null;
+}
+
+function recordTackleStat(state, teamIdx, playerIdx) {
+  if (!state.config.premiumStats) return;
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (p) p.matchStats.tackles++;
+}
+
+function recordFoulStat(state, teamIdx, playerIdx) {
+  if (!state.config.premiumStats) return;
+  state.matchStats.teams[teamIdx].fouls++;
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (p) p.matchStats.fouls++;
+}
+
+function recordCardStat(state, teamIdx, playerIdx, color) {
+  if (!state.config.premiumStats) return;
+  const t = state.matchStats.teams[teamIdx];
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (color === 'red') {
+    t.red++;
+    if (p) p.matchStats.red++;
+  } else {
+    t.yellow++;
+    if (p) p.matchStats.yellow++;
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -284,6 +392,7 @@ function updateOwnership(state) {
       && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D;
 
     if (isSave) {
+      recordSaveStat(state, best.team, best.idx);
       const side = Math.sign(b.x - stopped.x) || 1;
       const high = b.z > KEEPER_CONTROL_Z * 0.52;
       // Very hard or high shots are punched/parried instead of magically glued
@@ -355,6 +464,7 @@ function updateOwnership(state) {
       }
     }
 
+    settlePendingPassOnControl(state, best.team, best.idx);
     registerPossession(state, best.team, b.x, b.y);
     b.owner = best;
     b.lastTouch = { team: best.team, idx: best.idx };
@@ -637,6 +747,15 @@ function applyPendingSubstitution(state, teamIdx) {
   }
 
   const outName = p.displayName;
+  if (state.config.premiumStats) {
+    team.subArchive.push({
+      displayName: p.displayName,
+      shirtNumber: p.shirtNumber,
+      position: p.position,
+      overall: p.overall,
+      matchStats: { ...p.matchStats },
+    });
+  }
   const inNumber = team.nextBenchNumber++;
   const inName = 'Reserva ' + inNumber;
 
@@ -653,6 +772,7 @@ function applyPendingSubstitution(state, teamIdx) {
     p.overall = targetOverall;
   }
   p.stamina = 1000;
+  if (state.config.premiumStats) p.matchStats = emptyPlayerStats();
   p.substitute = true;
   p.yellowCards = 0;
   p.down = 0;
@@ -887,6 +1007,7 @@ function updatePlayers(state, inputs, frozen) {
           ? it.kick.lift * clamp(1 - ((p.rating?.fin ?? 72) - 72) * 0.0018, 0.96, 1.04)
           : it.kick.lift;
         kickBall(state, t, i, it.kick.dx, it.kick.dy, ratedPower, ratedLift);
+        recordKickStats(state, t, i, it.kick.kind);
         if (typeof it.kick.spin === 'number') state.ball.spin = it.kick.spin;
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
@@ -1322,6 +1443,7 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
         old.vy *= 0.52;
         p.cooldown = Math.max(p.cooldown, 8);
 
+        recordFoulStat(state, teamIdx, playerIdx);
         const advantage = !penalty && canPlayAdvantage(state, oldTeam, old, false);
         state.events.push({
           type: 'foul',
@@ -1375,6 +1497,7 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
     b.lastTouch = { team: teamIdx, idx: playerIdx };
     b.kicker = null;
     p.holdTicks = 0;
+    recordTackleStat(state, teamIdx, playerIdx);
     state.events.push({ type: 'tackle', kind: 'standing', team: teamIdx, idx: playerIdx });
   }
   return false;
@@ -1590,6 +1713,7 @@ function applyDiscipline(state, foul) {
 
   if (foul.card === 'red' || foul.directRed) {
     sendOffPlayer(state, foul.offenderTeam, foul.offenderIdx);
+    recordCardStat(state, foul.offenderTeam, foul.offenderIdx, 'red');
     state.events.push({
       type: 'card',
       color: 'red',
@@ -1604,6 +1728,7 @@ function applyDiscipline(state, foul) {
   p.yellowCards = (p.yellowCards || 0) + 1;
   const secondYellow = p.yellowCards >= 2;
   if (secondYellow) sendOffPlayer(state, foul.offenderTeam, foul.offenderIdx);
+  recordCardStat(state, foul.offenderTeam, foul.offenderIdx, secondYellow ? 'red' : 'yellow');
   state.events.push({
     type: 'card',
     color: secondYellow ? 'red' : 'yellow',
@@ -1725,6 +1850,7 @@ function resolveTackles(state) {
           b.kicker = null;
           p.cooldown = Math.max(p.cooldown, 10);
           wonBall = true;
+          if (ownerBefore && ownerBefore.team !== t) recordTackleStat(state, t, p.idx);
         }
       }
 
@@ -1750,6 +1876,7 @@ function resolveTackles(state) {
           o.vx = p.vx * 0.28;
           o.vy = p.vy * 0.28;
 
+          recordFoulStat(state, t, p.idx);
           const advantage = !penalty && canPlayAdvantage(state, opp.index, o, false);
           state.events.push({
             type: 'foul',
@@ -1981,6 +2108,26 @@ function checkGoal(state) {
   }
   if (scoringTeam < 0) return false;
 
+  if (state.config.premiumStats) {
+    const scorerIdx = state.matchStats.lastShot?.team === scoringTeam
+      ? state.matchStats.lastShot.idx
+      : (b.lastTouch?.team === scoringTeam ? b.lastTouch.idx : -1);
+    markShotOnTarget(state, scoringTeam);
+    if (scorerIdx >= 0) {
+      const scorer = state.teams[scoringTeam].players[scorerIdx];
+      if (scorer) scorer.matchStats.goals++;
+      const assist = state.matchStats.assistCandidate[scoringTeam];
+      if (assist && assist.receiver === scorerIdx && assist.passer !== scorerIdx) {
+        const passer = state.teams[scoringTeam].players[assist.passer];
+        if (passer) passer.matchStats.assists++;
+      }
+    }
+    state.matchStats.pendingPass = null;
+    state.matchStats.lastShot = null;
+    state.matchStats.assistCandidate[scoringTeam] = null;
+    state.matchStats.assistCandidate[1 - scoringTeam] = null;
+  }
+
   state.score[scoringTeam]++;
   state.lastGoalTeam = scoringTeam;
   state.phase = 'goal';
@@ -2003,6 +2150,7 @@ function checkGoal(state) {
 
 /** Free kick to the other side, taken where the offside player got involved. */
 function whistleOffside(state, teamIdx, player) {
+  if (state.config.premiumStats) state.matchStats.teams[teamIdx].offsides++;
   const x = clamp(player.x, FIELD.left + 20, FIELD.right - 20);
   const y = clamp(player.y, FIELD.top + 20, FIELD.bottom - 20);
   clearOffside(state);
@@ -2032,6 +2180,7 @@ function checkOutOfPlay(state) {
 
   if (lastTeam === defender) {
     // Corner for the attacking side
+    if (state.config.premiumStats) state.matchStats.teams[1 - defender].corners++;
     const x = b.x < FIELD.cx ? FIELD.left + 8 : FIELD.right - 8;
     const y = topEnd ? FIELD.top + 8 : FIELD.bottom - 8;
     setRestart(state, x, y, 1 - defender, 'CORNER');
@@ -2126,6 +2275,10 @@ function arrangePremiumSetPiece(state, sp) {
 }
 
 function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
+  if (state.config.premiumStats) {
+    state.matchStats.pendingPass = null;
+    state.matchStats.lastShot = null;
+  }
   if (state.config.premiumManagement) flushPendingSubstitutions(state);
   state.delivery = null;
   state.possessionTeam = teamIdx;
