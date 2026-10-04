@@ -1848,11 +1848,17 @@ function beginCpu(){
   resetMatch({humans:[true,false],difficulty:'normal',localTeam:0});
   transport=new LocalTransport(devices,[0]);
   lobbyEl.classList.add('hidden');
-  statusEl.textContent='FC Mukeka Premium · Pedra Lisa x Independência';
-  startPresentation(()=>{
+  if(PREMATCH_PRESENTATION){
+    statusEl.textContent='FC Mukeka Premium · Pedra Lisa x Independência';
+    startPresentation(()=>{
+      matchActive=true;
+      statusEl.textContent='FC Mukeka Premium · contra CPU';
+    });
+  }else{
     matchActive=true;
-    statusEl.textContent='FC Mukeka Premium · contra CPU';
-  });
+    showTouch(true);
+    statusEl.textContent='FC Mukeka Premium · contra CPU · modo estável';
+  }
 }
 
 function beginOnline({seed,localTeam:team,signal:sig}){
@@ -1862,11 +1868,17 @@ function beginOnline({seed,localTeam:team,signal:sig}){
   resetMatch({seed,humans:[true,true],localTeam:team,formations:['433','433']});
   transport=new OnlineTransport({signal:sig,devices,localTeam:team});
   lobbyEl.classList.add('hidden');
-  statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · apresentação';
-  startPresentation(()=>{
+  if(PREMATCH_PRESENTATION){
+    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · apresentação';
+    startPresentation(()=>{
+      matchActive=true;
+      statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+    },{online:true});
+  }else{
     matchActive=true;
-    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
-  },{online:true});
+    showTouch(true);
+    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA')+' · modo estável';
+  }
 }
 
 function simToWorld(x,y,z=0){
@@ -1928,19 +1940,19 @@ let cardToastUntil=0;
 let refToastUntil=0;
 
 function recordReplayFrame(){
-  if(!matchActive)return;
+  if(!matchActive || match.tick%3!==0)return;
   const frame={
     tick:match.tick,
     ball:{x:match.ball.x,y:match.ball.y,z:match.ball.z},
     teams:match.teams.map(team=>team.players.map(p=>({x:p.x,y:p.y,dirX:p.dirX,dirY:p.dirY})))
   };
   replayHistory.push(frame);
-  if(replayHistory.length>150)replayHistory.shift();
+  if(replayHistory.length>60)replayHistory.shift();
 }
 
 function startGoalReplay(){
-  const frames=replayHistory.slice(-120);
-  if(frames.length<20)return;
+  const frames=replayHistory.slice(-48);
+  if(frames.length<8)return;
   replay={active:true,frames,started:performance.now()/1000,duration:2.15};
   replayLabelEl.style.opacity='1';
 }
