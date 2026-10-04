@@ -1425,7 +1425,8 @@ function renderTeamScreen(){
   pane?.classList.add('active');
   if(teamScreenTab==='roster')renderRosterPane();
   else if(teamScreenTab==='tactics')renderTacticsPane();
-  else renderSubsPane();
+  else if(teamScreenTab==='subs')renderSubsPane();
+  else renderMatchStatsPane();
 
   const online=!!transport?.online;
   teamScreenOnlineNoteEl.textContent=online?'ONLINE: a partida continua enquanto esta tela está aberta.':'CONTRA CPU: partida pausada enquanto esta tela está aberta.';
@@ -1883,7 +1884,9 @@ try{
 addEventListener('keydown',e=>{
   if(e.code==='Escape'&&matchActive&&!presentation.active){
     e.preventDefault();
-    if(teamScreenOpen)closeTeamScreen();else openTeamScreen('roster');
+    if(summaryOpen)closeMatchSummary();
+    else if(teamScreenOpen)closeTeamScreen();
+    else openTeamScreen('roster');
     return;
   }
   if(teamScreenOpen)return;
@@ -2045,6 +2048,8 @@ function processVisualEvents(){
       cardToastEl.classList.add('show');
     }else if(ev.type==='whistle'){
       playWhistle();
+      if(ev.kind==='half')openMatchSummary('half');
+      else if(ev.kind==='end')openMatchSummary('full');
     }else if(ev.type==='goal'){
       const gw=simToWorld(ev.x,ev.y,ev.z||0);
       const side=gw.x<0?-1:1;
@@ -2418,6 +2423,11 @@ function frame(now){
   if(teamScreenOpen&&now-lastTeamScreenRender>220){
     lastTeamScreenRender=now;
     renderTeamScreen();
+  }
+  if(summaryOpen&&transport?.online&&summaryKind==='half'&&match.phase!=='halftime'){
+    closeMatchSummary();
+  }else if(summaryOpen&&now-lastTeamScreenRender>220){
+    renderMatchSummary();
   }
   renderState(dt);
   renderer.render(scene,camera);
