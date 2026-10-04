@@ -1,7 +1,7 @@
 {
   "name": "FC Mukeka",
   "short_name": "FC Mukeka",
-  "description": "FC Mukeka — futebol 2D da Mukeka Netflix, direto no navegador.",
+  "description": "FC Mukeka — futebol 2D da Mukeka Games, direto no navegador.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
