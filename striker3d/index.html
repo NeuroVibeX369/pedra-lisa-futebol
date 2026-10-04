@@ -759,6 +759,7 @@ let match=createMatch({
   humans:[true,false],
   difficulty:'normal',
   offside:true,
+  premiumAI:true,
   formations:['433','433']
 });
 let transport=null;
@@ -774,6 +775,7 @@ function resetMatch(opts={}){
     humans:opts.humans||[true,false],
     difficulty:opts.difficulty||'normal',
     offside:opts.offside!==false,
+    premiumAI:true,
     formations:opts.formations||['433','433']
   });
   localTeam=opts.localTeam??0;
