@@ -113,6 +113,10 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     // Ticks left in which the automatic switch keeps its hands off, because you
     // asked for a particular player yourself.
     manualHold: 0,
+    // Short-lived memory for give-and-go runs in FC Mukeka Premium.
+    // It exists on every match state but is inert unless config.premiumAI=true.
+    oneTwoPasser: -1,
+    oneTwoTicks: 0,
     players: formation.map((f, i) => ({
       idx: i,
       role: f.role,
@@ -128,6 +132,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       down: 0,
       cooldown: 0,
       holdTicks: 0,
+      supportRunTicks: 0,
       // Where the current run with the ball began, and whether it has already
       // been remarked upon.
       runFrom: null,
@@ -205,11 +210,14 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
       pl.down = 0;
       pl.cooldown = 0;
       pl.holdTicks = 0;
+      pl.supportRunTicks = 0;
       pl.offside = false;
     }
     team.controlled = 9;
     team.prevMask = 0;
     team.manualHold = 0;
+    team.oneTwoPasser = -1;
+    team.oneTwoTicks = 0;
   }
 
   // The striker of the kickoff team stands next to the ball, on his own side of
@@ -255,7 +263,10 @@ export function hashState(state) {
   mix(state.ball.vx);
   mix(state.ball.vy);
   for (const team of state.teams) {
+    mix(team.oneTwoPasser);
+    mix(team.oneTwoTicks);
     for (const p of team.players) {
+      mix(p.supportRunTicks);
       mix(p.x);
       mix(p.y);
       mix(p.vx);
