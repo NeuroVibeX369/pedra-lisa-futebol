@@ -301,7 +301,137 @@ const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false };
  * to stale ones. That measurably won team 1 more goals. Now all 22 players
  * decide their intent from the exact same snapshot.
  */
+function setPieceTargets(state, sp) {
+  const team = state.teams[sp.team];
+  const candidates = [];
+  for (let i = 1; i < team.players.length; i++) {
+    const p = team.players[i];
+    if (i === sp.taker || p.sentOff || p.down > 0) continue;
+    candidates.push(i);
+  }
+  if (!candidates.length) return [];
+
+  if (sp.kind === 'CORNER') {
+    const preferred = [9, 8, 10, 7, 6, 5, 2, 3, 1, 4];
+    return preferred.filter(i => candidates.includes(i));
+  }
+  if (sp.kind === 'THROW-IN') {
+    return candidates.sort((a, b) =>
+      dist2(sp.x, sp.y, team.players[a].x, team.players[a].y)
+      - dist2(sp.x, sp.y, team.players[b].x, team.players[b].y));
+  }
+  if (sp.kind === 'GOAL KICK') {
+    const preferred = [2, 3, 1, 4, 6, 5, 7, 8, 10, 9];
+    return preferred.filter(i => candidates.includes(i));
+  }
+  if (sp.kind === 'FREE KICK' || sp.kind === 'OFFSIDE') {
+    return candidates.sort((a, b) => {
+      const aa = advanceOf(team, team.players[a].y);
+      const ab = advanceOf(team, team.players[b].y);
+      return ab - aa;
+    });
+  }
+  return candidates;
+}
+
+function ensureSetPieceTarget(state, sp) {
+  const targets = setPieceTargets(state, sp);
+  if (!targets.length) {
+    sp.targetIdx = -1;
+    return -1;
+  }
+  if (!targets.includes(sp.targetIdx)) sp.targetIdx = targets[0];
+  return sp.targetIdx;
+}
+
+function cycleSetPieceTarget(state, sp) {
+  const targets = setPieceTargets(state, sp);
+  if (!targets.length) {
+    sp.targetIdx = -1;
+    return;
+  }
+  const at = targets.indexOf(sp.targetIdx);
+  sp.targetIdx = targets[(at + 1 + targets.length) % targets.length];
+  state.events.push({ type: 'set-piece-target', team: sp.team, idx: sp.targetIdx, kind: sp.kind });
+}
+
+function cycleSetPieceTaker(state, sp) {
+  if (sp.kind === 'KICKOFF' || sp.kind === 'GOAL KICK') return;
+  const team = state.teams[sp.team];
+  const eligible = [];
+  for (let i = 1; i < team.players.length; i++) {
+    const p = team.players[i];
+    if (!p.sentOff && p.down === 0) eligible.push(i);
+  }
+  if (eligible.length < 2) return;
+
+  const at = eligible.indexOf(sp.taker);
+  const next = eligible[(at + 1 + eligible.length) % eligible.length];
+  if (next === sp.taker) return;
+
+  const old = team.players[sp.taker];
+  const neo = team.players[next];
+  const ox = old.x, oy = old.y;
+  old.x = neo.x; old.y = neo.y; old.vx = 0; old.vy = 0;
+  neo.x = ox; neo.y = oy; neo.vx = 0; neo.vy = 0;
+  sp.taker = next;
+  team.controlled = next;
+  if (state.ball.owner?.team === sp.team) state.ball.owner = { team: sp.team, idx: next };
+  ensureSetPieceTarget(state, sp);
+  state.events.push({ type: 'set-piece-taker', team: sp.team, idx: next, kind: sp.kind });
+}
+
+function setPieceTargetDir(state, sp, fallbackPlayer) {
+  const team = state.teams[sp.team];
+  const idx = ensureSetPieceTarget(state, sp);
+  const target = idx >= 0 ? team.players[idx] : null;
+  if (target) {
+    const lead = sp.kind === 'CORNER' ? 0.14 : 0.08;
+    return norm(
+      target.x + target.vx * lead - fallbackPlayer.x,
+      target.y + target.vy * lead - fallbackPlayer.y
+    );
+  }
+  return norm(fallbackPlayer.dirX, fallbackPlayer.dirY);
+}
+
+function updatePremiumSetPieceControls(state, inputs) {
+  const sp = state.config.premiumSetPieces ? state.setPiece : null;
+  if (!sp) return;
+
+  const attacking = state.teams[sp.team];
+  if (attacking.human) {
+    const mask = inputs[sp.team] | 0;
+    const prev = attacking.prevMask | 0;
+    const throughPressed = (mask & BTN.THROUGH) !== 0 && (prev & BTN.THROUGH) === 0;
+    const switchPressed = (mask & BTN.SWITCH) !== 0 && (prev & BTN.SWITCH) === 0;
+    const dir = maskToDir(mask);
+
+    if (throughPressed && ['THROW-IN','CORNER','FREE KICK','OFFSIDE','GOAL KICK'].includes(sp.kind)) {
+      cycleSetPieceTarget(state, sp);
+    }
+    if (switchPressed) cycleSetPieceTaker(state, sp);
+
+    if (sp.kind === 'PENALTY' || sp.kind === 'FREE KICK') {
+      sp.aimX = clamp((sp.aimX || 0) + dir.x * 1.15, -GOAL_W * 0.38, GOAL_W * 0.38);
+      sp.aimLift = clamp((sp.aimLift || 0) - dir.y * 1.05, 0, sp.kind === 'PENALTY' ? 42 : 95);
+    }
+  }
+
+  if (sp.kind === 'PENALTY') {
+    const defendingTeam = 1 - sp.team;
+    const defending = state.teams[defendingTeam];
+    if (defending.human) {
+      const dir = maskToDir(inputs[defendingTeam] | 0);
+      if (Math.abs(dir.x) > 0.25) sp.keeperDive = dir.x < 0 ? -1 : 1;
+      else if (Math.abs(dir.y) > 0.5) sp.keeperDive = 0;
+    }
+  }
+}
+
 function updatePlayers(state, inputs, frozen) {
+  updatePremiumSetPieceControls(state, inputs);
+
   // Phase 0: timers that feed into the decisions below.
   for (const team of state.teams) {
     if (state.config.premiumAI && team.oneTwoTicks > 0) {
@@ -317,8 +447,11 @@ function updatePlayers(state, inputs, frozen) {
     const team = state.teams[t];
     if (!team.human) continue;
     const mask = inputs[t] | 0;
-    // On the press, not while held, so leaning on it does not chase the ball.
     const asked = (mask & BTN.SWITCH) !== 0 && (team.prevMask & BTN.SWITCH) === 0;
+    if (state.config.premiumSetPieces && state.setPiece) {
+      if (state.setPiece.team === t) team.controlled = state.setPiece.taker;
+      continue;
+    }
     updateControlledPlayer(state, t, asked);
   }
 
@@ -329,7 +462,9 @@ function updatePlayers(state, inputs, frozen) {
     const mask = team.human ? (inputs[t] | 0) : 0;
     for (let i = 0; i < team.players.length; i++) {
       const p = team.players[i];
-      if (frozen || p.sentOff || p.down > 0) {
+      const waitingSetPiece = state.config.premiumSetPieces && state.setPiece;
+      const isSetPieceTaker = waitingSetPiece && state.setPiece.team === t && state.setPiece.taker === i;
+      if (frozen || p.sentOff || p.down > 0 || (waitingSetPiece && !isSetPieceTaker)) {
         intents[t][i] = NO_INTENT;
         continue;
       }
@@ -1136,8 +1271,19 @@ function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   team.controlled = takerIdx;
 
   if (state.config.premiumSetPieces) {
-    state.setPiece = { kind: message, team: teamIdx, taker: takerIdx, x, y };
+    state.setPiece = {
+      kind: message,
+      team: teamIdx,
+      taker: takerIdx,
+      x,
+      y,
+      targetIdx: -1,
+      aimX: 0,
+      aimLift: 0,
+      keeperDive: 0,
+    };
     arrangePremiumSetPiece(state, state.setPiece);
+    ensureSetPieceTarget(state, state.setPiece);
     protectFor(state, teamIdx, 'untilPlayed', PROTECT_TICKS * 2);
   }
 
