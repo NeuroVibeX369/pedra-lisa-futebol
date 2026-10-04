@@ -1327,11 +1327,17 @@ function renderState(dt){
       v.root.rotation.z=0;
       const actionActive=v.actionUntil>nowSec;
 
+      const holdingThrow=!!(match.setPiece?.kind==='THROW-IN'
+        && match.ball.owner?.team===t && match.ball.owner?.idx===i
+        && match.setPiece.team===t && match.setPiece.taker===i);
+
       if(presentation.active && introPose){
         if(introPose.mode==='walk'){
           setAnim(v,v.actions.Walk?'Walk':'Run');
           if(v.actions.Walk)v.actions.Walk.timeScale=1.05;
         }else setAnim(v,'Idle');
+      }else if(holdingThrow && v.actions.ThrowHold){
+        setAnim(v,'ThrowHold');
       }else if(p.slide>0){
         setAnim(v,v.actions.Slide?'Slide':'Punch');
         // A short forward body tilt makes the generic Punch clip read much more
@@ -1378,6 +1384,9 @@ function renderState(dt){
     const o=match.ball.owner;
     const p=match.teams[o.team].players[o.idx];
     const pw=simToWorld(p.x,p.y,0);
+    if(match.setPiece?.kind==='THROW-IN' && match.setPiece.team===o.team && match.setPiece.taker===o.idx){
+      ball.position.set(pw.x,1.98,pw.z);
+    }else{
     const fx=-p.dirY,fz=p.dirX;
     const fl=Math.hypot(fx,fz)||1;
     const dx=fx/fl,dz=fz/fl;
@@ -1388,6 +1397,7 @@ function renderState(dt){
     const side=speed>18?stride*.12:0;
     const bob=speed>18?Math.abs(Math.sin(match.tick*.22))*.025:0;
     ball.position.set(pw.x+dx*forward+lx*side,BALL_R+bob,pw.z+dz*forward+lz*side);
+    }
   }else{
     ball.position.set(bw.x,BALL_R+bw.y,bw.z);
   }
@@ -1417,6 +1427,22 @@ function renderState(dt){
   const matchSeconds=Math.floor(frac*45*60);
   clockEl.textContent=match.half+'T · '+String(Math.floor(matchSeconds/60)).padStart(2,'0')+':'+String(matchSeconds%60).padStart(2,'0');
 
+  const setPieceNames={
+    KICKOFF:'SAÍDA DE BOLA',
+    'THROW-IN':'LATERAL',
+    CORNER:'ESCANTEIO',
+    'GOAL KICK':'TIRO DE META',
+    'FREE KICK':'FALTA',
+    PENALTY:'PÊNALTI',
+    OFFSIDE:'IMPEDIMENTO · TIRO LIVRE'
+  };
+  const setPieceText=match.setPiece?setPieceNames[match.setPiece.kind]||match.setPiece.kind:'';
+  setPieceBannerEl.textContent=setPieceText;
+  setPieceBannerEl.classList.toggle('show',!!setPieceText && !presentation.active);
+  if(cardToastUntil && nowSec>cardToastUntil){
+    cardToastUntil=0;
+    cardToastEl.classList.remove('show');
+  }
   const phaseText=match.message||((match.phase==='kickoff')?'INÍCIO':(match.phase==='halftime'?'INTERVALO':match.phase==='fulltime'?'FIM DE JOGO':''));
   phaseEl.textContent=phaseText;
   phaseEl.style.opacity=phaseText?'1':'0';
