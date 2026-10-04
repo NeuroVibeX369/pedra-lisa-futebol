@@ -1,5 +1,5 @@
 import {
-  AI_LEVELS, CENTER_R, FIELD, FIELD_H, FIELD_W, TEAM_PRESETS,
+  AI_LEVELS, CENTER_R, FIELD, FIELD_H, FIELD_W, TEAM_PRESETS, PLAYER_ROSTERS,
   KICKOFF_TICKS, PROTECT_TICKS, TICK_RATE,
 } from '../constants.js';
 import { lineupFrom } from './formations.js';
@@ -18,6 +18,7 @@ export function createMatch(options = {}) {
     premiumAI: false, // richer off-ball tactics; opt-in so FC Mukeka 2D stays unchanged
     premiumSetPieces: false, // console-style restarts/fouls; opt-in for Premium only
     premiumBallControl: false, // first touch, shielding and skill touches; Premium only
+    premiumManagement: false, // tactics, fatigue and substitutions; Premium only
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -34,6 +35,7 @@ export function createMatch(options = {}) {
       premiumAI: opts.premiumAI === true,
       premiumSetPieces: opts.premiumSetPieces === true,
       premiumBallControl: opts.premiumBallControl === true,
+      premiumManagement: opts.premiumManagement === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
@@ -132,9 +134,17 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     pressTicks: 0,
     turnoverX: FIELD.cx,
     turnoverY: FIELD.cy,
-    players: formation.map((f, i) => ({
+    mentality: 0, // -1 defensive, 0 balanced, +1 attacking
+    subsUsed: 0,
+    nextBenchNumber: 12,
+    lastAutoSubHalfTick: -99999,
+    players: formation.map((f, i) => {
+      const identity = PLAYER_ROSTERS[index]?.[i] || { name: 'Jogador', number: i + 1 };
+      return {
       idx: i,
       role: f.role,
+      displayName: identity.name,
+      shirtNumber: identity.number,
       x: FIELD.cx,
       y: FIELD.cy,
       vx: 0,
@@ -155,6 +165,8 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       skillCooldown: 0,
       skillDirX: 0,
       skillDirY: attackDir,
+      stamina: 1000,
+      substitute: false,
       yellowCards: 0,
       sentOff: false,
       // Where the current run with the ball began, and whether it has already
@@ -162,7 +174,8 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       runFrom: null,
       ran: false,
       offside: false, // flagged when the ball was last played forward past him // how long this player has held the ball (for the keeper's clearance)
-    })),
+      };
+    }),
   };
 }
 
@@ -359,6 +372,10 @@ export function hashState(state) {
     mix(team.pressTicks);
     mix(team.turnoverX);
     mix(team.turnoverY);
+    mix(team.mentality);
+    mix(team.subsUsed);
+    mix(team.nextBenchNumber);
+    mix(team.lastAutoSubHalfTick);
     for (const p of team.players) {
       mix(p.supportRunTicks);
       mix(p.firstTouchTicks);
@@ -368,6 +385,9 @@ export function hashState(state) {
       mix(p.skillCooldown);
       mix(p.skillDirX);
       mix(p.skillDirY);
+      mix(p.stamina);
+      mix(p.substitute ? 1 : 0);
+      mix(p.shirtNumber || 0);
       mix(p.yellowCards);
       mix(p.sentOff ? 1 : 0);
       mix(p.x);
