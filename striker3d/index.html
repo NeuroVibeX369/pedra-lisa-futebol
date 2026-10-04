@@ -108,7 +108,7 @@
       <input id="joinCode3d" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
       <button id="joinRoom" class="onlineBtn" type="button">ENTRAR</button>
     </div>
-    <div id="lobbyStatus3d" class="lobbyStatus">Controle/celular: × passe/pressão · ○ cruzar/carrinho · □ chute/cabeceio · △ profundidade · TROCAR/Q com bola: proteger/finta.</div>
+    <div id="lobbyStatus3d" class="lobbyStatus">× passe/pressão · ○ cruzar/carrinho · □ chute · △ profundidade · Q/TROCAR proteger/finta · Q+□ colocado · Q+△ cavadinha.</div>
   </div>
 </div>
 <div id="pregame" class="pregame">
@@ -177,7 +177,7 @@
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>FC Mukeka Premium · motor determinístico</b></div>
-    <div class="keys">Ataque: × passe · □ chute/cabeceio · ○ cruzar · △ profundidade · TROCAR/Q: proteger/finta · Tática: Z defensivo · X ofensivo · C substituição · Defesa: × pressionar/desarmar · ○ carrinho</div>
+    <div class="keys">Ataque: × passe · □ chute (toque rasteiro / segure forte) · Q+□ colocado · Q+△ cavadinha · ○ cruzar · △ profundidade · Q/TROCAR proteger/finta · Tática: Z defensivo · X ofensivo · C substituição · Defesa: × pressionar/desarmar · ○ carrinho</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
   <div class="tag">Mukeka Games · build em desenvolvimento</div>
@@ -1306,11 +1306,11 @@ function processVisualEvents(){
     const ev=visualEvents.shift();
     if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
-      playBallContactSound(ev.kind);
+      playBallContactSound(['placed-shot','low-shot','power-shot','chip-shot'].includes(ev.kind)?'shot':ev.kind);
       if(ev.kind==='throw-in')playAction(v,'throw-in',v.actions.ThrowIn?'ThrowIn':'Punch',.62,.46);
       else if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
       else if(ev.kind==='volley')playAction(v,'volley',v.actions.Volley?'Volley':(v.actions.Shoot?'Shoot':'Punch'),.76,.36);
-      else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68,.44);
+      else if(['shot','placed-shot','low-shot','power-shot','chip-shot'].includes(ev.kind))playAction(v,ev.kind,v.actions.Shoot?'Shoot':'Punch',ev.kind==='power-shot'?.74:.68,.44);
       else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
       else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52,.48);
       else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46,.46);
@@ -1601,8 +1601,9 @@ function renderState(dt){
         }else if(v.actionKind==='volley'){
           v.root.position.y+=Math.sin(phase*Math.PI)*.08;
           v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
-        }else if(v.actionKind==='shot'||v.actionKind==='cross'){
-          v.root.rotation.x=-.08*Math.sin(phase*Math.PI);
+        }else if(['shot','placed-shot','low-shot','power-shot','chip-shot'].includes(v.actionKind)||v.actionKind==='cross'){
+          const extra=v.actionKind==='power-shot'?1.45:v.actionKind==='chip-shot'?.72:1;
+          v.root.rotation.x=-.08*extra*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='standing-tackle'){
           v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='skill'){
