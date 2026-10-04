@@ -158,6 +158,7 @@ export class InputDevices {
     this.touch = null; // on-screen controls, when there are any
     this.ps2FaceButtons = false; // opt-in; Classic 2D keeps its original pad mapping
     this.premiumManagement = false; // opt-in team tactics/substitutions
+    this.virtualPulse = [0, 0]; // one-tick UI commands; safe for local and online lockstep
     this.setBindings(bindings);
 
     this._onKeyDown = (e) => {
@@ -198,6 +199,12 @@ export class InputDevices {
     return this.down.has(code);
   }
 
+  pulse(slot, bits) {
+    const i = slot | 0;
+    if (i < 0 || i > 1) return;
+    this.virtualPulse[i] = (this.virtualPulse[i] | bits) | 0;
+  }
+
   /** Bitmask for one local slot (0 or 1), keyboard and gamepad merged. */
   mask(slot) {
     if (!this.enabled) return 0;
@@ -215,7 +222,9 @@ export class InputDevices {
       if (this.down.has('KeyC')) m |= BTN.SUB;
     }
     const touch = slot === 0 && this.touch ? this.touch.mask : 0;
-    return m | touch | this.gamepadMask(slot);
+    const pulse = this.virtualPulse[slot] | 0;
+    this.virtualPulse[slot] = 0;
+    return m | touch | this.gamepadMask(slot) | pulse;
   }
 
   gamepadMask(slot) {
