@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Pedra Lisa PS2 Web</title>
+  <title>FC Mukeka Premium</title>
   <style>
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     #app{position:fixed;inset:0}#app:after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.20) 100%);z-index:2}canvas{display:block}
@@ -49,8 +49,8 @@
 <body>
 <div id="browserLobby" class="lobby">
   <div class="lobbyBox">
-    <div class="small">PEDRA LISA GAMES · SEM DOWNLOAD</div>
-    <h1>PEDRA LISA PS2 WEB</h1>
+    <div class="small">MUKEKA GAMES · EM DESENVOLVIMENTO</div>
+    <h1>FC MUKEKA PREMIUM</h1>
     <p>Jogue direto no navegador. Contra a CPU funciona imediatamente. Para jogar com um amigo, um cria a sala e envia o código de 4 letras.</p>
     <div class="lobbyBtns">
       <button id="playCpu" class="playBtn" type="button">JOGAR CONTRA CPU</button>
@@ -80,17 +80,17 @@
 <div id="hud">
   <div class="top">
     <span>PEDRA LISA</span><span class="score" id="score">0 — 0</span><span>INDEPENDÊNCIA</span>
-    <span class="clock" id="clock">1T · 00:00</span><span class="small">PS2 WEB · NAVEGADOR</span>
+    <span class="clock" id="clock">1T · 00:00</span><span class="small">PREMIUM · 3D WEB</span>
   </div>
   <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
   <div class="phase" id="phase"></div>
   <a class="back" href="../">← HUB</a>
   <div class="info">
-    <div><b>Pedra Lisa PS2 Web · motor determinístico</b></div>
+    <div><b>FC Mukeka Premium · motor determinístico</b></div>
     <div class="keys">Ataque: × passe · □ chute/cabeceio · ○ cruzar · △ profundidade · Defesa: × pressionar/desarmar · ○ carrinho</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
-  <div class="tag">Versão web própria · sem download</div>
+  <div class="tag">Mukeka Games · build em desenvolvimento</div>
 </div>
 <script type="module">
 import * as THREE from 'three';
@@ -108,7 +108,9 @@ import {
   CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT
 } from '../src/constants.js';
 
-const MODEL_URL='https://raw.githubusercontent.com/kendrekaran/striker-3d/57847f87ff3d924712a1bb37df9dae391aedc315/assets/player.glb';
+const PREMIUM_MODEL_URL='https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb';
+const FALLBACK_MODEL_URL='https://raw.githubusercontent.com/kendrekaran/striker-3d/57847f87ff3d924712a1bb37df9dae391aedc315/assets/player.glb';
+let premiumRig=false;
 const app=document.getElementById('app');
 const statusEl=document.getElementById('status');
 const scoreEl=document.getElementById('score');
@@ -361,7 +363,7 @@ function adTexture(text,bg='#0b5128',fg='#ffffff'){
 }
 const adMats=[
   new THREE.MeshStandardMaterial({map:adTexture('PEDRA LISA GAMES'),emissive:0x0a2413,emissiveIntensity:.55}),
-  new THREE.MeshStandardMaterial({map:adTexture('PEDRA LISA PS2 WEB','#13213f'),emissive:0x081127,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({map:adTexture('FC MUKEKA PREMIUM','#13213f'),emissive:0x081127,emissiveIntensity:.55}),
   new THREE.MeshStandardMaterial({map:adTexture('INDEPENDÊNCIA','#f4f4ef','#111111'),emissive:0x222222,emissiveIntensity:.2})
 ];
 let adIdx=0;
@@ -422,29 +424,178 @@ function fallbackVisual(data,teamIdx){
 function tintRig(root,data,teamIdx){
   const kit=kitColors(teamIdx,data.gk);
   root.traverse(o=>{
-    if(!o.isMesh)return;o.castShadow=true;
+    if(!o.isMesh)return;
+    o.castShadow=true;
+    o.receiveShadow=true;
     const mats=Array.isArray(o.material)?o.material:[o.material];
     const repl=mats.map(src=>{
-      const m=src.clone(),n=(src.name||'').toLowerCase();
-      if(n==='shirt'||n==='shirt2')m.color.setHex(kit.shirt);
-      else if(n==='pants')m.color.setHex(kit.shorts);
-      else if(n==='socks')m.color.setHex(kit.socks);
-      else if(n==='shoes')m.color.setHex(0x171717);
-      else if(n==='skin')m.color.setHex(data.skin);
-      else if(n==='hair'||n==='hair2')m.color.setHex(data.hair);
+      const m=src.clone();
+      const n=(src.name||'').toLowerCase();
+      if(/hair/.test(n))m.color?.setHex(data.hair);
+      else if(/skin|face/.test(n))m.color?.setHex(data.skin);
+      else if(/eye/.test(n))m.color?.setHex(0x202020);
+      else if(/shirt|jersey|top|torso|cloth/.test(n))m.color?.setHex(kit.shirt);
+      else if(/pants|short/.test(n))m.color?.setHex(kit.shorts);
+      else if(/sock/.test(n))m.color?.setHex(kit.socks);
+      else if(/shoe|boot/.test(n))m.color?.setHex(0x181818);
+      if('roughness' in m)m.roughness=.72;
       return m;
     });
     o.material=Array.isArray(o.material)?repl:repl[0];
   });
 }
+
+function attachKitMesh(rig,boneName,mesh,pos=[0,0,0],rot=[0,0,0],scale=[1,1,1]){
+  const bone=rig.getObjectByName(boneName);
+  if(!bone)return;
+  mesh.position.set(...pos);
+  mesh.rotation.set(...rot);
+  mesh.scale.set(...scale);
+  mesh.castShadow=true;
+  bone.add(mesh);
+}
+
+function decoratePremiumKit(rig,data,teamIdx){
+  if(!rig.getObjectByName('spine_02'))return;
+  const kit=kitColors(teamIdx,data.gk);
+  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.72});
+  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.78});
+  const socks=new THREE.MeshStandardMaterial({color:kit.socks,roughness:.8});
+  const boots=new THREE.MeshStandardMaterial({color:0x151515,roughness:.58});
+
+  // Lightweight bone-mounted kit pieces: they share the imported skeleton but
+  // keep Pedra Lisa/Independência colors readable from broadcast distance.
+  attachKitMesh(rig,'spine_02',new THREE.Mesh(new THREE.CylinderGeometry(.17,.19,.36,10),shirt),[0,.025,0],[0,0,0],[1.12,1, .76]);
+  for(const side of ['l','r']){
+    attachKitMesh(rig,'upperarm_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.072,.09,.16,8),shirt),[0,.055,0]);
+    attachKitMesh(rig,'thigh_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.105,.12,.2,8),shorts),[0,.075,0]);
+    attachKitMesh(rig,'calf_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.058,.072,.24,8),socks),[0,.10,0]);
+    attachKitMesh(rig,'foot_'+side,new THREE.Mesh(new THREE.CapsuleGeometry(.055,.11,2,6),boots),[0,-.025,.055],[Math.PI/2,0,0],[.9,1.18,.78]);
+  }
+}
+
+const BASE_FOOTBALL_POSE={
+  upperarm_l:[.02,0,-.96],
+  upperarm_r:[.02,0,.96],
+  lowerarm_l:[-.08,0,0],
+  lowerarm_r:[-.08,0,0],
+};
+
+function footballClip(root,name,duration,frames){
+  const bones=new Set(Object.keys(BASE_FOOTBALL_POSE));
+  for(const [,pose] of frames)for(const key of Object.keys(pose))bones.add(key);
+  const tracks=[];
+  for(const boneName of bones){
+    const bone=root.getObjectByName(boneName);
+    if(!bone)continue;
+    const times=[],values=[];
+    for(const [t,pose] of frames){
+      const r=pose[boneName]||BASE_FOOTBALL_POSE[boneName]||[0,0,0];
+      const off=new THREE.Quaternion().setFromEuler(new THREE.Euler(r[0],r[1],r[2],'XYZ'));
+      const q=bone.quaternion.clone().multiply(off).normalize();
+      times.push(t*duration);
+      values.push(q.x,q.y,q.z,q.w);
+    }
+    tracks.push(new THREE.QuaternionKeyframeTrack(boneName+'.quaternion',times,values));
+  }
+  return new THREE.AnimationClip(name,duration,tracks);
+}
+
+function createPremiumFootballClips(root){
+  const clips={};
+  const add=(name,duration,frames)=>clips[name]=footballClip(root,name,duration,frames);
+
+  add('Idle',2.2,[
+    [0,{spine_02:[.015,0,0],neck_01:[0,-.02,0]}],
+    [.5,{spine_02:[-.02,0,0],neck_01:[0,.025,0]}],
+    [1,{spine_02:[.015,0,0],neck_01:[0,-.02,0]}],
+  ]);
+
+  add('Walk',.92,[
+    [0,{thigh_l:[-.28,0,0],thigh_r:[.28,0,0],calf_l:[.18,0,0],calf_r:[-.08,0,0],upperarm_l:[.24,0,-.96],upperarm_r:[-.24,0,.96]}],
+    [.5,{thigh_l:[.28,0,0],thigh_r:[-.28,0,0],calf_l:[-.08,0,0],calf_r:[.18,0,0],upperarm_l:[-.24,0,-.96],upperarm_r:[.24,0,.96]}],
+    [1,{thigh_l:[-.28,0,0],thigh_r:[.28,0,0],calf_l:[.18,0,0],calf_r:[-.08,0,0],upperarm_l:[.24,0,-.96],upperarm_r:[-.24,0,.96]}],
+  ]);
+
+  add('Run',.64,[
+    [0,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
+    [.5,{spine_02:[.10,0,0],thigh_l:[.58,0,0],thigh_r:[-.55,0,0],calf_l:[-.18,0,0],calf_r:[.42,0,0],upperarm_l:[-.42,0,-.9],upperarm_r:[.42,0,.9]}],
+    [1,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
+  ]);
+
+  add('Pass',.46,[
+    [0,{spine_02:[-.04,-.10,0],thigh_r:[-.34,0,0],calf_r:[.22,0,0]}],
+    [.46,{spine_02:[.07,.14,0],thigh_r:[.62,0,0],calf_r:[-.28,0,0],foot_r:[.20,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Through',.52,[
+    [0,{spine_02:[-.05,-.12,0],thigh_r:[-.38,0,0],calf_r:[.26,0,0]}],
+    [.48,{spine_02:[.10,.18,0],thigh_r:[.76,0,0],calf_r:[-.34,0,0],foot_r:[.24,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Cross',.64,[
+    [0,{spine_02:[-.10,.16,0],pelvis:[0,-.14,0],thigh_l:[-.48,0,0],calf_l:[.38,0,0],upperarm_r:[.16,0,.58]}],
+    [.48,{spine_02:[.16,-.24,0],pelvis:[0,.18,0],thigh_l:[.92,0,0],calf_l:[-.42,0,0],foot_l:[.34,0,0],upperarm_r:[-.34,0,.66]}],
+    [1,{}],
+  ]);
+
+  add('Shoot',.68,[
+    [0,{spine_02:[-.16,-.18,0],pelvis:[0,-.14,0],thigh_r:[-.70,0,0],calf_r:[.56,0,0],upperarm_l:[.38,0,-.66],upperarm_r:[-.26,0,.58]}],
+    [.44,{spine_02:[.22,.30,0],pelvis:[0,.22,0],thigh_r:[1.15,0,0],calf_r:[-.52,0,0],foot_r:[.34,0,0],upperarm_l:[-.42,0,-.72],upperarm_r:[.34,0,.70]}],
+    [.72,{spine_02:[.10,.38,0],thigh_r:[.26,0,0],calf_r:[-.18,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Header',.58,[
+    [0,{spine_01:[-.18,0,0],spine_03:[-.16,0,0],neck_01:[.12,0,0],upperarm_l:[0,0,-.62],upperarm_r:[0,0,.62]}],
+    [.46,{spine_01:[.30,0,0],spine_03:[.34,0,0],neck_01:[-.30,0,0],Head:[-.22,0,0],upperarm_l:[-.22,0,-.78],upperarm_r:[-.22,0,.78]}],
+    [1,{}],
+  ]);
+
+  add('Slide',.78,[
+    [0,{pelvis:[0,0,-.08],spine_02:[.12,0,.08],thigh_l:[-.34,0,0],thigh_r:[.24,0,0]}],
+    [.42,{pelvis:[-.32,0,-.72],spine_01:[.34,0,.34],thigh_l:[1.02,0,0],calf_l:[-.30,0,0],thigh_r:[-.46,0,0],calf_r:[.44,0,0],upperarm_l:[-.28,0,-1.02],upperarm_r:[.16,0,.72]}],
+    [1,{pelvis:[-.12,0,-.38],thigh_l:[.28,0,0],thigh_r:[-.14,0,0]}],
+  ]);
+
+  add('Tackle',.34,[
+    [0,{spine_02:[.04,0,0],thigh_r:[-.18,0,0]}],
+    [.5,{spine_02:[.18,0,0],thigh_r:[.26,0,0],upperarm_l:[-.18,0,-.78],upperarm_r:[-.18,0,.78]}],
+    [1,{}],
+  ]);
+
+  add('Save',.62,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.20,0,-.72],upperarm_r:[-.20,0,.72]}],
+    [.46,{spine_02:[.16,0,0],upperarm_l:[-1.12,0,-.34],upperarm_r:[-1.12,0,.34],lowerarm_l:[-.32,0,0],lowerarm_r:[-.32,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Knockdown',.92,[
+    [0,{}],
+    [.5,{pelvis:[-.58,0,.28],spine_01:[-.38,0,0],upperarm_l:[0,0,-.76],upperarm_r:[0,0,.76]}],
+    [1,{pelvis:[-1.18,0,.38],spine_01:[-.46,0,0],Head:[.14,0,0]}],
+  ]);
+
+  add('Celebrate',1.2,[
+    [0,{}],
+    [.38,{spine_03:[-.10,0,0],upperarm_l:[-1.30,0,-.34],upperarm_r:[-1.30,0,.34],lowerarm_l:[-.42,0,0],lowerarm_r:[-.42,0,0]}],
+    [.72,{spine_03:[.14,0,0],upperarm_l:[-1.02,0,-.62],upperarm_r:[-1.02,0,.62],Head:[0,.18,0]}],
+    [1,{upperarm_l:[-1.24,0,-.40],upperarm_r:[-1.24,0,.40]}],
+  ]);
+  return clips;
+}
+
 function animatedVisual(data,teamIdx){
   if(!template)return fallbackVisual(data,teamIdx);
   const rig=SkeletonUtils.clone(template);
   const h=data.height||1,b=data.build||1;
-  const arcadeBody=1.08;
-  rig.scale.set(fitScale*b*arcadeBody,fitScale*h*1.04,fitScale*b*arcadeBody);
+  const arcadeBody=1.04;
+  rig.scale.set(fitScale*b*arcadeBody,fitScale*h*1.02,fitScale*b*arcadeBody);
   rig.position.y=-fitMinY*fitScale*h;
   tintRig(rig,data,teamIdx);
+  if(premiumRig)decoratePremiumKit(rig,data,teamIdx);
   const root=new THREE.Group();root.add(rig);
   const mixer=new THREE.AnimationMixer(rig),actions={};
   for(const [name,clip] of Object.entries(clipMap))actions[name]=mixer.clipAction(clip);
@@ -534,7 +685,7 @@ function beginCpu(){
   matchActive=true;
   lobbyEl.classList.add('hidden');
   showTouch(true);
-  statusEl.textContent='Pedra Lisa PS2 Web · contra CPU';
+  statusEl.textContent='FC Mukeka Premium · contra CPU';
 }
 
 function beginOnline({seed,localTeam:team,signal:sig}){
@@ -546,7 +697,7 @@ function beginOnline({seed,localTeam:team,signal:sig}){
   matchActive=true;
   lobbyEl.classList.add('hidden');
   showTouch(true);
-  statusEl.textContent='ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+  statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
 }
 
 function simToWorld(x,y,z=0){
@@ -573,21 +724,47 @@ function refreshControlled(){
 refreshControlled();
 
 try{
-  const gltf=await new GLTFLoader().loadAsync(MODEL_URL);
-  template=gltf.scene;clipMap={};
-  for(const clip of gltf.animations)clipMap[clip.name.replace(/^HumanArmature\|Man_/,'')]=clip;
+  const loader=new GLTFLoader();
+  let gltf;
+  try{
+    gltf=await loader.loadAsync(PREMIUM_MODEL_URL);
+    premiumRig=!!gltf.scene.getObjectByName('thigh_r') && !!gltf.scene.getObjectByName('spine_02');
+  }catch(primaryErr){
+    console.warn('Premium CC0 rig unavailable, loading fallback.',primaryErr);
+    gltf=await loader.loadAsync(FALLBACK_MODEL_URL);
+    premiumRig=false;
+  }
+
+  template=gltf.scene;
+  clipMap=premiumRig?createPremiumFootballClips(template):{};
+  if(!premiumRig){
+    for(const clip of gltf.animations)clipMap[clip.name.replace(/^HumanArmature\|Man_/,'')]=clip;
+  }
+
   template.updateMatrixWorld(true);
   const box=new THREE.Box3(),tmp=new THREE.Box3();box.makeEmpty();
-  template.traverse(o=>{if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){o.computeBoundingBox();tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);box.union(tmp)}});
-  if(!box.isEmpty()){const h=box.max.y-box.min.y;fitScale=h>1e-4?1.88/h:1;fitMinY=box.min.y}
+  template.traverse(o=>{
+    if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){
+      o.computeBoundingBox();
+      tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);
+      box.union(tmp);
+    }
+  });
+  if(!box.isEmpty()){
+    const h=box.max.y-box.min.y;
+    fitScale=h>1e-4?1.84/h:1;
+    fitMinY=box.min.y;
+  }
+
   respawnVisuals();selectedIdx=-1;refreshControlled();
-  statusEl.textContent='Pedra Lisa PS2 Web · visual renovado · modelo 3D CC0 · '+Object.keys(clipMap).length+' animações';
+  statusEl.textContent=premiumRig
+    ?'FC Mukeka Premium · rig CC0 + '+Object.keys(clipMap).length+' animações de futebol próprias'
+    :'FC Mukeka Premium · rig CC0 de fallback · '+Object.keys(clipMap).length+' animações';
   setTimeout(()=>statusEl.style.opacity='.55',3200);
 }catch(err){
   console.warn(err);
-  statusEl.textContent='Motor WebSoccer ativo · modelo remoto indisponível, usando fallback 3D';
+  statusEl.textContent='Motor ativo · modelo 3D indisponível, usando jogador procedural';
 }
-
 addEventListener('keydown',e=>{
   if(e.code==='Digit1')camMode='broadcast';
   if(e.code==='Digit2')camMode='close';
@@ -612,23 +789,24 @@ function processVisualEvents(){
     const ev=visualEvents.shift();
     if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
-      if(ev.kind==='header') playAction(v,'header',v.actions.Jump?'Jump':'Punch',.56);
-      else if(ev.kind==='shot') playAction(v,'shot','Punch',.42);
-      else if(ev.kind==='cross') playAction(v,'cross','Punch',.40);
-      else if(ev.kind==='through') playAction(v,'through','Punch',.32);
-      else playAction(v,'pass','Punch',.28);
+      if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58);
+      else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68);
+      else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64);
+      else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52);
+      else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46);
     }else if(ev.type==='tackle' && visuals[ev.team]?.[ev.idx]){
-      playAction(visuals[ev.team][ev.idx],'standing-tackle','Punch',.30);
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'standing-tackle',v.actions.Tackle?'Tackle':'Punch',.34);
     }else if(ev.type==='save'){
       const v=visuals[ev.team]?.[0];
-      if(v)playAction(v,'save',v.actions.Jump?'Jump':'Punch',.55);
+      if(v)playAction(v,'save',v.actions.Save?'Save':(v.actions.Jump?'Jump':'Punch'),.62);
     }else if(ev.type==='goal'){
       const team=ev.team;
       const scorer=(match.ball.lastTouch?.team===team)?match.ball.lastTouch.idx:match.teams[team].controlled;
       const order=[scorer,...Array.from({length:11},(_,i)=>i).filter(i=>i!==scorer)].slice(0,4);
       order.forEach((idx,n)=>{
         const v=visuals[team]?.[idx];if(!v)return;
-        const clip=v.actions.Clapping?'Clapping':(v.actions.Jump?'Jump':'Idle');
+        const clip=v.actions.Celebrate?'Celebrate':(v.actions.Clapping?'Clapping':(v.actions.Jump?'Jump':'Idle'));
         playAction(v,'celebrate',clip,1.15+n*.08);
       });
     }
@@ -664,7 +842,7 @@ function renderState(dt){
       const actionActive=v.actionUntil>nowSec;
 
       if(p.slide>0){
-        setAnim(v,'Punch');
+        setAnim(v,v.actions.Slide?'Slide':'Punch');
         // A short forward body tilt makes the generic Punch clip read much more
         // like a football slide without changing simulation/collision.
         v.root.rotation.x=-.72;
@@ -684,7 +862,7 @@ function renderState(dt){
         }else if(v.actionKind==='celebrate'){
           v.root.position.y+=Math.sin(phase*Math.PI*2)*.10;
         }
-      }else if(p.down>0)setAnim(v,'Idle');
+      }else if(p.down>0)setAnim(v,v.actions.Knockdown?'Knockdown':'Idle');
       else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
       else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
       else setAnim(v,'Idle');
@@ -700,7 +878,7 @@ function renderState(dt){
   if(kicker&&kicker!==lastKicker){
     const [t,i]=kicker.split(':').map(Number);
     const v=visuals[t][i];
-    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick','Punch',.34);
+    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick',v.actions.Shoot?'Shoot':'Punch',.46);
   }
   lastKicker=kicker;
 
