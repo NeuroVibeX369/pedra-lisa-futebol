@@ -1011,7 +1011,7 @@ function arrangePremiumSetPiece(state, sp) {
   const inside = (d) => goalY - team.attackDir * d;
   const outsideOwn = (d) => ownY + team.attackDir * d;
   const setP = (p, x, y) => {
-    if (!p) return;
+    if (!p || p.sentOff) return;
     p.x = clamp(x, FIELD.left + 14, FIELD.right - 14);
     p.y = clamp(y, FIELD.top + 14, FIELD.bottom - 14);
     p.vx = 0;
@@ -1110,10 +1110,11 @@ function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   // a goal kick does: that is the keeper's to take.
   const team = state.teams[teamIdx];
   let takerIdx = forcedTaker === null ? 1 : forcedTaker;
+  if (team.players[takerIdx]?.sentOff) forcedTaker = null;
   let bestD = Infinity;
   for (let i = 1; forcedTaker === null && i < team.players.length; i++) {
     const p = team.players[i];
-    if (p.down > 0) continue;
+    if (p.sentOff || p.down > 0) continue;
     const d = dist2(x, y, p.x, p.y);
     if (d < bestD) {
       bestD = d;
