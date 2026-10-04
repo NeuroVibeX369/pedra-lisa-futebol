@@ -100,12 +100,19 @@ function advancePhase(state) {
       });
       break;
     case 'goal':
+      flushPendingSubstitutions(state);
       setupKickoff(state, 1 - state.lastGoalTeam, 'goal');
       break;
     case 'halftime':
+      flushPendingSubstitutions(state);
       state.half = 2;
       state.halfTick = 0;
-      for (const team of state.teams) team.attackDir *= -1;
+      for (const team of state.teams) {
+        team.attackDir *= -1;
+        if (state.config.premiumManagement) {
+          for (const p of team.players) p.stamina = Math.min(1000, p.stamina + 95);
+        }
+      }
       setupKickoff(state, 1 - state.firstKickoffTeam, 'half');
       break;
     default:
@@ -525,8 +532,158 @@ function updatePremiumSetPieceControls(state, inputs) {
   }
 }
 
+function mentalityName(v) {
+  return v < 0 ? 'DEFENSIVO' : v > 0 ? 'OFENSIVO' : 'EQUILIBRADO';
+}
+
+function setMentality(state, teamIdx, value, source = 'manual') {
+  const team = state.teams[teamIdx];
+  const next = clamp(value, -1, 1);
+  if (team.mentality === next) return;
+  team.mentality = next;
+  state.events.push({
+    type: 'tactic',
+    team: teamIdx,
+    mentality: next,
+    label: mentalityName(next),
+    source,
+  });
+}
+
+function substitutionCandidate(team, preferredIdx = -1) {
+  const usable = [];
+  for (let i = 1; i < team.players.length; i++) {
+    const p = team.players[i];
+    if (p.sentOff || p.substitute) continue;
+    usable.push(i);
+  }
+  if (!usable.length) return -1;
+  if (usable.includes(preferredIdx)) return preferredIdx;
+  usable.sort((a, b) => team.players[a].stamina - team.players[b].stamina || a - b);
+  return usable[0];
+}
+
+function queueSubstitution(state, teamIdx, preferredIdx = -1, source = 'manual') {
+  const team = state.teams[teamIdx];
+  if (!state.config.premiumManagement || team.subsUsed >= 3 || team.pendingSubIdx >= 0) return false;
+  const idx = substitutionCandidate(team, preferredIdx);
+  if (idx < 0) return false;
+  team.pendingSubIdx = idx;
+  const p = team.players[idx];
+  state.events.push({
+    type: 'sub-pending',
+    team: teamIdx,
+    idx,
+    outName: p.displayName,
+    source,
+  });
+  return true;
+}
+
+function applyPendingSubstitution(state, teamIdx) {
+  const team = state.teams[teamIdx];
+  const idx = team.pendingSubIdx;
+  if (!state.config.premiumManagement || idx < 1 || team.subsUsed >= 3) {
+    team.pendingSubIdx = -1;
+    return false;
+  }
+  const p = team.players[idx];
+  if (!p || p.sentOff || p.substitute) {
+    team.pendingSubIdx = -1;
+    return false;
+  }
+
+  const outName = p.displayName;
+  const inNumber = team.nextBenchNumber++;
+  const inName = 'Reserva ' + inNumber;
+
+  p.displayName = inName;
+  p.shirtNumber = inNumber;
+  p.stamina = 1000;
+  p.substitute = true;
+  p.yellowCards = 0;
+  p.down = 0;
+  p.cooldown = 0;
+  p.slide = 0;
+  p.charging = false;
+  p.charge = 0;
+  p.firstTouchTicks = 0;
+  p.skillTicks = 0;
+  p.skillCooldown = 0;
+  p.shielding = false;
+  team.subsUsed++;
+  team.pendingSubIdx = -1;
+
+  state.events.push({
+    type: 'substitution',
+    team: teamIdx,
+    idx,
+    outName,
+    inName,
+    inNumber,
+    used: team.subsUsed,
+  });
+  return true;
+}
+
+function flushPendingSubstitutions(state) {
+  for (let t = 0; t < 2; t++) applyPendingSubstitution(state, t);
+}
+
+function updateCpuManagement(state) {
+  if (!state.config.premiumManagement || state.phase !== 'play') return;
+  if (state.tick % 60 !== 0) return;
+
+  const frac = state.halfTick / Math.max(1, state.config.halfTicks);
+  for (let t = 0; t < 2; t++) {
+    const team = state.teams[t];
+    if (team.human) continue;
+
+    const diff = state.score[t] - state.score[1 - t];
+    let desired = 0;
+    if (state.half === 2 && frac > 0.66) {
+      if (diff < 0) desired = 1;
+      else if (diff > 0) desired = -1;
+    } else if (diff <= -2) desired = 1;
+    setMentality(state, t, desired, 'cpu');
+
+    if (team.subsUsed < 3 && team.pendingSubIdx < 0
+        && state.half === 2 && frac > 0.18
+        && state.halfTick - team.lastAutoSubHalfTick > 1200) {
+      const idx = substitutionCandidate(team);
+      if (idx >= 0) {
+        const threshold = frac > 0.72 ? 760 : frac > 0.45 ? 680 : 590;
+        if (team.players[idx].stamina < threshold) {
+          team.lastAutoSubHalfTick = state.halfTick;
+          queueSubstitution(state, t, idx, 'cpu');
+        }
+      }
+    }
+  }
+}
+
+function updatePremiumManagementControls(state, inputs) {
+  if (!state.config.premiumManagement) return;
+  updateCpuManagement(state);
+
+  for (let t = 0; t < 2; t++) {
+    const team = state.teams[t];
+    if (!team.human) continue;
+    const mask = inputs[t] | 0;
+    const prev = team.prevMask | 0;
+    const down = (mask & BTN.TACTIC_DOWN) !== 0 && (prev & BTN.TACTIC_DOWN) === 0;
+    const up = (mask & BTN.TACTIC_UP) !== 0 && (prev & BTN.TACTIC_UP) === 0;
+    const sub = (mask & BTN.SUB) !== 0 && (prev & BTN.SUB) === 0;
+
+    if (down) setMentality(state, t, team.mentality - 1);
+    if (up) setMentality(state, t, team.mentality + 1);
+    if (sub) queueSubstitution(state, t, team.controlled, 'manual');
+  }
+}
+
 function updatePlayers(state, inputs, frozen) {
   updatePremiumSetPieceControls(state, inputs);
+  updatePremiumManagementControls(state, inputs);
 
   // Phase 0: timers that feed into the decisions below.
   for (const team of state.teams) {
@@ -1109,6 +1266,12 @@ function movePlayer(state, t, p, mv) {
       : owns ? PLAYER_SPEED_BALL : PLAYER_SPEED) * handicap;
     let accel = PLAYER_ACC;
 
+    if (state.config.premiumManagement && p.role !== 'gk') {
+      const staminaRatio = clamp(p.stamina / 600, 0, 1);
+      speed *= 0.84 + staminaRatio * 0.16;
+      accel *= 0.78 + staminaRatio * 0.22;
+    }
+
     if (state.config.premiumBallControl && owns && p.role !== 'gk') {
       if (p.firstTouchTicks > 0) {
         speed *= 0.78;
@@ -1138,6 +1301,19 @@ function movePlayer(state, t, p, mv) {
     }
   }
   integratePlayer(p);
+
+  if (state.config.premiumManagement && !p.sentOff) {
+    const team = state.teams[t];
+    const paceBase = p.role === 'gk' ? KEEPER_SPEED : PLAYER_SPEED;
+    const effort = clamp(len(p.vx, p.vy) / Math.max(1, paceBase), 0, 1.35);
+    const tacticDrain = team.mentality > 0 ? 1.16 : team.mentality < 0 ? 0.90 : 1;
+    const pressDrain = team.pressTicks > 0 ? 1.20 : 1;
+    let drain = effort * 0.030 * tacticDrain * pressDrain;
+    if (p.skillTicks > 0) drain += 0.018;
+    if (p.slide > 0) drain += 0.020;
+    const recovery = effort < 0.22 && !owns ? 0.012 : 0;
+    p.stamina = clamp(p.stamina - drain + recovery, 0, 1000);
+  }
 
   // Carrying it a good way up the pitch is worth a word - once per run, and only
   // for ground actually gained towards their goal, or dribbling in circles would
@@ -1794,6 +1970,7 @@ function arrangePremiumSetPiece(state, sp) {
 }
 
 function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
+  if (state.config.premiumManagement) flushPendingSubstitutions(state);
   state.delivery = null;
   state.possessionTeam = teamIdx;
   if (state.config.premiumAI) {
