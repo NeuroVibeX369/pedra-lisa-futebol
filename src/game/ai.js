@@ -170,7 +170,8 @@ function counterPressIndices(state, teamIdx) {
   }
 
   candidates.sort((a, b) => a.score - b.score || a.i - b.i);
-  return candidates.slice(0, 3).map(v => v.i);
+  const count = team.mentality > 0 ? 4 : team.mentality < 0 ? 2 : 3;
+  return candidates.slice(0, count).map(v => v.i);
 }
 
 function counterPressSpot(state, teamIdx, i, rank) {
@@ -213,7 +214,8 @@ function defensiveLineAdvance(state, teamIdx) {
 
   // Immediately after losing it, do not spring the whole back four forward.
   if (team.pressTicks > 0) line = Math.min(line, 0.34);
-  return line;
+  line += (team.mentality || 0) * 0.045;
+  return clamp(line, 0.06, 0.49);
 }
 
 function transitionCounterSpot(state, teamIdx, i, home) {
@@ -373,6 +375,10 @@ function premiumAttackingSpot(state, teamIdx, i, home) {
     yFrac = Math.min(yFrac, Math.max(0.22, ownerAdv - 0.28));
   }
 
+  const mentality = team.mentality || 0;
+  const rolePush = p.role === 'fw' ? 0.055 : (p.role === 'am' || p.role === 'mf') ? 0.038 : p.role === 'dm' ? 0.018 : 0.012;
+  yFrac += mentality * rolePush;
+  if (mentality < 0 && p.role === 'df') xRel *= 0.88;
   yFrac = holdTheLine(state, teamIdx, clamp(yFrac, 0.14, 0.93));
   return posFor(team, clamp(xRel, -0.92, 0.92), yFrac);
 }
@@ -428,6 +434,13 @@ function premiumDefendingSpot(state, teamIdx, i, home, chaser, secondMarker) {
   } else if (p.role === 'fw') {
     // Forwards stay available for the counter instead of all collapsing deep.
     tx += (b.x - tx) * 0.08;
+  }
+
+  const mentality = team.mentality || 0;
+  if (p.role !== 'gk') {
+    const currentAdv = advanceOf(team, ty);
+    const adjusted = clamp(currentAdv + mentality * (p.role === 'df' ? 0.025 : 0.04), 0.06, 0.90);
+    ty = posFor(team, 0, adjusted).y;
   }
 
   return {
@@ -570,6 +583,8 @@ function findPassTarget(state, teamIdx, from) {
         score += Math.max(0, forward) * 0.62;
         if (m.role === 'fw') score += 42;
       }
+      if ((team.mentality || 0) > 0) score += Math.max(0, forward) * 0.24;
+      if ((team.mentality || 0) < 0 && forward < -10) score += 34;
     }
     if (score > bestScore) {
       bestScore = score;
@@ -693,7 +708,9 @@ function ownerAction(state, teamIdx, i) {
   }
 
   // Shooting (allowed sooner than passing: a first-time shot is fine).
-  if (p.holdTicks >= 5 && dGoal < skill.shootRange && Math.abs(p.x - goalX) < 210) {
+  const mentality = team.mentality || 0;
+  const shootRange = skill.shootRange * (mentality > 0 ? 1.10 : mentality < 0 ? 0.92 : 1);
+  if (p.holdTicks >= 5 && dGoal < shootRange && Math.abs(p.x - goalX) < 210) {
     let aimX = goalX + randRange(state, -GOAL_W / 2 + 12, GOAL_W / 2 - 12);
     // The draw below is skipped entirely when there is no error to add, so HARD
     // consumes exactly the same random numbers as it always did.
