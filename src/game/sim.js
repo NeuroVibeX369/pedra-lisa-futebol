@@ -39,6 +39,7 @@ export function step(state, inputs) {
   const frozen = state.phase !== 'play';
 
   updateProtection(state);
+  updateDelivery(state);
   updateOwnership(state);
   updatePlayers(state, inputs, frozen);
   separatePlayers(state);
@@ -46,7 +47,13 @@ export function step(state, inputs) {
   updateBall(state, inputs);
 
   if (!frozen) {
-    if (!checkGoal(state)) checkOutOfPlay(state);
+    const goal = checkGoal(state);
+    if (goal) {
+      settleAdvantage(state, true);
+    } else {
+      if (updateAdvantage(state)) return state;
+      checkOutOfPlay(state);
+    }
     updateClock(state);
   }
   return state;
@@ -287,6 +294,12 @@ function updateProtection(state) {
 export function clearProtection(state) {
   state.ball.protectedFor = null;
   state.ball.protectTicks = 0;
+}
+
+function updateDelivery(state) {
+  if (!state.delivery) return;
+  state.delivery.ticks--;
+  if (state.delivery.ticks <= 0) state.delivery = null;
 }
 
 // --------------------------------------------------------------------------
