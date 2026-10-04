@@ -3,19 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Pedra Lisa Futebol — Striker 3D</title>
+  <title>Pedra Lisa Futebol — Striker 3D Híbrido</title>
   <style>
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     #app{position:fixed;inset:0}canvas{display:block}
     #hud{position:fixed;inset:0;pointer-events:none}
-    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.13);border-radius:14px;padding:9px 14px;backdrop-filter:blur(8px);font-weight:800;box-shadow:0 10px 28px rgba(0,0,0,.25)}
+    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(6,11,8,.82);border:1px solid rgba(255,255,255,.13);border-radius:14px;padding:9px 14px;backdrop-filter:blur(8px);font-weight:800;box-shadow:0 10px 28px rgba(0,0,0,.25)}
     .score{font-size:20px}.small{font-size:11px;color:#aab9b0;letter-spacing:.08em;text-transform:uppercase}
-    .info{position:absolute;left:14px;bottom:14px;background:rgba(6,11,8,.76);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(8px);max-width:430px}
+    .clock{font-size:12px;color:#d9e5dd;padding-left:9px;border-left:1px solid rgba(255,255,255,.18)}
+    .info{position:absolute;left:14px;bottom:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(8px);max-width:460px}
     .info b{color:#82e3a0}.info .keys{margin-top:5px;color:#c8d3cc;font-size:12px;line-height:1.55}
-    .back{pointer-events:auto;position:absolute;right:14px;top:14px;text-decoration:none;color:#fff;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:10px 13px;font-weight:800}
-    .tag{position:absolute;right:14px;bottom:14px;background:rgba(6,11,8,.72);padding:8px 10px;border-radius:10px;font-size:11px;color:#aab9b0}
-    .status{position:absolute;left:14px;top:14px;background:rgba(6,11,8,.76);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:11px;color:#b8c9bf;max-width:340px}
-    .playercard{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:rgba(6,11,8,.76);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;backdrop-filter:blur(8px)}
+    .back{pointer-events:auto;position:absolute;right:14px;top:14px;text-decoration:none;color:#fff;background:rgba(6,11,8,.82);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:10px 13px;font-weight:800}
+    .tag{position:absolute;right:14px;bottom:14px;background:rgba(6,11,8,.74);padding:8px 10px;border-radius:10px;font-size:11px;color:#aab9b0}
+    .status{position:absolute;left:14px;top:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:11px;color:#b8c9bf;max-width:390px;transition:opacity .5s}
+    .playercard{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;backdrop-filter:blur(8px)}
+    .phase{position:absolute;left:50%;top:82px;transform:translateX(-50%);font-size:22px;font-weight:900;letter-spacing:.09em;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .15s}
   </style>
   <script type="importmap">
   {
@@ -29,26 +31,38 @@
 <body>
 <div id="app"></div>
 <div id="hud">
-  <div class="top"><span>PEDRA LISA</span><span class="score" id="score">0 — 0</span><span>INDEPENDÊNCIA</span><span class="small">3D ALPHA</span></div>
-  <div class="status" id="status">Carregando jogador 3D CC0…</div>
+  <div class="top">
+    <span>PEDRA LISA</span><span class="score" id="score">0 — 0</span><span>INDEPENDÊNCIA</span>
+    <span class="clock" id="clock">1T · 00:00</span><span class="small">HÍBRIDO 3D</span>
+  </div>
+  <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
+  <div class="phase" id="phase"></div>
   <a class="back" href="../">← HUB</a>
   <div class="info">
-    <div><b>Striker 3D — Alpha 2</b></div>
-    <div class="keys">WASD / setas: mover · Shift: correr · Espaço: chutar · Q: trocar jogador · 1/2/3: câmera Broadcast / Close / Tactical</div>
+    <div><b>WebSoccer × Striker 3D</b></div>
+    <div class="keys">WASD / setas: mover · Espaço: passe/chute (segure para força) · Q: trocar jogador · 1/2/3: Broadcast / Close / Tactical</div>
   </div>
-  <div class="playercard" id="playercard">#8 Ronilton</div>
-  <div class="tag">Modelo-base CC0 Quaternius · WebSoccer 2D preservado</div>
+  <div class="playercard" id="playercard">Carregando…</div>
+  <div class="tag">CPU, regras, 11×11 e bola agora vêm do motor WebSoccer</div>
 </div>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { createMatch } from '../src/game/state.js';
+import { step } from '../src/game/sim.js';
+import {
+  FRAME_TIME, BTN, FIELD, FIELD_W as SIM_FIELD_W, FIELD_H as SIM_FIELD_H,
+  CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT
+} from '../src/constants.js';
 
 const MODEL_URL='https://raw.githubusercontent.com/kendrekaran/striker-3d/57847f87ff3d924712a1bb37df9dae391aedc315/assets/player.glb';
 const app=document.getElementById('app');
 const statusEl=document.getElementById('status');
 const scoreEl=document.getElementById('score');
+const clockEl=document.getElementById('clock');
 const cardEl=document.getElementById('playercard');
+const phaseEl=document.getElementById('phase');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8cde6);
@@ -74,7 +88,7 @@ sun.shadow.bias=-.00035;scene.add(sun);
 const FIELD_L=105, FIELD_W=68, BALL_R=.22;
 const world=new THREE.Group();scene.add(world);
 
-// Campo com faixas
+// ---------- Pitch / stadium ----------
 const apron=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L+22,FIELD_W+22),new THREE.MeshStandardMaterial({color:0x215b31,roughness:.97}));
 apron.rotation.x=-Math.PI/2;apron.position.y=-.025;apron.receiveShadow=true;world.add(apron);
 for(let i=0;i<12;i++){
@@ -82,15 +96,13 @@ for(let i=0;i<12;i++){
   const s=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L/12+.04,FIELD_W),mat);
   s.rotation.x=-Math.PI/2;s.position.set(-FIELD_L/2+FIELD_L/24+i*FIELD_L/12,0,0);s.receiveShadow=true;world.add(s);
 }
-
 const lineMat=new THREE.LineBasicMaterial({color:0xf6f6f0,transparent:true,opacity:.95});
 const lineY=.035;
 const addLine=pts=>world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lineMat));
 function rect(x1,z1,x2,z2){addLine([new THREE.Vector3(x1,lineY,z1),new THREE.Vector3(x2,lineY,z1),new THREE.Vector3(x2,lineY,z2),new THREE.Vector3(x1,lineY,z2),new THREE.Vector3(x1,lineY,z1)])}
 rect(-FIELD_L/2,-FIELD_W/2,FIELD_L/2,FIELD_W/2);
 addLine([new THREE.Vector3(0,lineY,-FIELD_W/2),new THREE.Vector3(0,lineY,FIELD_W/2)]);
-const circlePts=Array.from({length:80},(_,i)=>{const a=i/80*Math.PI*2;return new THREE.Vector3(Math.cos(a)*9.15,lineY,Math.sin(a)*9.15)});
-world.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(circlePts),lineMat));
+world.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({length:80},(_,i)=>{const a=i/80*Math.PI*2;return new THREE.Vector3(Math.cos(a)*9.15,lineY,Math.sin(a)*9.15)})),lineMat));
 rect(-FIELD_L/2,-20.16,-FIELD_L/2+16.5,20.16);rect(FIELD_L/2-16.5,-20.16,FIELD_L/2,20.16);
 rect(-FIELD_L/2,-9.16,-FIELD_L/2+5.5,9.16);rect(FIELD_L/2-5.5,-9.16,FIELD_L/2,9.16);
 
@@ -110,214 +122,236 @@ function buildGoal(side){
 }
 buildGoal(-1);buildGoal(1);
 
-// Estádio
 const concrete=new THREE.MeshStandardMaterial({color:0x363d39,roughness:.9});
 const dark=new THREE.MeshStandardMaterial({color:0x1e2421,roughness:.95});
-function stand(x,y,z,w,h,d,mat=concrete){const s=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);s.position.set(x,y,z);s.castShadow=true;s.receiveShadow=true;world.add(s);return s}
+function stand(x,y,z,w,h,d,mat=concrete){const s=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);s.position.set(x,y,z);s.castShadow=true;s.receiveShadow=true;world.add(s)}
 stand(0,4,-45,124,8,12);stand(0,7,-51,124,6,7,dark);
 stand(0,4,45,124,8,12);stand(0,7,51,124,6,7,dark);
 stand(-62,3.4,0,12,6.8,72);stand(62,3.4,0,12,6.8,72);
 
 const crowdGeo=new THREE.BoxGeometry(.24,.52,.22),crowdMat=new THREE.MeshStandardMaterial({color:0xd6d6d0,roughness:.9});
-const crowd=new THREE.InstancedMesh(crowdGeo,crowdMat,1500);crowd.castShadow=false;
+const crowd=new THREE.InstancedMesh(crowdGeo,crowdMat,1500);
 const dummy=new THREE.Object3D();
 for(let i=0;i<1500;i++){
-  const north=i<750, row=Math.floor((i%750)/125), col=i%125;
+  const north=i<750,row=Math.floor((i%750)/125),col=i%125;
   dummy.position.set(-59+col*.95,5.1+row*.6,north?-40.5:40.5);
   dummy.rotation.y=north?Math.PI:0;dummy.scale.setScalar(.75+Math.random()*.35);dummy.updateMatrix();crowd.setMatrixAt(i,dummy.matrix);
 }
 world.add(crowd);
-
 const boardMat=new THREE.MeshStandardMaterial({color:0x0d4e29,emissive:0x082b18,emissiveIntensity:.8,roughness:.55});
 for(const z of [-35.8,35.8])for(let x=-48;x<=48;x+=12){const b=new THREE.Mesh(new THREE.BoxGeometry(10,.75,.18),boardMat);b.position.set(x,.55,z);world.add(b)}
 
-// Bola
-const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,24,16),new THREE.MeshStandardMaterial({color:0xf5f5f0,roughness:.5,metalness:.02}));
-ball.position.set(0,BALL_R,0);ball.castShadow=true;world.add(ball);
-const ballVel=new THREE.Vector3();
+const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,24,16),new THREE.MeshStandardMaterial({color:0xf5f5f0,roughness:.5}));
+ball.castShadow=true;world.add(ball);
 
-const HOME=[
- {name:'Olavo Lobão',num:1,h:1.06,skin:0xd6a57b,hair:0x2a1a10,gk:true},
- {name:'Neto Bode',num:6,h:.90,skin:0xb77c54,hair:0x241811},
- {name:'Djha',num:2,h:.96,skin:0xc9936b,hair:0x2a1a10},
- {name:'Bastiaozão Rei',num:4,h:1.06,skin:0xe0b691,hair:null,bald:true},
- {name:'Bruno',num:2,h:.93,skin:0x8f5b3c,hair:0x1d1109},
- {name:'Manoel',num:6,h:.93,skin:0xc9936b,hair:0x5a3924},
- {name:'Ronilton',num:8,h:.96,skin:0xc9936b,hair:0x2b1d16},
- {name:'Luciano',num:10,h:1.00,skin:0xc9936b,hair:0x2a1a10},
- {name:'Helio',num:11,h:.96,skin:0xc9936b,hair:0x201712},
- {name:'Bastiaozinho',num:9,h:1.06,skin:0xc9936b,hair:0x2a1a10},
- {name:'Ricardo',num:7,h:.96,skin:0xb77c54,hair:0x241811}
-];
-const AWAY=[
- {name:'Junior Paredão',num:1,h:1.07,skin:0xe0b691,hair:0x1d1109,gk:true},
- {name:'Neto',num:6,h:.97,skin:0xb77c54,hair:0x2a1a10},
- {name:'Aberlado',num:3,h:1.05,skin:0xe0b691,hair:0x3a2415},
- {name:'Zé Neto',num:4,h:1.05,skin:0xe0b691,hair:0x8a5a2b},
- {name:'Edimar',num:2,h:.97,skin:0x68402c,hair:0x1a0e06},
- {name:'Maninho',num:5,h:1.00,skin:0x7d4e34,hair:0x221109},
- {name:'Auristênio',num:8,h:1.00,skin:0x8f5b3c,hair:0x1d1109},
- {name:'Chico Baião',num:10,h:.98,skin:0xb77c54,hair:0x2a1a10},
- {name:'Alex',num:7,h:.98,skin:0xc9936b,hair:0x3a2415},
- {name:'Valdeke Mattos',num:9,h:1.05,skin:0xe0b691,hair:0x8a5a2b},
- {name:'Clodoaldo',num:11,h:1.00,skin:0x68402c,hair:0x1a0e06}
-];
-
-const formation=[[-47,0],[-35,-25],[-36,-9],[-36,9],[-35,25],[-14,-17],[-13,0],[-14,17],[12,-22],[20,0],[12,22]];
+// ---------- Model loading / player visuals ----------
 let template=null,clipMap={},fitScale=1,fitMinY=0;
 const mixers=[];
+const visuals=[[],[]];
 
-function proceduralFallback(data,team){
-  const root=new THREE.Group();
-  const shirtColor=data.gk?(team==='home'?0xe0b52d:0x28539b):(team==='home'?0x178a3c:0xf5f5f5);
-  const shortColor=team==='home'?0xffffff:0x111111;
+function colorHex(v){return new THREE.Color(v).getHex()}
+function playerData(teamIdx,i){
+  const r=PLAYER_ROSTERS[teamIdx][i];
+  const tone=SKIN_TONES[r.skinTone]||SKIN_TONES[1];
+  return {...r,skin:colorHex(tone.skin),hair:r.bald?colorHex(tone.skin):colorHex(r.hair||tone.hair),gk:i===0};
+}
+function kitColors(teamIdx,isGK){
+  const k=isGK?KEEPER_KIT[teamIdx]:TEAM_PRESETS[teamIdx];
+  return {shirt:colorHex(k.shirt),shorts:colorHex(k.shorts),socks:colorHex(k.trim||k.shirt)};
+}
+function fallbackVisual(data,teamIdx){
+  const root=new THREE.Group(),kit=kitColors(teamIdx,data.gk);
   const skin=new THREE.MeshStandardMaterial({color:data.skin,roughness:.7});
-  const shirt=new THREE.MeshStandardMaterial({color:shirtColor,roughness:.78});
-  const shorts=new THREE.MeshStandardMaterial({color:shortColor,roughness:.82});
+  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.78});
+  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.82});
   const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.62,4,10),shirt);torso.position.y=1.08;root.add(torso);
   const hip=new THREE.Mesh(new THREE.BoxGeometry(.5,.28,.32),shorts);hip.position.y=.68;root.add(hip);
   const head=new THREE.Mesh(new THREE.SphereGeometry(.22,12,10),skin);head.position.y=1.68;root.add(head);
   for(const x of [-.15,.15]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.5,3,8),shorts);leg.position.set(x,.32,0);root.add(leg)}
-  root.scale.setScalar(data.h||1);root.traverse(o=>{if(o.isMesh)o.castShadow=true});return {root,mixer:null,actions:{}};
+  root.scale.set(data.build||1,data.height||1,data.build||1);
+  root.traverse(o=>{if(o.isMesh)o.castShadow=true});
+  return {root,mixer:null,actions:{},active:'Idle',data};
 }
-
-function tintRig(root,data,team){
+function tintRig(root,data,teamIdx){
+  const kit=kitColors(teamIdx,data.gk);
   root.traverse(o=>{
-    if(!o.isMesh)return;
-    o.castShadow=true;
+    if(!o.isMesh)return;o.castShadow=true;
     const mats=Array.isArray(o.material)?o.material:[o.material];
     const repl=mats.map(src=>{
-      const m=src.clone(), n=(src.name||'').toLowerCase();
-      if(n==='shirt'||n==='shirt2')m.color.setHex(data.gk?(team==='home'?0xe0b52d:0x28539b):(team==='home'?0x178a3c:0xf5f5f5));
-      else if(n==='pants')m.color.setHex(team==='home'?0xffffff:0x111111);
-      else if(n==='socks')m.color.setHex(team==='home'?0x178a3c:0xf5f5f5);
+      const m=src.clone(),n=(src.name||'').toLowerCase();
+      if(n==='shirt'||n==='shirt2')m.color.setHex(kit.shirt);
+      else if(n==='pants')m.color.setHex(kit.shorts);
+      else if(n==='socks')m.color.setHex(kit.socks);
       else if(n==='shoes')m.color.setHex(0x171717);
       else if(n==='skin')m.color.setHex(data.skin);
-      else if(n==='hair'||n==='hair2')m.color.setHex(data.bald?data.skin:(data.hair??0x23160f));
+      else if(n==='hair'||n==='hair2')m.color.setHex(data.hair);
       return m;
     });
     o.material=Array.isArray(o.material)?repl:repl[0];
   });
 }
-
-function buildAnimated(data,team){
-  if(!template)return proceduralFallback(data,team);
+function animatedVisual(data,teamIdx){
+  if(!template)return fallbackVisual(data,teamIdx);
   const rig=SkeletonUtils.clone(template);
-  rig.scale.multiplyScalar(fitScale*(data.h||1));
-  rig.position.y=-fitMinY*fitScale*(data.h||1);
-  tintRig(rig,data,team);
+  const h=data.height||1,b=data.build||1;
+  rig.scale.set(fitScale*b,fitScale*h,fitScale*b);
+  rig.position.y=-fitMinY*fitScale*h;
+  tintRig(rig,data,teamIdx);
   const root=new THREE.Group();root.add(rig);
   const mixer=new THREE.AnimationMixer(rig),actions={};
   for(const [name,clip] of Object.entries(clipMap))actions[name]=mixer.clipAction(clip);
   if(actions.Idle)actions.Idle.play();
   mixers.push(mixer);
-  return {root,mixer,actions,active:'Idle'};
+  return {root,mixer,actions,active:'Idle',data};
+}
+function setAnim(v,name,oneShot=false){
+  if(!v.mixer||(!oneShot&&v.active===name))return;
+  const next=v.actions[name];if(!next)return;
+  const prev=v.actions[v.active];if(prev&&prev!==next)prev.fadeOut(.12);
+  next.reset().setLoop(oneShot?THREE.LoopOnce:THREE.LoopRepeat,Infinity);
+  next.clampWhenFinished=oneShot;next.fadeIn(.12).play();v.active=name;
+}
+function respawnVisuals(){
+  for(const team of visuals)for(const v of team)world.remove(v.root);
+  visuals[0].length=0;visuals[1].length=0;mixers.length=0;
+  for(let t=0;t<2;t++)for(let i=0;i<11;i++){const v=animatedVisual(playerData(t,i),t);v.team=t;v.idx=i;world.add(v.root);visuals[t].push(v)}
 }
 
-function setAnim(p,name,oneShot=false){
-  if(!p.mixer||p.active===name&&!oneShot)return;
-  const next=p.actions[name];if(!next)return;
-  const prev=p.actions[p.active];
-  if(prev&&prev!==next)prev.fadeOut(.14);
-  next.reset();next.enabled=true;next.setLoop(oneShot?THREE.LoopOnce:THREE.LoopRepeat,Infinity);next.clampWhenFinished=oneShot;next.fadeIn(.14).play();
-  p.active=name;
+// ---------- Real WebSoccer simulation ----------
+let match=createMatch({
+  seed:20261004,
+  halfSeconds:120,
+  humans:[true,false],
+  difficulty:'normal',
+  offside:true,
+  formations:['433','433']
+});
+respawnVisuals();
+
+function simToWorld(x,y,z=0){
+  return {
+    x: -((y-FIELD.cy)/SIM_FIELD_H)*FIELD_L,
+    y: Math.max(0,z)*(2.44/CROSSBAR_H),
+    z: ((x-FIELD.cx)/SIM_FIELD_W)*FIELD_W
+  };
 }
 
-const home=[],away=[];
-function spawnPlayers(){
-  for(const p of [...home,...away])world.remove(p.root);home.length=0;away.length=0;mixers.length=0;
-  formation.forEach(([x,z],i)=>{const p=buildAnimated(HOME[i],'home');p.data=HOME[i];p.root.position.set(x,0,z);p.root.rotation.y=Math.PI/2;p.team='home';p.index=i;world.add(p.root);home.push(p)});
-  formation.forEach(([x,z],i)=>{const p=buildAnimated(AWAY[i],'away');p.data=AWAY[i];p.root.position.set(-x,0,-z);p.root.rotation.y=-Math.PI/2;p.team='away';p.index=i;world.add(p.root);away.push(p)});
-  selectPlayer(Math.min(selectedIndex,home.length-1));
+let selectedIdx=-1;
+let ring=new THREE.Mesh(new THREE.RingGeometry(.58,.78,32),new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
+ring.rotation.x=-Math.PI/2;ring.position.y=.035;
+function refreshControlled(){
+  const idx=match.teams[0].controlled;
+  if(idx===selectedIdx)return;
+  if(ring.parent)ring.parent.remove(ring);
+  selectedIdx=idx;
+  visuals[0][idx].root.add(ring);
+  const r=PLAYER_ROSTERS[0][idx];
+  cardEl.textContent='#'+r.number+' '+r.name;
 }
-
-let selectedIndex=6,selected=null,ring=null;
-function selectPlayer(i){
-  selectedIndex=i;selected=home[i];
-  if(ring&&ring.parent)ring.parent.remove(ring);
-  ring=new THREE.Mesh(new THREE.RingGeometry(.58,.77,32),new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
-  ring.rotation.x=-Math.PI/2;ring.position.y=.035;selected.root.add(ring);
-  cardEl.textContent='#'+selected.data.num+' '+selected.data.name;
-}
-
-spawnPlayers();
+refreshControlled();
 
 try{
   const gltf=await new GLTFLoader().loadAsync(MODEL_URL);
-  template=gltf.scene;
-  clipMap={};
+  template=gltf.scene;clipMap={};
   for(const clip of gltf.animations)clipMap[clip.name.replace(/^HumanArmature\|Man_/,'')]=clip;
   template.updateMatrixWorld(true);
   const box=new THREE.Box3(),tmp=new THREE.Box3();box.makeEmpty();
   template.traverse(o=>{if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){o.computeBoundingBox();tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);box.union(tmp)}});
   if(!box.isEmpty()){const h=box.max.y-box.min.y;fitScale=h>1e-4?1.78/h:1;fitMinY=box.min.y}
-  spawnPlayers();
-  statusEl.textContent='Modelo 3D CC0 carregado · '+Object.keys(clipMap).length+' animações';
-  setTimeout(()=>statusEl.style.opacity='.5',2500);
+  respawnVisuals();selectedIdx=-1;refreshControlled();
+  statusEl.textContent='Híbrido ativo · motor WebSoccer + modelo CC0 · '+Object.keys(clipMap).length+' animações';
+  setTimeout(()=>statusEl.style.opacity='.55',3200);
 }catch(err){
-  console.warn('Falha ao carregar GLB remoto; mantendo fallback procedural.',err);
-  statusEl.textContent='Modelo remoto indisponível · usando jogadores 3D procedurais';
+  console.warn(err);
+  statusEl.textContent='Motor WebSoccer ativo · modelo remoto indisponível, usando fallback 3D';
 }
 
-const keys=new Set();let kickLatch=false;
+const keys=new Set();
 addEventListener('keydown',e=>{
-  if(e.code==='Space')e.preventDefault();
-  if(e.code==='KeyQ'&&!e.repeat)selectPlayer((selectedIndex+1)%home.length);
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.code==='Digit1')camMode='broadcast';
   if(e.code==='Digit2')camMode='close';
   if(e.code==='Digit3')camMode='tactical';
   keys.add(e.code);
 });
-addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='Space')kickLatch=false});
+addEventListener('keyup',e=>keys.delete(e.code));
+addEventListener('blur',()=>keys.clear());
 
-let homeScore=0,awayScore=0,camMode='broadcast';
-function resetBall(){ball.position.set(0,BALL_R,0);ballVel.set(0,0,0)}
-function goalCheck(){
-  if(Math.abs(ball.position.z)>3.66||ball.position.y>2.44)return;
-  if(ball.position.x>FIELD_L/2+.2){homeScore++;scoreEl.textContent=homeScore+' — '+awayScore;resetBall()}
-  if(ball.position.x<-FIELD_L/2-.2){awayScore++;scoreEl.textContent=homeScore+' — '+awayScore;resetBall()}
+function inputMask(){
+  let m=0;
+  if(keys.has('KeyW')||keys.has('ArrowUp'))m|=BTN.UP;
+  if(keys.has('KeyS')||keys.has('ArrowDown'))m|=BTN.DOWN;
+  if(keys.has('KeyA')||keys.has('ArrowLeft'))m|=BTN.LEFT;
+  if(keys.has('KeyD')||keys.has('ArrowRight'))m|=BTN.RIGHT;
+  if(keys.has('Space'))m|=BTN.FIRE;
+  if(keys.has('KeyQ'))m|=BTN.SWITCH;
+  return m;
 }
 
-let last=performance.now(),focusX=0;
-function tick(now){
-  const dt=Math.min(.033,(now-last)/1000);last=now;
-  const dir=new THREE.Vector3(
-    (keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),
-    0,
-    (keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)
-  );
-  const moving=dir.lengthSq()>0;
-  const sprint=keys.has('ShiftLeft')||keys.has('ShiftRight');
-  if(moving){
-    dir.normalize();selected.root.position.addScaledVector(dir,(sprint?11.2:7.3)*dt);
-    selected.root.rotation.y=Math.atan2(dir.x,dir.z);
-    setAnim(selected,sprint?'Run':'Walk');
-    if(selected.actions?.Run)selected.actions.Run.timeScale=sprint?1.18:.85;
-  }else setAnim(selected,'Idle');
-  selected.root.position.x=THREE.MathUtils.clamp(selected.root.position.x,-FIELD_L/2+1,FIELD_L/2-1);
-  selected.root.position.z=THREE.MathUtils.clamp(selected.root.position.z,-FIELD_W/2+1,FIELD_W/2-1);
+let camMode='broadcast',acc=0,last=performance.now(),focusX=0,lastKicker='';
+function renderState(dt){
+  refreshControlled();
 
-  if(keys.has('Space')&&!kickLatch&&selected.root.position.distanceTo(ball.position)<2.25){
-    kickLatch=true;const shot=moving?dir.clone():new THREE.Vector3(Math.sin(selected.root.rotation.y),0,Math.cos(selected.root.rotation.y));
-    ballVel.copy(shot).multiplyScalar(sprint?27:22);ballVel.y=sprint?6.2:5.2;setAnim(selected,'Punch',true);
-    setTimeout(()=>{if(selected)setAnim(selected,'Idle')},430);
+  for(let t=0;t<2;t++){
+    for(let i=0;i<11;i++){
+      const p=match.teams[t].players[i],v=visuals[t][i],w=simToWorld(p.x,p.y,0);
+      v.root.position.set(w.x,0,w.z);
+      const dx=-p.dirY,dz=p.dirX;
+      if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
+
+      const speed=Math.hypot(p.vx,p.vy);
+      if(p.slide>0)setAnim(v,'Punch');
+      else if(p.down>0)setAnim(v,'Idle');
+      else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
+      else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
+      else setAnim(v,'Idle');
+    }
   }
 
-  ballVel.y-=14*dt;ball.position.addScaledVector(ballVel,dt);
-  if(ball.position.y<BALL_R){ball.position.y=BALL_R;if(ballVel.y<0)ballVel.y=-ballVel.y*.3;ballVel.x*=.987;ballVel.z*=.987}
-  if(Math.abs(ballVel.y)<.05&&ball.position.y<=BALL_R+.001)ballVel.y=0;
-  ball.rotation.x+=ballVel.z*dt*.9;ball.rotation.z-=ballVel.x*dt*.9;goalCheck();
+  const bw=simToWorld(match.ball.x,match.ball.y,match.ball.z);
+  ball.position.set(bw.x,BALL_R+bw.y,bw.z);
+  ball.rotation.x+=match.ball.vy*dt*.006;
+  ball.rotation.z-=match.ball.vx*dt*.006;
+
+  const kicker=match.ball.kicker?match.ball.kicker.team+':'+match.ball.kicker.idx:'';
+  if(kicker&&kicker!==lastKicker){
+    const [t,i]=kicker.split(':').map(Number);
+    setAnim(visuals[t][i],'Punch',true);
+  }
+  lastKicker=kicker;
+
+  scoreEl.textContent=match.score[0]+' — '+match.score[1];
+  const frac=Math.min(1,match.halfTick/Math.max(1,match.config.halfTicks));
+  const matchSeconds=Math.floor(frac*45*60);
+  clockEl.textContent=match.half+'T · '+String(Math.floor(matchSeconds/60)).padStart(2,'0')+':'+String(matchSeconds%60).padStart(2,'0');
+
+  const phaseText=match.message||((match.phase==='kickoff')?'INÍCIO':(match.phase==='halftime'?'INTERVALO':match.phase==='fulltime'?'FIM DE JOGO':''));
+  phaseEl.textContent=phaseText;
+  phaseEl.style.opacity=phaseText?'1':'0';
+
+  const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
+  focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
+  if(camMode==='close'){camera.position.set(focusX,19,29);camera.fov=45}
+  else if(camMode==='tactical'){camera.position.set(focusX,51,67);camera.fov=39}
+  else{camera.position.set(focusX,29,45);camera.fov=42}
+  camera.updateProjectionMatrix();camera.lookAt(focusX,0,0);
 
   for(const m of mixers)m.update(dt);
-
-  focusX=THREE.MathUtils.lerp(focusX,THREE.MathUtils.clamp((ball.position.x+selected.root.position.x)*.34,-34,34),1-Math.exp(-dt*4.2));
-  if(camMode==='close'){camera.position.set(focusX,21,31);camera.fov=46}
-  else if(camMode==='tactical'){camera.position.set(focusX,54,70);camera.fov=39}
-  else{camera.position.set(focusX,34,52);camera.fov=42}
-  camera.updateProjectionMatrix();camera.lookAt(focusX,0,0);
-  renderer.render(scene,camera);requestAnimationFrame(tick);
 }
-requestAnimationFrame(tick);
+
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
+  let guard=0;
+  while(acc>=FRAME_TIME&&guard<8){
+    step(match,[inputMask(),0]);
+    acc-=FRAME_TIME;guard++;
+  }
+  if(guard>=8)acc=0;
+  renderState(dt);
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script>
