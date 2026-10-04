@@ -66,10 +66,10 @@ const NUMBERS = [
   'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
 ];
 
-/** How a scoreline is read out: "blue two, red nil". */
+/** Read the score without the old BLUE/RED team names. */
 export function scoreWords(score) {
   if (score[0] > 12 || score[1] > 12) return ''; // past twelve, say nothing
-  return `blue ${NUMBERS[score[0]]} red ${NUMBERS[score[1]]}`;
+  return `${NUMBERS[score[0]]} ${NUMBERS[score[1]]}`;
 }
 
 /**
@@ -80,6 +80,6 @@ export const LINES = {
   goal: ['goal', 'what a goal', 'its in'],
   save: ['saved', 'what a save', 'great save'],
   run: ['hes away', 'go on', 'what a run'],
-  start: ['blue against red', 'here we go'],
+  start: ['here we go'],
   fulltime: ['thats full time', 'full time'],
 };
