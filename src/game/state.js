@@ -49,6 +49,9 @@ export function createMatch(options = {}) {
     setPiece: null,
     advantage: null,
     delivery: null,
+    // Last team with controlled possession. Premium uses this to detect real
+    // turnovers without treating every pass (owner=null in flight) as a loss.
+    possessionTeam: -1,
     ball: newBall(),
     teams: [
       makeTeam(0, opts.humans[0], -1, levelFor(opts.difficulty, 0), opts.formations[0]),
@@ -122,6 +125,11 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     // It exists on every match state but is inert unless config.premiumAI=true.
     oneTwoPasser: -1,
     oneTwoTicks: 0,
+    // Premium transition memory. These stay zero in FC Mukeka 2D.
+    counterTicks: 0,
+    pressTicks: 0,
+    turnoverX: FIELD.cx,
+    turnoverY: FIELD.cy,
     players: formation.map((f, i) => ({
       idx: i,
       role: f.role,
@@ -230,7 +238,13 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
     team.manualHold = 0;
     team.oneTwoPasser = -1;
     team.oneTwoTicks = 0;
+    team.counterTicks = 0;
+    team.pressTicks = 0;
+    team.turnoverX = FIELD.cx;
+    team.turnoverY = FIELD.cy;
   }
+
+  state.possessionTeam = kickoffTeam;
 
   // The striker of the kickoff team stands next to the ball, on his own side of
   // the halfway line - he used to be placed in the opponent's half.
@@ -321,9 +335,14 @@ export function hashState(state) {
   mix(state.delivery?.team ?? -1);
   mix(state.delivery?.ticks ?? 0);
   mix(state.delivery?.kind === 'CORNER' ? 1 : state.delivery?.kind === 'FREE KICK' ? 2 : 0);
+  mix(state.possessionTeam);
   for (const team of state.teams) {
     mix(team.oneTwoPasser);
     mix(team.oneTwoTicks);
+    mix(team.counterTicks);
+    mix(team.pressTicks);
+    mix(team.turnoverX);
+    mix(team.turnoverY);
     for (const p of team.players) {
       mix(p.supportRunTicks);
       mix(p.yellowCards);
