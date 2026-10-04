@@ -75,22 +75,32 @@ function trackPossessionTick(state) {
   if (teamIdx === 0 || teamIdx === 1) state.matchStats.teams[teamIdx].possessionTicks++;
 }
 
-function recordKickStats(state, teamIdx, playerIdx, kind) {
+function recordKickStats(state, teamIdx, playerIdx, kind, kick = null) {
   if (!state.config.premiumStats || !kind) return;
   const teamStats = state.matchStats.teams[teamIdx];
   const p = state.teams[teamIdx].players[playerIdx];
+
+  // Classic 2D has one chargeable kick button, so its legacy action is called
+  // "shot" even when it is a pass/clearance. Classify it by context for stats
+  // without changing the kick physics or controls.
+  let statKind = kind;
+  if (kind === 'shot' && !state.config.premiumBallControl && !state.config.premiumSetPieces && kick) {
+    const aimed = { x: kick.dx, y: kick.dy };
+    if (!shootingAtGoal(state, teamIdx, p, aimed)) statKind = 'pass';
+  }
+
   const passKinds = ['pass','through','cross'];
   const shotKinds = ['shot','placed-shot','low-shot','power-shot','chip-shot','volley','header'];
 
-  if (passKinds.includes(kind)) {
+  if (passKinds.includes(statKind)) {
     teamStats.passes++;
     p.matchStats.passes++;
-    state.matchStats.pendingPass = { team: teamIdx, idx: playerIdx, kind };
+    state.matchStats.pendingPass = { team: teamIdx, idx: playerIdx, kind: statKind };
     state.matchStats.lastShot = null;
-  } else if (shotKinds.includes(kind)) {
+  } else if (shotKinds.includes(statKind)) {
     teamStats.shots++;
     p.matchStats.shots++;
-    state.matchStats.lastShot = { team: teamIdx, idx: playerIdx, onTarget: false, kind };
+    state.matchStats.lastShot = { team: teamIdx, idx: playerIdx, onTarget: false, kind: statKind };
     state.matchStats.pendingPass = null;
   } else if (kind !== 'throw-in') {
     state.matchStats.pendingPass = null;
@@ -1015,7 +1025,7 @@ function updatePlayers(state, inputs, frozen) {
           ? it.kick.lift * clamp(1 - ((p.rating?.fin ?? 72) - 72) * 0.0018, 0.96, 1.04)
           : it.kick.lift;
         kickBall(state, t, i, it.kick.dx, it.kick.dy, ratedPower, ratedLift);
-        recordKickStats(state, t, i, it.kick.kind);
+        recordKickStats(state, t, i, it.kick.kind, it.kick);
         if (typeof it.kick.spin === 'number') state.ball.spin = it.kick.spin;
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
