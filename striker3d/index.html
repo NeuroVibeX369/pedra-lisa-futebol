@@ -18,6 +18,9 @@
     .status{position:absolute;left:14px;top:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:11px;color:#b8c9bf;max-width:390px;transition:opacity .5s}
     .playercard{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;backdrop-filter:blur(8px)}
     .phase{position:absolute;left:50%;top:82px;transform:translateX(-50%);font-size:22px;font-weight:900;letter-spacing:.09em;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .15s}
+    .replay{position:absolute;left:18px;top:62px;padding:7px 11px;border-radius:7px;background:rgba(120,0,0,.85);border:1px solid rgba(255,255,255,.24);font-size:11px;font-weight:1000;letter-spacing:.16em;opacity:0;transition:opacity .12s}
+    .powerWrap{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:min(260px,46vw);height:10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);overflow:hidden;opacity:0;transition:opacity .1s}
+    .powerFill{height:100%;width:0;background:linear-gradient(90deg,#55d977,#f0d35c,#e85b4f)}
     .lobby{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(4,10,7,.78);backdrop-filter:blur(10px);padding:18px}
     .lobby.hidden{display:none}.lobbyBox{width:min(560px,100%);background:#0d1912;border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.45)}
     .lobbyBox h1{margin:0 0 6px;font-size:32px}.lobbyBox p{color:#aebdb4;line-height:1.5}.lobbyBtns{display:grid;gap:10px;margin-top:18px}
@@ -84,6 +87,8 @@
   </div>
   <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
   <div class="phase" id="phase"></div>
+  <div class="replay" id="replayLabel">REPLAY</div>
+  <div class="powerWrap" id="powerWrap"><div class="powerFill" id="powerFill"></div></div>
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>FC Mukeka Premium · motor determinístico</b></div>
@@ -117,6 +122,9 @@ const scoreEl=document.getElementById('score');
 const clockEl=document.getElementById('clock');
 const cardEl=document.getElementById('playercard');
 const phaseEl=document.getElementById('phase');
+const replayLabelEl=document.getElementById('replayLabel');
+const powerWrapEl=document.getElementById('powerWrap');
+const powerFillEl=document.getElementById('powerFill');
 const lobbyEl=document.getElementById('browserLobby');
 const lobbyStatusEl=document.getElementById('lobbyStatus3d');
 const roomEl=document.getElementById('room3d');
@@ -583,6 +591,18 @@ function createPremiumFootballClips(root){
     [1,{}],
   ]);
 
+  add('SaveLeft',.72,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.25,0,-.72],upperarm_r:[-.25,0,.72]}],
+    [.44,{pelvis:[-.12,0,-.72],spine_01:[.12,0,-.48],spine_02:[.10,0,-.42],upperarm_l:[-1.18,0,-.52],upperarm_r:[-1.02,0,.28],thigh_l:[.22,0,-.28],thigh_r:[-.18,0,-.16]}],
+    [1,{pelvis:[-.06,0,-.38],spine_01:[.06,0,-.22],upperarm_l:[-.52,0,-.54],upperarm_r:[-.42,0,.42]}],
+  ]);
+
+  add('SaveRight',.72,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.25,0,-.72],upperarm_r:[-.25,0,.72]}],
+    [.44,{pelvis:[-.12,0,.72],spine_01:[.12,0,.48],spine_02:[.10,0,.42],upperarm_l:[-1.02,0,-.28],upperarm_r:[-1.18,0,.52],thigh_l:[-.18,0,.16],thigh_r:[.22,0,.28]}],
+    [1,{pelvis:[-.06,0,.38],spine_01:[.06,0,.22],upperarm_l:[-.42,0,-.42],upperarm_r:[-.52,0,.54]}],
+  ]);
+
   add('Knockdown',.92,[
     [0,{}],
     [.5,{pelvis:[-.58,0,.28],spine_01:[-.38,0,0],upperarm_l:[0,0,-.76],upperarm_r:[0,0,.76]}],
@@ -816,6 +836,39 @@ function inputMask(){
 
 let camMode='broadcast',acc=0,last=performance.now(),focusX=0,lastKicker='';
 const visualEvents=[];
+const replayHistory=[];
+let replay={active:false,frames:[],started:0,duration:2.15};
+
+function recordReplayFrame(){
+  if(!matchActive)return;
+  const frame={
+    tick:match.tick,
+    ball:{x:match.ball.x,y:match.ball.y,z:match.ball.z},
+    teams:match.teams.map(team=>team.players.map(p=>({x:p.x,y:p.y,dirX:p.dirX,dirY:p.dirY})))
+  };
+  replayHistory.push(frame);
+  if(replayHistory.length>150)replayHistory.shift();
+}
+
+function startGoalReplay(){
+  const frames=replayHistory.slice(-120);
+  if(frames.length<20)return;
+  replay={active:true,frames,started:performance.now()/1000,duration:2.15};
+  replayLabelEl.style.opacity='1';
+}
+
+function replayFrameNow(nowSec){
+  if(!replay.active)return null;
+  const t=(nowSec-replay.started)/replay.duration;
+  if(t>=1){
+    replay.active=false;
+    replayLabelEl.style.opacity='0';
+    return null;
+  }
+  const eased=Math.max(0,Math.min(.999,t));
+  const idx=Math.floor(eased*replay.frames.length);
+  return replay.frames[Math.min(replay.frames.length-1,idx)];
+}
 
 function queueVisualEvents(){
   if(!match.events?.length)return;
@@ -838,9 +891,16 @@ function processVisualEvents(){
       const v=visuals[ev.team][ev.idx];
       playAction(v,'standing-tackle',v.actions.Tackle?'Tackle':'Punch',.34);
     }else if(ev.type==='save'){
-      const v=visuals[ev.team]?.[0];
-      if(v)playAction(v,'save',v.actions.Save?'Save':(v.actions.Jump?'Jump':'Punch'),.62);
+      const v=visuals[ev.team]?.[ev.idx??0];
+      if(v){
+        const clip=ev.side<0
+          ?(v.actions.SaveLeft?'SaveLeft':(v.actions.Save?'Save':'Punch'))
+          :(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'));
+        playAction(v,'save',clip,.72,.44);
+        v.saveSide=ev.side||1;
+      }
     }else if(ev.type==='goal'){
+      startGoalReplay();
       const team=ev.team;
       const scorer=(match.ball.lastTouch?.team===team)?match.ball.lastTouch.idx:match.teams[team].controlled;
       const order=[scorer,...Array.from({length:11},(_,i)=>i).filter(i=>i!==scorer)].slice(0,4);
@@ -856,10 +916,14 @@ function renderState(dt){
   refreshControlled();
   processVisualEvents();
   const nowSec=performance.now()/1000;
+  const replayFrame=replayFrameNow(nowSec);
 
   for(let t=0;t<2;t++){
     for(let i=0;i<11;i++){
-      const p=match.teams[t].players[i],v=visuals[t][i],w=simToWorld(p.x,p.y,0);
+      const p=match.teams[t].players[i],v=visuals[t][i];
+      const rp=replayFrame?.teams?.[t]?.[i];
+      const px=rp?rp.x:p.x,py=rp?rp.y:p.y,pdirX=rp?rp.dirX:p.dirX,pdirY=rp?rp.dirY:p.dirY;
+      const w=simToWorld(px,py,0);
       if(i===0){
         // Keep the goalkeeper visually in front of the goal mouth when the
         // simulation has him guarding the line. WebSoccer uses a much wider
@@ -872,7 +936,7 @@ function renderState(dt){
         }
       }
       v.root.position.set(w.x,0,w.z);
-      const dx=-p.dirY,dz=p.dirX;
+      const dx=-pdirY,dz=pdirX;
       if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
 
       const speed=Math.hypot(p.vx,p.vy);
@@ -894,8 +958,10 @@ function renderState(dt){
           v.root.position.y+=Math.sin(phase*Math.PI)*.42;
           v.root.rotation.x=-.12*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='save'){
-          v.root.position.y+=Math.sin(phase*Math.PI)*.28;
-          v.root.rotation.z=.18*Math.sin(phase*Math.PI);
+          const s=v.saveSide||1;
+          v.root.position.y+=Math.sin(phase*Math.PI)*.34;
+          v.root.position.z+=s*Math.sin(phase*Math.PI)*.72;
+          v.root.rotation.z=-s*.52*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='shot'||v.actionKind==='cross'){
           v.root.rotation.x=-.08*Math.sin(phase*Math.PI);
         }else if(v.actionKind==='standing-tackle'){
@@ -915,8 +981,9 @@ function renderState(dt){
     }
   }
 
-  const bw=simToWorld(match.ball.x,match.ball.y,match.ball.z);
-  if(match.ball.owner){
+  const rb=replayFrame?.ball;
+  const bw=simToWorld(rb?rb.x:match.ball.x,rb?rb.y:match.ball.y,rb?rb.z:match.ball.z);
+  if(!replayFrame && match.ball.owner){
     const o=match.ball.owner;
     const p=match.teams[o.team].players[o.idx];
     const pw=simToWorld(p.x,p.y,0);
@@ -944,6 +1011,16 @@ function renderState(dt){
   }
   lastKicker=kicker;
 
+  const cp=match.teams[localTeam]?.players?.[match.teams[localTeam]?.controlled??0];
+  if(!replay.active && cp?.charging){
+    const pct=Math.min(100,(cp.charge/30)*100);
+    powerWrapEl.style.opacity='1';
+    powerFillEl.style.width=pct+'%';
+  }else{
+    powerWrapEl.style.opacity='0';
+    powerFillEl.style.width='0%';
+  }
+
   scoreEl.textContent=match.score[0]+' — '+match.score[1];
   const frac=Math.min(1,match.halfTick/Math.max(1,match.config.halfTicks));
   const matchSeconds=Math.floor(frac*45*60);
@@ -955,10 +1032,17 @@ function renderState(dt){
 
   const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
   focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
-  if(camMode==='close'){camera.position.set(focusX,8.6,21.5);camera.fov=42}
-  else if(camMode==='tactical'){camera.position.set(focusX,32,48);camera.fov=38}
-  else{camera.position.set(focusX,13.6,30.5);camera.fov=36}
-  camera.updateProjectionMatrix();camera.lookAt(focusX,1.0,0);
+  if(replay.active){
+    camera.position.set(bw.x-10,7.0,THREE.MathUtils.clamp(bw.z+15,-23,23));
+    camera.fov=34;
+    camera.lookAt(bw.x,1.05,bw.z);
+  }else{
+    if(camMode==='close'){camera.position.set(focusX,8.6,21.5);camera.fov=42}
+    else if(camMode==='tactical'){camera.position.set(focusX,32,48);camera.fov=38}
+    else{camera.position.set(focusX,13.6,30.5);camera.fov=36}
+    camera.lookAt(focusX,1.0,0);
+  }
+  camera.updateProjectionMatrix();
 
   for(const m of mixers)m.update(dt);
 }
@@ -971,6 +1055,7 @@ function frame(now){
     transport?.sample?.(tick);
     if(transport?.ready && !transport.ready(tick))break;
     step(match,transport?.poll?transport.poll(tick):[inputMask(),0]);
+    recordReplayFrame();
     queueVisualEvents();
     transport?.afterStep?.(match);
     acc-=FRAME_TIME;guard++;
