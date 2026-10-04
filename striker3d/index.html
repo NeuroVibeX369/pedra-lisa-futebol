@@ -6,10 +6,10 @@
   <title>Pedra Lisa PS2 Web</title>
   <style>
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
-    #app{position:fixed;inset:0}canvas{display:block}
+    #app{position:fixed;inset:0}#app:after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.20) 100%);z-index:2}canvas{display:block}
     #hud{position:fixed;inset:0;pointer-events:none}
-    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(6,11,8,.82);border:1px solid rgba(255,255,255,.13);border-radius:14px;padding:9px 14px;backdrop-filter:blur(8px);font-weight:800;box-shadow:0 10px 28px rgba(0,0,0,.25)}
-    .score{font-size:20px}.small{font-size:11px;color:#aab9b0;letter-spacing:.08em;text-transform:uppercase}
+    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(10,72,34,.96),rgba(9,14,11,.96) 36%,rgba(9,14,11,.96) 64%,rgba(235,235,230,.96));border:1px solid rgba(255,255,255,.20);border-radius:8px;padding:9px 16px;backdrop-filter:blur(8px);font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.36);text-shadow:0 1px 2px #000}
+    .score{font-size:22px;min-width:72px;text-align:center;background:#0a0f0c;border-radius:5px;padding:3px 8px}.small{font-size:10px;color:#d0dbd4;letter-spacing:.08em;text-transform:uppercase}
     .clock{font-size:12px;color:#d9e5dd;padding-left:9px;border-left:1px solid rgba(255,255,255,.18)}
     .info{position:absolute;left:14px;bottom:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(8px);max-width:460px}
     .info b{color:#82e3a0}.info .keys{margin-top:5px;color:#c8d3cc;font-size:12px;line-height:1.55}
@@ -77,7 +77,7 @@
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>Pedra Lisa PS2 Web · motor determinístico</b></div>
-    <div class="keys">WASD / setas: mover · Espaço: passe/chute (segure para força) · Q: trocar jogador · 1/2/3: Broadcast / Close / Tactical</div>
+    <div class="keys">WASD / setas: mover · Espaço: passe/chute · Q: trocar jogador · 1/2/3: TV / Próxima / Tática</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
   <div class="tag">Versão web própria · sem download</div>
@@ -125,8 +125,8 @@ if(touchDevice){
 }
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0xa8cde6);
-scene.fog=new THREE.Fog(0xa8cde6,125,310);
+scene.background=new THREE.Color(0x90b7d1);
+scene.fog=new THREE.Fog(0x90b7d1,145,330);
 
 const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,550);
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -136,7 +136,7 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05;
+renderer.toneMappingExposure=.92;
 app.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xe7f4ff,0x31512e,1.65));
@@ -149,13 +149,37 @@ const FIELD_L=105, FIELD_W=68, BALL_R=.22;
 const world=new THREE.Group();scene.add(world);
 
 // ---------- Pitch / stadium ----------
-const apron=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L+22,FIELD_W+22),new THREE.MeshStandardMaterial({color:0x215b31,roughness:.97}));
-apron.rotation.x=-Math.PI/2;apron.position.y=-.025;apron.receiveShadow=true;world.add(apron);
-for(let i=0;i<12;i++){
-  const mat=new THREE.MeshStandardMaterial({color:i%2?0x2e8242:0x28783c,roughness:.96});
-  const s=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L/12+.04,FIELD_W),mat);
-  s.rotation.x=-Math.PI/2;s.position.set(-FIELD_L/2+FIELD_L/24+i*FIELD_L/12,0,0);s.receiveShadow=true;world.add(s);
+function makePitchTexture(){
+  const canvas=document.createElement('canvas');
+  canvas.width=1024;canvas.height=640;
+  const ctx=canvas.getContext('2d');
+  const stripes=12;
+  for(let i=0;i<stripes;i++){
+    ctx.fillStyle=i%2?'#327f3f':'#2b7438';
+    ctx.fillRect(i*canvas.width/stripes,0,canvas.width/stripes+1,canvas.height);
+  }
+  // Fine mowing/noise so the grass stops looking like a neon flat plane.
+  const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+  for(let i=0;i<img.data.length;i+=4){
+    const n=(Math.random()-.5)*12;
+    img.data[i]=Math.max(0,Math.min(255,img.data[i]+n));
+    img.data[i+1]=Math.max(0,Math.min(255,img.data[i+1]+n));
+    img.data[i+2]=Math.max(0,Math.min(255,img.data[i+2]+n*.45));
+  }
+  ctx.putImageData(img,0,0);
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return tex;
 }
+const apron=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L+28,FIELD_W+28),new THREE.MeshStandardMaterial({color:0x24492b,roughness:1}));
+apron.rotation.x=-Math.PI/2;apron.position.y=-.035;apron.receiveShadow=true;world.add(apron);
+const pitchTex=makePitchTexture();
+const pitch=new THREE.Mesh(
+  new THREE.PlaneGeometry(FIELD_L,FIELD_W),
+  new THREE.MeshStandardMaterial({map:pitchTex,color:0xffffff,roughness:.94,metalness:0})
+);
+pitch.rotation.x=-Math.PI/2;pitch.position.y=0;pitch.receiveShadow=true;world.add(pitch);
 const lineMat=new THREE.LineBasicMaterial({color:0xf6f6f0,transparent:true,opacity:.95});
 const lineY=.035;
 const addLine=pts=>world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lineMat));
@@ -242,26 +266,114 @@ function buildGoal(side){
 }
 buildGoal(-1);buildGoal(1);
 
-const concrete=new THREE.MeshStandardMaterial({color:0x363d39,roughness:.9});
-const dark=new THREE.MeshStandardMaterial({color:0x1e2421,roughness:.95});
-function stand(x,y,z,w,h,d,mat=concrete){const s=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);s.position.set(x,y,z);s.castShadow=true;s.receiveShadow=true;world.add(s)}
-stand(0,4,-45,124,8,12);stand(0,7,-51,124,6,7,dark);
-stand(0,4,45,124,8,12);stand(0,7,51,124,6,7,dark);
-stand(-62,3.4,0,12,6.8,72);stand(62,3.4,0,12,6.8,72);
+const concrete=new THREE.MeshStandardMaterial({color:0x3a403d,roughness:.88});
+const concreteLight=new THREE.MeshStandardMaterial({color:0x555d58,roughness:.9});
+const dark=new THREE.MeshStandardMaterial({color:0x181d1a,roughness:.96});
+const roofMat=new THREE.MeshStandardMaterial({color:0x222824,roughness:.82,metalness:.14,side:THREE.DoubleSide});
+function stand(x,y,z,w,h,d,mat=concrete){const s=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);s.position.set(x,y,z);s.castShadow=true;s.receiveShadow=true;world.add(s);return s}
 
-const crowdGeo=new THREE.BoxGeometry(.24,.52,.22),crowdMat=new THREE.MeshStandardMaterial({color:0xd6d6d0,roughness:.9});
-const crowd=new THREE.InstancedMesh(crowdGeo,crowdMat,1500);
-const dummy=new THREE.Object3D();
-for(let i=0;i<1500;i++){
-  const north=i<750,row=Math.floor((i%750)/125),col=i%125;
-  dummy.position.set(-59+col*.95,5.1+row*.6,north?-40.5:40.5);
-  dummy.rotation.y=north?Math.PI:0;dummy.scale.setScalar(.75+Math.random()*.35);dummy.updateMatrix();crowd.setMatrixAt(i,dummy.matrix);
+// Full stadium bowl: lower and upper tiers, end stands and roof. Designed to keep
+// the pitch open while making the broadcast camera feel like a real venue.
+for(const side of [-1,1]){
+  stand(0,3.4,side*43.5,122,6.8,8,concrete);
+  stand(0,8.0,side*49.2,126,5.8,8,concreteLight);
+  const roof=stand(0,13.0,side*53.0,130,.8,14,roofMat);
+  roof.rotation.x=side*.08;
 }
-world.add(crowd);
-const boardMat=new THREE.MeshStandardMaterial({color:0x0d4e29,emissive:0x082b18,emissiveIntensity:.8,roughness:.55});
-for(const z of [-35.8,35.8])for(let x=-48;x<=48;x+=12){const b=new THREE.Mesh(new THREE.BoxGeometry(10,.75,.18),boardMat);b.position.set(x,.55,z);world.add(b)}
+for(const side of [-1,1]){
+  stand(side*59.5,3.2,0,8,6.4,70,concrete);
+  stand(side*64.0,7.7,0,7,5.4,72,concreteLight);
+  stand(side*68.0,12.4,0,9,.7,76,roofMat);
+}
 
-const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,24,16),new THREE.MeshStandardMaterial({color:0xf5f5f0,roughness:.5}));
+// Dark fascia between tiers gives the PS2-era broadcast look and hides the
+// simple geometry from field level.
+for(const z of [-44.4,44.4]) stand(0,6.7,z,124,1.0,.55,dark);
+for(const x of [-60.4,60.4]) stand(x,6.4,0,.55,1.0,71,dark);
+
+function makeCrowdTexture(seed=1){
+  const cv=document.createElement('canvas');cv.width=512;cv.height=128;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#202621';ctx.fillRect(0,0,cv.width,cv.height);
+  const colors=['#e5d7c0','#c6a47f','#7c563e','#f0f0e9','#178a3c','#f5f5f5','#263d70','#9f2e2e','#d6b84d'];
+  let s=seed>>>0;
+  const rand=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+  for(let row=0;row<7;row++){
+    for(let col=0;col<72;col++){
+      const x=col*7.2+(row%2)*3.5+(rand()-.5)*2;
+      const y=12+row*16+(rand()-.5)*3;
+      ctx.fillStyle=colors[Math.floor(rand()*colors.length)];
+      ctx.beginPath();ctx.arc(x,y,2.4+rand()*1.8,0,Math.PI*2);ctx.fill();
+      ctx.fillRect(x-2.5,y+3,5,6+rand()*5);
+    }
+  }
+  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.RepeatWrapping;return tex;
+}
+const crowdTex=makeCrowdTexture(20261004);
+function crowdPanel(w,h,x,y,z,rotY=0,repeat=8){
+  const tex=crowdTex.clone();tex.needsUpdate=true;tex.repeat.set(repeat,1);
+  const m=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,toneMapped:false});
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m);
+  p.position.set(x,y,z);p.rotation.y=rotY;world.add(p);return p;
+}
+// Lower + upper crowd strips on all four sides.
+for(const z of [-39.7,39.7]){
+  crowdPanel(116,5.2,0,4.3,z,z<0?0:Math.PI,14);
+  crowdPanel(120,4.6,0,8.8,z<0?-46.8:46.8,z<0?0:Math.PI,15);
+}
+for(const x of [-55.4,55.4]){
+  crowdPanel(64,5.0,x,4.2,0,x<0?Math.PI/2:-Math.PI/2,8);
+  crowdPanel(66,4.4,x<0?-62.1:62.1,8.5,0,x<0?Math.PI/2:-Math.PI/2,9);
+}
+
+// Stadium floodlights.
+const mastMat=new THREE.MeshStandardMaterial({color:0x4a504d,metalness:.5,roughness:.5});
+for(const x of [-50,50])for(const z of [-48,48]){
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.16,.22,22,10),mastMat);mast.position.set(x,11,z);world.add(mast);
+  const rack=new THREE.Mesh(new THREE.BoxGeometry(7,2,.45),new THREE.MeshStandardMaterial({color:0xe9eee9,emissive:0xffffff,emissiveIntensity:.65}));
+  rack.position.set(x,21.4,z);world.add(rack);
+}
+
+// Original Pedra Lisa advertising, no third-party marks.
+function adTexture(text,bg='#0b5128',fg='#ffffff'){
+  const cv=document.createElement('canvas');cv.width=1024;cv.height=128;
+  const ctx=cv.getContext('2d');ctx.fillStyle=bg;ctx.fillRect(0,0,1024,128);
+  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.strokeRect(4,4,1016,120);
+  ctx.fillStyle=fg;ctx.font='900 54px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(text,512,65);
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const adMats=[
+  new THREE.MeshStandardMaterial({map:adTexture('PEDRA LISA GAMES'),emissive:0x0a2413,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({map:adTexture('PEDRA LISA PS2 WEB','#13213f'),emissive:0x081127,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({map:adTexture('INDEPENDÊNCIA','#f4f4ef','#111111'),emissive:0x222222,emissiveIntensity:.2})
+];
+let adIdx=0;
+for(const z of [-35.8,35.8])for(let x=-48;x<=48;x+=12){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(10.5,.95,.16),adMats[adIdx++%adMats.length]);b.position.set(x,.58,z);world.add(b);
+}
+for(const x of [-53.3,53.3])for(let z=-28;z<=28;z+=10){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.16,.95,8.6),adMats[adIdx++%adMats.length]);b.position.set(x,.58,z);world.add(b);
+}
+
+// Player tunnel and bench blocks.
+stand(-4,1.3,36.9,8,2.6,2.2,dark);
+for(const x of [-24,24]){stand(x,1.1,37.0,15,2.2,2.2,new THREE.MeshStandardMaterial({color:0x1f3428,roughness:.8}));}
+
+
+function makeBallTexture(){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=128;
+  const ctx=cv.getContext('2d');ctx.fillStyle='#f3f1e8';ctx.fillRect(0,0,256,128);
+  ctx.fillStyle='#202020';
+  for(const [x,y] of [[32,28],[96,74],[162,27],[221,78],[62,112],[192,112]]){
+    ctx.beginPath();
+    for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;const px=x+13*Math.cos(a),py=y+13*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py)}
+    ctx.closePath();ctx.fill();
+  }
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,32,24),new THREE.MeshStandardMaterial({map:makeBallTexture(),roughness:.46}));
 ball.castShadow=true;world.add(ball);
 
 // ---------- Model loading / player visuals ----------
@@ -374,7 +486,24 @@ function showTouch(on){
   touch3d.show(on);
 }
 
+let crowdAudioStarted=false;
+function startCrowdAudio(){
+  if(crowdAudioStarted)return;
+  crowdAudioStarted=true;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    const ac=new AC(),len=ac.sampleRate*3,buf=ac.createBuffer(1,len,ac.sampleRate),data=buf.getChannelData(0);
+    for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*(.28+.18*Math.sin(i/1800));
+    const src=ac.createBufferSource();src.buffer=buf;src.loop=true;
+    const filter=ac.createBiquadFilter();filter.type='bandpass';filter.frequency.value=720;filter.Q.value=.35;
+    const gain=ac.createGain();gain.gain.value=.055;
+    src.connect(filter);filter.connect(gain);gain.connect(ac.destination);src.start();
+  }catch{}
+}
+
 function beginCpu(){
+  startCrowdAudio();
   transport?.dispose?.();
   signal=null;
   resetMatch({humans:[true,false],difficulty:'normal',localTeam:0});
@@ -386,6 +515,7 @@ function beginCpu(){
 }
 
 function beginOnline({seed,localTeam:team,signal:sig}){
+  startCrowdAudio();
   transport?.dispose?.();
   signal=sig;
   resetMatch({seed,humans:[true,true],localTeam:team,formations:['433','433']});
@@ -428,7 +558,7 @@ try{
   template.traverse(o=>{if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){o.computeBoundingBox();tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);box.union(tmp)}});
   if(!box.isEmpty()){const h=box.max.y-box.min.y;fitScale=h>1e-4?1.88/h:1;fitMinY=box.min.y}
   respawnVisuals();selectedIdx=-1;refreshControlled();
-  statusEl.textContent='Pedra Lisa PS2 Web · modelo 3D CC0 · '+Object.keys(clipMap).length+' animações';
+  statusEl.textContent='Pedra Lisa PS2 Web · visual renovado · modelo 3D CC0 · '+Object.keys(clipMap).length+' animações';
   setTimeout(()=>statusEl.style.opacity='.55',3200);
 }catch(err){
   console.warn(err);
@@ -499,10 +629,10 @@ function renderState(dt){
 
   const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
   focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
-  if(camMode==='close'){camera.position.set(focusX,12.5,24);camera.fov=44}
-  else if(camMode==='tactical'){camera.position.set(focusX,42,59);camera.fov=40}
-  else{camera.position.set(focusX,20.5,35);camera.fov=39}
-  camera.updateProjectionMatrix();camera.lookAt(focusX,1.15,0);
+  if(camMode==='close'){camera.position.set(focusX,8.6,21.5);camera.fov=42}
+  else if(camMode==='tactical'){camera.position.set(focusX,32,48);camera.fov=38}
+  else{camera.position.set(focusX,13.6,30.5);camera.fov=36}
+  camera.updateProjectionMatrix();camera.lookAt(focusX,1.0,0);
 
   for(const m of mixers)m.update(dt);
 }
