@@ -138,6 +138,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     subsUsed: 0,
     nextBenchNumber: 12,
     lastAutoSubHalfTick: -99999,
+    pendingSubIdx: -1,
     players: formation.map((f, i) => {
       const identity = PLAYER_ROSTERS[index]?.[i] || { name: 'Jogador', number: i + 1 };
       return {
@@ -376,6 +377,7 @@ export function hashState(state) {
     mix(team.subsUsed);
     mix(team.nextBenchNumber);
     mix(team.lastAutoSubHalfTick);
+    mix(team.pendingSubIdx);
     for (const p of team.players) {
       mix(p.supportRunTicks);
       mix(p.firstTouchTicks);
