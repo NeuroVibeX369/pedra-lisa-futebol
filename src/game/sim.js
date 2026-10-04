@@ -229,6 +229,7 @@ function updateOwnership(state) {
       p.charging = false;
       p.shielding = false;
       p.charge = 0;
+      p.shotStyle = 'normal';
     } else {
       p.holdTicks++;
       // Topped up for as long as he really has it, but not past the six second
@@ -786,6 +787,7 @@ function updatePlayers(state, inputs, frozen) {
           state.events.push({ type: 'penalty-dive', team: defendingTeam, idx: 0, side: dive });
         }
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+        if (typeof it.kick.spin === 'number') state.ball.spin = it.kick.spin;
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
           if (setPieceKind === 'CORNER' || setPieceKind === 'FREE KICK') {
@@ -1003,9 +1005,23 @@ function humanIntent(state, t, i, mask) {
     // Face buttons behave like a console football game:
     // × short grounded pass; △ stronger ball into space; ○ lofted cross;
     // □/legacy FIRE is the chargeable shot.
-    if (passPressed) {
+    if (switchHeld && throughPressed && state.config.premiumBallControl) {
       p.charging = false;
       p.charge = 0;
+      p.shotStyle = 'normal';
+      const aimed = assistedAim(state, t, i, aimX, aimY);
+      const shot = chargeToShot(14);
+      intent.kick = {
+        dx: aimed.x,
+        dy: aimed.y,
+        power: shot.power * 0.86,
+        lift: 265,
+        kind: 'chip-shot',
+      };
+    } else if (passPressed) {
+      p.charging = false;
+      p.charge = 0;
+      p.shotStyle = 'normal';
       const shot = chargeToShot(2);
       const aimed = assistedAim(state, t, i, aimX, aimY);
       intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 0, kind: 'pass' };
@@ -1025,6 +1041,7 @@ function humanIntent(state, t, i, mask) {
     } else if (shoot && !prevShoot) {
       p.charging = true;
       p.charge = 0;
+      p.shotStyle = state.config.premiumBallControl && switchHeld ? 'placed' : 'normal';
     }
   } else {
     // Contextual first-time finishes. Medium-height balls become volleys;
@@ -1094,13 +1111,36 @@ function humanIntent(state, t, i, mask) {
           intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 245, kind: 'cross' };
         } else {
           const aimed = assistedAim(state, t, i, aimX, aimY);
+          const atGoal = shootingAtGoal(state, t, p, aimed);
+          let kind = 'shot';
+          let power = shot.power;
+          let lift = atGoal ? Math.min(shot.lift, SHOT_LIFT_MAX) : shot.lift;
+          let spin = 0;
+
+          if (state.config.premiumBallControl && p.shotStyle === 'placed' && atGoal) {
+            kind = 'placed-shot';
+            power *= 0.88;
+            lift = Math.min(lift, 118);
+            spin = clamp(aimed.x, -1, 1) * 1.08;
+          } else if (state.config.premiumBallControl && atGoal && p.charge <= 7) {
+            kind = 'low-shot';
+            power *= 0.94;
+            lift = Math.min(lift, 34);
+          } else if (state.config.premiumBallControl && atGoal && p.charge >= 23) {
+            kind = 'power-shot';
+            power *= 1.06;
+            lift = Math.min(lift, 160);
+          }
+
           intent.kick = {
             dx: aimed.x,
             dy: aimed.y,
-            power: shot.power,
-            lift: shootingAtGoal(state, t, p, aimed) ? Math.min(shot.lift, SHOT_LIFT_MAX) : shot.lift,
-            kind: 'shot',
+            power,
+            lift,
+            spin,
+            kind,
           };
+          p.shotStyle = 'normal';
         }
       }
     }
