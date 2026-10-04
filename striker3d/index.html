@@ -842,6 +842,7 @@ let match=createMatch({
   premiumSetPieces:true,
   premiumBallControl:true,
   premiumManagement:true,
+  premiumRatings:true,
   formations:['433','433']
 });
 let transport=null;
@@ -861,6 +862,7 @@ function resetMatch(opts={}){
     premiumSetPieces:true,
     premiumBallControl:true,
     premiumManagement:true,
+    premiumRatings:true,
     formations:opts.formations||['433','433']
   });
   localTeam=opts.localTeam??0;
@@ -924,13 +926,15 @@ const presentation={
   online:false,
 };
 
-function renderLineupList(target,roster){
-  target.innerHTML=roster.map((p,i)=>
-    '<div><b>'+String(p.number).padStart(2,'0')+'</b><span>'+p.name+'</span></div>'
-  ).join('');
+function renderLineupList(target,teamIdx){
+  const roster=PLAYER_ROSTERS[teamIdx];
+  target.innerHTML=roster.map((p,i)=>{
+    const live=match.teams[teamIdx].players[i];
+    return '<div><b>'+String(p.number).padStart(2,'0')+'</b><span>'+p.name+' · '+p.position+' · OVR '+(live?.overall??'--')+'</span></div>';
+  }).join('');
 }
-renderLineupList(lineupHomeListEl,PLAYER_ROSTERS[0]);
-renderLineupList(lineupAwayListEl,PLAYER_ROSTERS[1]);
+renderLineupList(lineupHomeListEl,0);
+renderLineupList(lineupAwayListEl,1);
 
 function playPresentationSting(){
   try{
@@ -1016,7 +1020,8 @@ function setFeaturedPlayer(slot){
   spotNumberEl.textContent=p.number;
   spotTeamEl.textContent=team===0?'PEDRA LISA':'INDEPENDÊNCIA';
   spotNameEl.textContent=p.name;
-  spotRoleEl.textContent=role+' · DESTAQUE DA APRESENTAÇÃO';
+  const live=match.teams[team]?.players?.[idx];
+  spotRoleEl.textContent=role+' · OVR '+(live?.overall??'--')+' · DESTAQUE DA APRESENTAÇÃO';
 }
 
 function updatePresentation(nowSec){
@@ -1201,7 +1206,7 @@ function refreshControlled(){
   selectedIdx=idx;
   visuals[team][idx].root.add(ring);
   const p=match.teams[team].players[idx];
-  cardEl.textContent='#'+(p.shirtNumber??PLAYER_ROSTERS[team][idx].number)+' '+(p.displayName||PLAYER_ROSTERS[team][idx].name);
+  cardEl.textContent='#'+(p.shirtNumber??PLAYER_ROSTERS[team][idx].number)+' '+(p.displayName||PLAYER_ROSTERS[team][idx].name)+' · '+(p.position||PLAYER_ROSTERS[team][idx].position)+' · OVR '+(p.overall??'--');
 }
 refreshControlled();
 
@@ -1671,7 +1676,7 @@ function renderState(dt){
   if(cp){
     const staminaPct=Math.round((cp.stamina??1000)/10);
     staminaMiniFillEl.style.transform='scaleX('+Math.max(0,Math.min(1,staminaPct/100))+')';
-    cardEl.textContent='#'+(cp.shirtNumber??PLAYER_ROSTERS[localTeam][localStateTeam.controlled].number)+' '+(cp.displayName||PLAYER_ROSTERS[localTeam][localStateTeam.controlled].name)+' · ENERGIA '+staminaPct+'%';
+    cardEl.textContent='#'+(cp.shirtNumber??PLAYER_ROSTERS[localTeam][localStateTeam.controlled].number)+' '+(cp.displayName||PLAYER_ROSTERS[localTeam][localStateTeam.controlled].name)+' · '+(cp.position||PLAYER_ROSTERS[localTeam][localStateTeam.controlled].position)+' · OVR '+(cp.overall??'--')+' · ENERGIA '+staminaPct+'%';
   }
   if(touchDevice){
     const localOwns=!!(match.ball.owner && match.ball.owner.team===localTeam);
