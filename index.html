@@ -38,18 +38,18 @@
         <div class="row">
           <label>Mode</label>
           <div class="btns">
-            <button data-mode="1" class="active">1 player</button>
-            <button data-mode="2">2 players</button>
-            <button data-mode="online">Online</button>
+            <button data-mode="1" class="active">Contra Máquina</button>
+            <button data-mode="2">2 no mesmo PC</button>
+            <button data-mode="online">Online contra amigo</button>
           </div>
         </div>
 
         <div class="row" id="difficultyRow">
-          <label>CPU skill</label>
+          <label>Dificuldade</label>
           <div class="btns">
-            <button data-difficulty="easy">Easy</button>
+            <button data-difficulty="easy">Fácil</button>
             <button data-difficulty="normal" class="active">Normal</button>
-            <button data-difficulty="hard">Hard</button>
+            <button data-difficulty="hard">Difícil</button>
           </div>
         </div>
 
@@ -90,7 +90,7 @@
         <summary>Controls</summary>
         <table class="keys" id="keysTable">
           <thead>
-            <tr><th></th><th>Player 1 (blue)</th><th id="p2head">Player 2 (red)</th></tr>
+            <tr><th></th><th>Jogador 1 (Pedra Lisa)</th><th id="p2head">Jogador 2 (Independência)</th></tr>
           </thead>
           <tbody id="keysBody"></tbody>
           <tfoot>
@@ -109,8 +109,8 @@
           <div class="row" id="lineupTeamRow">
             <label>Team</label>
             <div class="btns">
-              <button data-lineupteam="0" class="active">Blue</button>
-              <button data-lineupteam="1">Red</button>
+              <button data-lineupteam="0" class="active">Pedra Lisa</button>
+              <button data-lineupteam="1">Independência</button>
             </div>
           </div>
           <div class="btns wrap" id="lineupPresets"></div>
@@ -144,7 +144,7 @@
             <li><b>Aftertouch:</b> keep steering after the shot to bend the ball; forwards lifts it, backwards makes it dip.</li>
             <li>The button <b>without the ball</b> is a slide tackle.</li>
             <li>You automatically control whoever is nearest the ball.</li>
-            <li>Gamepads work too (controller 1 &rarr; blue, controller 2 &rarr; red).</li>
+            <li>Gamepads também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
             <li><b>Esc</b> pauses.</li>
           </ul>
           </details>
@@ -154,7 +154,7 @@
         <div id="onlineSetup" class="hidden">
           <p class="explain">
             One player opens a match and passes on the code; the other enters it.
-            Whoever opens the match plays <b>blue</b>, the second player <b>red</b>.
+            Quem cria a sala joga com <b>Pedra Lisa</b>; quem entra pelo código joga com <b>Independência</b>.
             You control your own team with either set of keys from the table above.
           </p>
 
