@@ -1291,6 +1291,16 @@ function processVisualEvents(){
         v.saveHigh=!!ev.high;
         if(ev.kind==='parry'||claim)playBallContactSound('save');
       }
+    }else if(ev.type==='transition'){
+      if(ev.winner===localTeam){
+        refToastEl.textContent='CONTRA-ATAQUE · ATAQUE O ESPAÇO';
+        refToastUntil=performance.now()/1000+1.15;
+        refToastEl.classList.add('show');
+      }else if(ev.loser===localTeam){
+        refToastEl.textContent='PRESSÃO PÓS-PERDA';
+        refToastUntil=performance.now()/1000+1.0;
+        refToastEl.classList.add('show');
+      }
     }else if(ev.type==='advantage'){
       refToastEl.textContent='VANTAGEM · '+(ev.label||'SEGUE O JOGO');
       refToastUntil=performance.now()/1000+1.8;
