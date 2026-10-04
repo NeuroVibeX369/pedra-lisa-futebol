@@ -497,6 +497,23 @@ function makeBallTexture(){
 const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,32,24),new THREE.MeshStandardMaterial({map:makeBallTexture(),roughness:.46}));
 ball.castShadow=true;world.add(ball);
 
+const setPieceTargetRing=new THREE.Mesh(
+  new THREE.RingGeometry(.72,.92,32),
+  new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.92,depthWrite:false})
+);
+setPieceTargetRing.rotation.x=-Math.PI/2;
+setPieceTargetRing.position.y=.06;
+setPieceTargetRing.visible=false;
+world.add(setPieceTargetRing);
+
+const setPieceAimRing=new THREE.Mesh(
+  new THREE.RingGeometry(.28,.42,28),
+  new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false})
+);
+setPieceAimRing.rotation.y=Math.PI/2;
+setPieceAimRing.visible=false;
+world.add(setPieceAimRing);
+
 // ---------- Model loading / player visuals ----------
 let template=null,clipMap={},fitScale=1,fitMinY=0;
 const mixers=[];
