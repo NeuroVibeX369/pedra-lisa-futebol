@@ -31,16 +31,50 @@
     .foot{text-align:center;color:#789083;font-size:12px;margin-top:20px}
     @media(max-width:1080px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:760px){body{padding:18px}.grid{grid-template-columns:1fr}.card{min-height:330px}h1{font-size:48px}}
-  </style>
+  
+    .platform-strip{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 4px}
+    .platform-pill{padding:8px 12px;border:1px solid rgba(255,255,255,.14);border-radius:999px;font-size:.86rem;opacity:.9}
+    .platform-pill strong{font-weight:700}
+    .future-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
+    .future-card{border:1px dashed rgba(255,255,255,.16);border-radius:18px;padding:20px;background:rgba(255,255,255,.025)}
+    .future-card h3{margin:0 0 8px;font-size:1.05rem}
+    .future-card p{margin:0;opacity:.72;line-height:1.5}
+    .future-tag{display:inline-block;margin-top:12px;font-size:.78rem;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
+    @media(max-width:900px){.future-grid{grid-template-columns:1fr}}
+    </style>
 </head>
 <body>
   <main class="shell">
     <header class="brand">
-      <div class="eyebrow">Pedra Lisa Games</div>
+      <div class="eyebrow">Pedra Lisa Games · Plataforma</div>
       <h1>PEDRA LISA<br>FUTEBOL</h1>
-      <p class="sub">Uma plataforma com versões diferentes do Pedra Lisa Futebol. Teste estilos, compare gerações e escolha qual experiência jogar.</p>
+      <p class="sub">Uma plataforma de jogos independentes. Começamos com Pedra Lisa PS1 e Pedra Lisa PS2 e, depois, podemos adicionar novos gêneros sem misturar o código de cada jogo.</p>
+    <div class="platform-strip">
+      <span class="platform-pill"><strong>Conta única</strong> — planejado</span>
+      <span class="platform-pill"><strong>Amigos e ranking</strong> — planejado</span>
+      <span class="platform-pill"><strong>Jogos no navegador</strong> — prioridade</span>
+      <span class="platform-pill"><strong>PC / mobile</strong> — conforme cada jogo</span>
+    </div>
     </header>
 
+
+    <section class="future-grid" aria-label="Próximos universos da plataforma">
+      <article class="future-card">
+        <h3>🃏 Duelo de Cartas</h3>
+        <p>Jogo próprio de cartas colecionáveis, com regras e personagens originais.</p>
+        <span class="future-tag">Planejado</span>
+      </article>
+      <article class="future-card">
+        <h3>🐲 RPG de Criaturas</h3>
+        <p>Exploração, captura, evolução e batalhas com criaturas originais do universo Pedra Lisa.</p>
+        <span class="future-tag">Planejado</span>
+      </article>
+      <article class="future-card">
+        <h3>⚔️ Mundo OpenTibia</h3>
+        <p>Servidor separado dentro da mesma plataforma, com acesso e identidade visual integrados.</p>
+        <span class="future-tag">Planejado</span>
+      </article>
+    </section>
 
     <section class="grid" style="margin-top:18px">
       <article class="card" style="min-height:330px">
