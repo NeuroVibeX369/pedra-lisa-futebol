@@ -375,18 +375,51 @@ function humanIntent(state, t, i, mask) {
   const b = state.ball;
   const dir = maskToDir(mask);
   const intent = { x: dir.x, y: dir.y, kick: null, slide: false };
+  const prev = team.prevMask | 0;
 
-  const fire = (mask & BTN.FIRE) !== 0;
-  const prevFire = (team.prevMask & BTN.FIRE) !== 0;
+  // Legacy FIRE stays intact for Classic 2D and keyboard play. PS2 Web adds
+  // four independent face-button actions on top of it.
+  const shoot = (mask & (BTN.FIRE | BTN.SHOOT)) !== 0;
+  const prevShoot = (prev & (BTN.FIRE | BTN.SHOOT)) !== 0;
+  const passPressed = (mask & BTN.PASS) !== 0 && (prev & BTN.PASS) === 0;
+  const crossPressed = (mask & BTN.CROSS) !== 0 && (prev & BTN.CROSS) === 0;
+  const throughPressed = (mask & BTN.THROUGH) !== 0 && (prev & BTN.THROUGH) === 0;
   const owns = b.owner && b.owner.team === t && b.owner.idx === i;
+  const aimX = dir.x || p.dirX;
+  const aimY = dir.y || p.dirY;
 
-  if (fire && !prevFire) {
-    if (owns) {
-      // Button pressed while on the ball: build up power until release.
+  if (owns) {
+    // Face buttons behave like a console football game:
+    // × short grounded pass; △ stronger ball into space; ○ lofted cross;
+    // □/legacy FIRE is the chargeable shot.
+    if (passPressed) {
+      p.charging = false;
+      p.charge = 0;
+      const shot = chargeToShot(2);
+      const aimed = assistedAim(state, t, i, aimX, aimY);
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 0 };
+    } else if (throughPressed) {
+      p.charging = false;
+      p.charge = 0;
+      const shot = chargeToShot(8);
+      // Through balls deliberately use less teammate magnetism: point into the
+      // space you want to attack.
+      intent.kick = { dx: aimX, dy: aimY, power: shot.power, lift: 0 };
+    } else if (crossPressed) {
+      p.charging = false;
+      p.charge = 0;
+      const shot = chargeToShot(18);
+      const aimed = assistedAim(state, t, i, aimX, aimY);
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: Math.max(shot.lift, 145) };
+    } else if (shoot && !prevShoot) {
       p.charging = true;
       p.charge = 0;
-    } else if (p.cooldown === 0 && p.slide === 0) {
-      // Button without the ball: slide tackle.
+    }
+  } else {
+    // Without the ball, ○ doubles as the slide tackle. Legacy FIRE keeps the
+    // old behaviour so Classic 2D is unchanged.
+    const legacyFirePressed = (mask & BTN.FIRE) !== 0 && (prev & BTN.FIRE) === 0;
+    if ((crossPressed || legacyFirePressed) && p.cooldown === 0 && p.slide === 0) {
       intent.slide = true;
     }
   }
@@ -397,10 +430,9 @@ function humanIntent(state, t, i, mask) {
       p.charge = 0;
     } else {
       p.charge++;
-      if (!fire || p.charge >= CHARGE_MAX) {
+      if (!shoot || p.charge >= CHARGE_MAX) {
         const shot = chargeToShot(p.charge);
-        // Nudged towards a team-mate, unless you are aiming at their goal.
-        const aimed = assistedAim(state, t, i, dir.x || p.dirX, dir.y || p.dirY);
+        const aimed = assistedAim(state, t, i, aimX, aimY);
         intent.kick = {
           dx: aimed.x,
           dy: aimed.y,
