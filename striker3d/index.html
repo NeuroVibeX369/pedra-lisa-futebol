@@ -190,6 +190,7 @@
       <button type="button" data-team-tab="roster" class="active">ELENCO</button>
       <button type="button" data-team-tab="tactics">TÁTICAS</button>
       <button type="button" data-team-tab="subs">SUBSTITUIÇÕES</button>
+      <button type="button" data-team-tab="stats">ESTATÍSTICAS</button>
     </div>
     <div class="teamBody">
       <section id="teamPaneRoster" class="teamPane active">
@@ -259,10 +260,51 @@
           </div>
         </div>
       </section>
+      <section id="teamPaneStats" class="teamPane">
+        <div class="summaryLayout">
+          <div class="summaryPanel">
+            <h3>ESTATÍSTICAS DA PARTIDA</h3>
+            <div id="teamStatsRows" class="matchStatsGrid"></div>
+          </div>
+          <div class="summaryPanel">
+            <h3>NOTAS DOS JOGADORES</h3>
+            <div id="teamRatingsTable" class="ratingTable"></div>
+          </div>
+        </div>
+      </section>
     </div>
     <div class="screenFooter">
       <span id="teamScreenHint">ESC fecha esta tela · a partida fica pausada contra a CPU.</span>
       <span id="teamScreenOnlineNote" class="onlineNote"></span>
+    </div>
+  </div>
+</div>
+<div id="matchSummary" class="summaryScreen" aria-hidden="true">
+  <div class="summaryCard">
+    <div id="summaryKicker" class="summaryKicker">INTERVALO · FC MUKEKA PREMIUM</div>
+    <div class="summaryScore">
+      <div class="summaryTeam">PEDRA LISA</div>
+      <div id="summaryScore" class="summaryResult">0 — 0</div>
+      <div class="summaryTeam">INDEPENDÊNCIA</div>
+    </div>
+    <div id="motmCard" class="motmCard">
+      <div id="motmScore" class="motmScore">7.0</div>
+      <div><div class="summaryKicker">MELHOR EM CAMPO</div><div id="motmName" class="motmName">—</div><div id="motmMeta" class="motmMeta">AGUARDANDO DESTAQUE</div></div>
+    </div>
+    <div class="summaryLayout">
+      <div class="summaryPanel">
+        <h3>RESUMO DA PARTIDA</h3>
+        <div id="summaryStatsRows" class="matchStatsGrid"></div>
+      </div>
+      <div class="summaryPanel">
+        <h3>NOTAS DOS JOGADORES</h3>
+        <div id="summaryRatings" class="ratingTable"></div>
+      </div>
+    </div>
+    <div class="summaryActions">
+      <button id="summaryContinue" class="summaryPrimary" type="button">CONTINUAR</button>
+      <button id="summaryTeamScreen" class="summarySecondary" type="button">ELENCO / TÁTICAS</button>
+      <a class="summarySecondary" href="../">VOLTAR AO HUB</a>
     </div>
   </div>
 </div>
