@@ -21,6 +21,32 @@
     .replay{position:absolute;left:18px;top:62px;padding:7px 11px;border-radius:7px;background:rgba(120,0,0,.85);border:1px solid rgba(255,255,255,.24);font-size:11px;font-weight:1000;letter-spacing:.16em;opacity:0;transition:opacity .12s}
     .powerWrap{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:min(260px,46vw);height:10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);overflow:hidden;opacity:0;transition:opacity .1s}
     .powerFill{height:100%;width:0;background:linear-gradient(90deg,#55d977,#f0d35c,#e85b4f)}
+    .teamSide{display:flex;align-items:center;gap:7px;font-weight:1000;white-space:nowrap}
+    .teamDot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+    .teamDot.home{background:#178a3c}.teamDot.away{background:#f5f5f5;border:1px solid #222}
+    .broadcastBug{position:absolute;top:58px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:.18em;color:#d7e3dc;text-shadow:0 1px 4px #000;opacity:.72}
+    .pregame{position:fixed;inset:0;z-index:34;display:none;pointer-events:none;background:linear-gradient(180deg,rgba(3,11,7,.20),rgba(3,8,5,.56));color:white}
+    .pregame.active{display:block}
+    .pregameMatch{position:absolute;left:50%;top:14%;transform:translateX(-50%);width:min(900px,92vw);text-align:center;opacity:0;transition:opacity .35s,transform .35s}
+    .pregameMatch.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .pregameKicker{font-size:10px;font-weight:1000;letter-spacing:.26em;color:#bcd2c3;text-transform:uppercase;margin-bottom:12px}
+    .pregameTitle{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;font-size:clamp(22px,4vw,50px);font-weight:1000;text-shadow:0 3px 20px rgba(0,0,0,.7)}
+    .pregameTitle .homeName{text-align:right;color:#e9fff0}.pregameTitle .awayName{text-align:left;color:#fff}
+    .pregameVs{font-size:.42em;padding:8px 10px;border-radius:6px;background:#0b120e;border:1px solid rgba(255,255,255,.18);letter-spacing:.12em}
+    .pregameSub{margin-top:10px;font-size:11px;letter-spacing:.14em;color:#d6dfda;text-transform:uppercase}
+    .lineupCard{position:absolute;left:50%;bottom:8%;transform:translateX(-50%) translateY(22px);width:min(860px,92vw);display:grid;grid-template-columns:1fr 1px 1fr;gap:18px;background:rgba(5,12,8,.88);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:18px 20px;box-shadow:0 20px 55px rgba(0,0,0,.38);opacity:0;transition:opacity .32s,transform .32s;backdrop-filter:blur(8px)}
+    .lineupCard.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .lineupDivider{background:rgba(255,255,255,.16)}
+    .lineupHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:1000;letter-spacing:.1em}
+    .lineupHead span:last-child{font-size:9px;color:#9fb2a7}
+    .lineupList{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:10px;color:#e9efeb}
+    .lineupList div{display:flex;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lineupList b{min-width:19px;color:#91dca7}
+    .lineupAway .lineupList b{color:#fff}
+    .skipIntro{pointer-events:auto;position:absolute;right:18px;bottom:18px;border:1px solid rgba(255,255,255,.26);background:rgba(5,12,8,.72);color:white;border-radius:8px;padding:9px 13px;font:900 10px system-ui;letter-spacing:.12em;cursor:pointer}
+    .kickoffFlash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);font-size:clamp(30px,7vw,72px);font-weight:1000;letter-spacing:.12em;text-shadow:0 6px 25px #000;opacity:0;transition:opacity .18s,transform .18s}
+    .kickoffFlash.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    @media(max-width:700px){.pregameTitle{grid-template-columns:1fr auto 1fr;gap:9px}.lineupCard{bottom:12%;padding:13px;gap:10px}.lineupList{grid-template-columns:1fr;font-size:9px;max-height:154px;overflow:hidden}.pregameMatch{top:10%}.skipIntro{bottom:205px}}
     .lobby{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(4,10,7,.78);backdrop-filter:blur(10px);padding:18px}
     .lobby.hidden{display:none}.lobbyBox{width:min(560px,100%);background:#0d1912;border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.45)}
     .lobbyBox h1{margin:0 0 6px;font-size:32px}.lobbyBox p{color:#aebdb4;line-height:1.5}.lobbyBtns{display:grid;gap:10px;margin-top:18px}
@@ -67,6 +93,28 @@
     <div id="lobbyStatus3d" class="lobbyStatus">Controle/celular: × passe/pressão · ○ cruzar/carrinho · □ chute/cabeceio · △ profundidade.</div>
   </div>
 </div>
+<div id="pregame" class="pregame">
+  <div id="pregameMatch" class="pregameMatch">
+    <div class="pregameKicker">FC MUKEKA PREMIUM · APRESENTAÇÃO DA PARTIDA</div>
+    <div class="pregameTitle">
+      <div class="homeName">PEDRA LISA</div><div class="pregameVs">VS</div><div class="awayName">INDEPENDÊNCIA</div>
+    </div>
+    <div class="pregameSub">Estádio Mukeka · formação 4-3-3</div>
+  </div>
+  <div id="lineupCard" class="lineupCard">
+    <div class="lineupHome">
+      <div class="lineupHead"><span>PEDRA LISA</span><span>11 INICIAL</span></div>
+      <div id="lineupHomeList" class="lineupList"></div>
+    </div>
+    <div class="lineupDivider"></div>
+    <div class="lineupAway">
+      <div class="lineupHead"><span>INDEPENDÊNCIA</span><span>11 INICIAL</span></div>
+      <div id="lineupAwayList" class="lineupList"></div>
+    </div>
+  </div>
+  <div id="kickoffFlash" class="kickoffFlash">VAI COMEÇAR</div>
+  <button id="skipIntro" class="skipIntro" type="button">PULAR APRESENTAÇÃO</button>
+</div>
 <div id="touch3d" class="touchHidden">
   <div id="stick3d"><div id="knob3d"></div></div>
   <div id="touchBtns3d">
@@ -82,9 +130,12 @@
 <div id="app"></div>
 <div id="hud">
   <div class="top">
-    <span>PEDRA LISA</span><span class="score" id="score">0 — 0</span><span>INDEPENDÊNCIA</span>
+    <span class="teamSide"><i class="teamDot home"></i>PEDRA LISA</span>
+    <span class="score" id="score">0 — 0</span>
+    <span class="teamSide">INDEPENDÊNCIA<i class="teamDot away"></i></span>
     <span class="clock" id="clock">1T · 00:00</span><span class="small">PREMIUM · 3D WEB</span>
   </div>
+  <div class="broadcastBug">MUKEKA GAMES · PARTIDA AMISTOSA</div>
   <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
   <div class="phase" id="phase"></div>
   <div class="replay" id="replayLabel">REPLAY</div>
@@ -128,6 +179,13 @@ const powerFillEl=document.getElementById('powerFill');
 const lobbyEl=document.getElementById('browserLobby');
 const lobbyStatusEl=document.getElementById('lobbyStatus3d');
 const roomEl=document.getElementById('room3d');
+const pregameEl=document.getElementById('pregame');
+const pregameMatchEl=document.getElementById('pregameMatch');
+const lineupCardEl=document.getElementById('lineupCard');
+const lineupHomeListEl=document.getElementById('lineupHomeList');
+const lineupAwayListEl=document.getElementById('lineupAwayList');
+const kickoffFlashEl=document.getElementById('kickoffFlash');
+const skipIntroEl=document.getElementById('skipIntro');
 
 const devices=new InputDevices(defaultBindings());
 devices.ps2FaceButtons=true;
@@ -745,16 +803,124 @@ function playBallContactSound(kind='pass'){
   }catch{}
 }
 
+const presentation={
+  active:false,
+  started:0,
+  duration:7.2,
+  onDone:null,
+  online:false,
+};
+
+function renderLineupList(target,roster){
+  target.innerHTML=roster.map((p,i)=>
+    '<div><b>'+String(p.number).padStart(2,'0')+'</b><span>'+p.name+'</span></div>'
+  ).join('');
+}
+renderLineupList(lineupHomeListEl,PLAYER_ROSTERS[0]);
+renderLineupList(lineupAwayListEl,PLAYER_ROSTERS[1]);
+
+function playPresentationSting(){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const now=ac.currentTime;
+    for(const [freq,at,dur,gain] of [[196,0,.22,.045],[247,.12,.24,.04],[294,.25,.34,.035]]){
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='triangle';o.frequency.value=freq;
+      g.gain.setValueAtTime(.0001,now+at);
+      g.gain.exponentialRampToValueAtTime(gain,now+at+.025);
+      g.gain.exponentialRampToValueAtTime(.0001,now+at+dur);
+      o.connect(g);g.connect(ac.destination);o.start(now+at);o.stop(now+at+dur+.03);
+    }
+  }catch{}
+}
+
+function finishPresentation(){
+  if(!presentation.active)return;
+  presentation.active=false;
+  pregameEl.classList.remove('active');
+  pregameMatchEl.classList.remove('show');
+  lineupCardEl.classList.remove('show');
+  kickoffFlashEl.classList.remove('show');
+  showTouch(true);
+  const done=presentation.onDone;
+  presentation.onDone=null;
+  if(done)done();
+}
+
+function startPresentation(onDone,{online=false}={}){
+  presentation.active=true;
+  presentation.started=performance.now()/1000;
+  presentation.onDone=onDone;
+  presentation.online=online;
+  matchActive=false;
+  showTouch(false);
+  pregameEl.classList.add('active');
+  pregameMatchEl.classList.add('show');
+  lineupCardEl.classList.remove('show');
+  kickoffFlashEl.classList.remove('show');
+  playPresentationSting();
+}
+
+skipIntroEl.addEventListener('click',finishPresentation);
+
+function updatePresentation(nowSec){
+  if(!presentation.active)return;
+  const t=nowSec-presentation.started;
+  pregameMatchEl.classList.toggle('show',t<3.25);
+  lineupCardEl.classList.toggle('show',t>=1.6&&t<5.65);
+  kickoffFlashEl.classList.toggle('show',t>=5.65);
+  if(t>=presentation.duration)finishPresentation();
+}
+
+function presentationPose(teamIdx,idx,nowSec){
+  if(!presentation.active)return null;
+  const t=nowSec-presentation.started;
+  // First show the stadium, then line both elevens up near midfield like a TV intro.
+  if(t<1.35)return null;
+  const spread=2.45;
+  return {
+    x:teamIdx===0?-3.1:3.1,
+    y:0,
+    z:-12.3+idx*spread,
+    rot:teamIdx===0?0:Math.PI,
+  };
+}
+
+function presentationCamera(nowSec){
+  if(!presentation.active)return false;
+  const t=nowSec-presentation.started;
+  if(t<1.5){
+    const q=t/1.5;
+    camera.position.set(-35+q*16,20-q*5,42-q*8);
+    camera.fov=38;
+    camera.lookAt(0,1.1,0);
+  }else if(t<5.65){
+    const q=(t-1.5)/4.15;
+    camera.position.set(-10+q*20,4.4,18-Math.sin(q*Math.PI)*5);
+    camera.fov=32;
+    camera.lookAt(0,1.15,-8+q*16);
+  }else{
+    const q=Math.min(1,(t-5.65)/1.55);
+    camera.position.set(THREE.MathUtils.lerp(0,focusX,q),THREE.MathUtils.lerp(8.5,13.6,q),THREE.MathUtils.lerp(17,30.5,q));
+    camera.fov=THREE.MathUtils.lerp(32,36,q);
+    camera.lookAt(THREE.MathUtils.lerp(0,focusX,q),1.0,0);
+  }
+  camera.updateProjectionMatrix();
+  return true;
+}
+
 function beginCpu(){
   startCrowdAudio();
   transport?.dispose?.();
   signal=null;
   resetMatch({humans:[true,false],difficulty:'normal',localTeam:0});
   transport=new LocalTransport(devices,[0]);
-  matchActive=true;
   lobbyEl.classList.add('hidden');
-  showTouch(true);
-  statusEl.textContent='FC Mukeka Premium · contra CPU';
+  statusEl.textContent='FC Mukeka Premium · Pedra Lisa x Independência';
+  startPresentation(()=>{
+    matchActive=true;
+    statusEl.textContent='FC Mukeka Premium · contra CPU';
+  });
 }
 
 function beginOnline({seed,localTeam:team,signal:sig}){
@@ -763,10 +929,12 @@ function beginOnline({seed,localTeam:team,signal:sig}){
   signal=sig;
   resetMatch({seed,humans:[true,true],localTeam:team,formations:['433','433']});
   transport=new OnlineTransport({signal:sig,devices,localTeam:team});
-  matchActive=true;
   lobbyEl.classList.add('hidden');
-  showTouch(true);
-  statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+  statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · apresentação';
+  startPresentation(()=>{
+    matchActive=true;
+    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+  },{online:true});
 }
 
 function simToWorld(x,y,z=0){
@@ -945,7 +1113,8 @@ function renderState(dt){
       const p=match.teams[t].players[i],v=visuals[t][i];
       const rp=replayFrame?.teams?.[t]?.[i];
       const px=rp?rp.x:p.x,py=rp?rp.y:p.y,pdirX=rp?rp.dirX:p.dirX,pdirY=rp?rp.dirY:p.dirY;
-      const w=simToWorld(px,py,0);
+      const introPose=presentationPose(t,i,nowSec);
+      const w=introPose?{x:introPose.x,y:introPose.y,z:introPose.z}:simToWorld(px,py,0);
       if(i===0){
         // Keep the goalkeeper visually in front of the goal mouth when the
         // simulation has him guarding the line. WebSoccer uses a much wider
@@ -959,7 +1128,8 @@ function renderState(dt){
       }
       v.root.position.set(w.x,0,w.z);
       const dx=-pdirY,dz=pdirX;
-      if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
+      if(introPose)v.root.rotation.y=introPose.rot;
+      else if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
 
       const speed=Math.hypot(p.vx,p.vy);
       const ownsBall=!!(match.ball.owner && match.ball.owner.team===t && match.ball.owner.idx===i);
@@ -968,7 +1138,9 @@ function renderState(dt){
       v.root.rotation.z=0;
       const actionActive=v.actionUntil>nowSec;
 
-      if(p.slide>0){
+      if(presentation.active && introPose){
+        setAnim(v,'Idle');
+      }else if(p.slide>0){
         setAnim(v,v.actions.Slide?'Slide':'Punch');
         // A short forward body tilt makes the generic Punch clip read much more
         // like a football slide without changing simulation/collision.
@@ -1074,7 +1246,9 @@ function renderState(dt){
 
   const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
   focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
-  if(replay.active){
+  if(presentationCamera(nowSec)){
+    // Camera controlled by the pre-match sequence.
+  }else if(replay.active){
     camera.position.set(bw.x-10,7.0,THREE.MathUtils.clamp(bw.z+15,-23,23));
     camera.fov=34;
     camera.lookAt(bw.x,1.05,bw.z);
@@ -1091,6 +1265,7 @@ function renderState(dt){
 
 function frame(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
+  updatePresentation(now/1000);
   let guard=0;
   while(matchActive&&acc>=FRAME_TIME&&guard<8){
     const tick=match.tick;
