@@ -16,6 +16,7 @@ export function createMatch(options = {}) {
     difficulty: 'hard', // only affects CPU teams; a string, or one key per team
     offside: true, // the offside rule, whistle and all
     premiumAI: false, // richer off-ball tactics; opt-in so FC Mukeka 2D stays unchanged
+    premiumSetPieces: false, // console-style restarts/fouls; opt-in for Premium only
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -30,6 +31,7 @@ export function createMatch(options = {}) {
       halfTicks: Math.round(opts.halfSeconds * TICK_RATE),
       offside: opts.offside !== false,
       premiumAI: opts.premiumAI === true,
+      premiumSetPieces: opts.premiumSetPieces === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
@@ -44,6 +46,7 @@ export function createMatch(options = {}) {
     firstKickoffTeam: 0,
     restartTeam: 0,
     lastGoalTeam: -1,
+    setPiece: null,
     ball: newBall(),
     teams: [
       makeTeam(0, opts.humans[0], -1, levelFor(opts.difficulty, 0), opts.formations[0]),
@@ -229,6 +232,26 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
   taker.dirY = state.teams[kickoffTeam].attackDir;
   state.teams[kickoffTeam].controlled = 9;
 
+  if (state.config.premiumSetPieces) {
+    const mate = state.teams[kickoffTeam].players[7];
+    mate.x = FIELD.cx + 26;
+    mate.y = FIELD.cy - state.teams[kickoffTeam].attackDir * 20;
+    mate.vx = 0;
+    mate.vy = 0;
+    mate.dirX = -1;
+    mate.dirY = state.teams[kickoffTeam].attackDir;
+    state.setPiece = {
+      kind: 'KICKOFF',
+      team: kickoffTeam,
+      taker: 9,
+      x: FIELD.cx,
+      y: FIELD.cy,
+      mate: 7,
+    };
+  } else {
+    state.setPiece = null;
+  }
+
   // Everyone except the taker keeps out of the centre circle, and by the same
   // measure ends up on his own half: the boundary is always on his own side.
   for (const team of state.teams) {
@@ -262,6 +285,10 @@ export function hashState(state) {
   mix(state.ball.z);
   mix(state.ball.vx);
   mix(state.ball.vy);
+  const spCodes = { KICKOFF: 1, 'THROW-IN': 2, CORNER: 3, 'GOAL KICK': 4, 'FREE KICK': 5, PENALTY: 6, OFFSIDE: 7 };
+  mix(state.setPiece ? (spCodes[state.setPiece.kind] || 9) : 0);
+  mix(state.setPiece?.team ?? -1);
+  mix(state.setPiece?.taker ?? -1);
   for (const team of state.teams) {
     mix(team.oneTwoPasser);
     mix(team.oneTwoTicks);
