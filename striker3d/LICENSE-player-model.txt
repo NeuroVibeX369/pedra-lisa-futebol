@@ -1,0 +1,13 @@
+Quaternius LowPoly Models — CC0 1.0 Universal
+
+The Striker 3D alpha loads the rigged player model from the Quaternius
+"Animated Men" asset as distributed by the public kendrekaran/striker-3d
+repository.
+
+License: CC0 1.0 Universal (Public Domain Dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Original creator: Quaternius
+https://quaternius.com/
+
+The Pedra Lisa Futebol project uses the model as a visual asset only.
