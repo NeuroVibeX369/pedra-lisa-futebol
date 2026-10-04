@@ -491,6 +491,19 @@ function updatePlayers(state, inputs, frozen) {
         const takingSetPiece = state.config.premiumSetPieces
           && state.setPiece?.team === t && state.setPiece?.taker === i;
         const setPieceKind = takingSetPiece ? state.setPiece.kind : null;
+        if (takingSetPiece && setPieceKind === 'PENALTY') {
+          const sp = state.setPiece;
+          const defendingTeam = 1 - t;
+          const keeper = state.teams[defendingTeam].players[0];
+          let dive = sp.keeperDive || 0;
+          if (!state.teams[defendingTeam].human && dive === 0) {
+            dive = ((state.seed + state.tick + defendingTeam) & 1) ? 1 : -1;
+          }
+          keeper.x = clamp(FIELD.cx + dive * GOAL_W * 0.27, FIELD.cx - GOAL_W * 0.42, FIELD.cx + GOAL_W * 0.42);
+          keeper.vx = dive * KEEPER_SPEED * 0.65;
+          keeper.vy = 0;
+          state.events.push({ type: 'penalty-dive', team: defendingTeam, idx: 0, side: dive });
+        }
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
@@ -618,20 +631,72 @@ function humanIntent(state, t, i, mask) {
     && state.setPiece.team === t && state.setPiece.taker === i
     ? state.setPiece : null;
 
-  if (owns && sp?.kind === 'THROW-IN') {
-    if (passPressed || throughPressed || crossPressed || (shoot && !prevShoot)) {
-      p.charging = false;
-      p.charge = 0;
-      const aimed = assistedAim(state, t, i, aimX, aimY);
-      const longThrow = throughPressed || crossPressed || shoot;
-      const shot = chargeToShot(longThrow ? 13 : 6);
-      intent.kick = {
-        dx: aimed.x,
-        dy: aimed.y,
-        power: shot.power * (longThrow ? 1.08 : 0.90),
-        lift: longThrow ? 165 : 105,
-        kind: 'throw-in',
-      };
+  if (owns && sp) {
+    // A set-piece taker is planted at the mark. Directional input adjusts aim
+    // (or the goalkeeper on a penalty) instead of walking away from the ball.
+    intent.x = 0;
+    intent.y = 0;
+
+    if (sp.kind === 'THROW-IN') {
+      if (passPressed || crossPressed || (shoot && !prevShoot)) {
+        p.charging = false;
+        p.charge = 0;
+        const d = setPieceTargetDir(state, sp, p);
+        const longThrow = crossPressed || shoot;
+        const shot = chargeToShot(longThrow ? 13 : 6);
+        intent.kick = {
+          dx: d.x,
+          dy: d.y,
+          power: shot.power * (longThrow ? 1.08 : 0.90),
+          lift: longThrow ? 165 : 105,
+          kind: 'throw-in',
+        };
+      }
+    } else if (sp.kind === 'CORNER') {
+      const d = setPieceTargetDir(state, sp, p);
+      if (passPressed) {
+        const shot = chargeToShot(4);
+        intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 0, kind: 'pass' };
+      } else if (crossPressed) {
+        const shot = chargeToShot(19);
+        intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 235, kind: 'cross' };
+      } else if (shoot && !prevShoot) {
+        p.charging = true;
+        p.charge = 0;
+      }
+    } else if (sp.kind === 'KICKOFF') {
+      if (passPressed || crossPressed || (shoot && !prevShoot)) {
+        const mate = team.players[sp.mate ?? sp.targetIdx ?? 7];
+        const d = mate ? norm(mate.x - p.x, mate.y - p.y) : norm(0, team.attackDir);
+        const shot = chargeToShot(3);
+        intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 0, kind: 'pass' };
+      }
+    } else if (sp.kind === 'GOAL KICK') {
+      const d = setPieceTargetDir(state, sp, p);
+      if (passPressed) {
+        intent.kick = { dx: d.x, dy: d.y, power: chargeToShot(8).power, lift: 45, kind: 'pass' };
+      } else if (crossPressed) {
+        intent.kick = { dx: d.x, dy: d.y, power: chargeToShot(20).power, lift: 220, kind: 'cross' };
+      } else if (shoot && !prevShoot) {
+        p.charging = true;
+        p.charge = 0;
+      }
+    } else if (sp.kind === 'FREE KICK' || sp.kind === 'OFFSIDE') {
+      if (passPressed) {
+        const d = setPieceTargetDir(state, sp, p);
+        intent.kick = { dx: d.x, dy: d.y, power: chargeToShot(5).power, lift: 0, kind: 'pass' };
+      } else if (crossPressed) {
+        const d = setPieceTargetDir(state, sp, p);
+        intent.kick = { dx: d.x, dy: d.y, power: chargeToShot(17).power, lift: 175, kind: 'cross' };
+      } else if (shoot && !prevShoot) {
+        p.charging = true;
+        p.charge = 0;
+      }
+    } else if (sp.kind === 'PENALTY') {
+      if (shoot && !prevShoot) {
+        p.charging = true;
+        p.charge = 0;
+      }
     }
   } else if (owns) {
     // Face buttons behave like a console football game:
@@ -710,14 +775,32 @@ function humanIntent(state, t, i, mask) {
       p.charge++;
       if (!shoot || p.charge >= CHARGE_MAX) {
         const shot = chargeToShot(p.charge);
-        const aimed = assistedAim(state, t, i, aimX, aimY);
-        intent.kick = {
-          dx: aimed.x,
-          dy: aimed.y,
-          power: shot.power,
-          lift: shootingAtGoal(state, t, p, aimed) ? Math.min(shot.lift, SHOT_LIFT_MAX) : shot.lift,
-          kind: 'shot',
-        };
+
+        if (sp?.kind === 'PENALTY' || sp?.kind === 'FREE KICK') {
+          const goalY = targetGoalY(team);
+          const tx = FIELD.cx + (sp.aimX || 0);
+          const d = norm(tx - p.x, goalY - p.y);
+          const extraLift = sp.aimLift || 0;
+          const lift = sp.kind === 'PENALTY'
+            ? clamp(shot.lift * 0.34 + extraLift, 0, 72)
+            : clamp(shot.lift * 0.72 + extraLift, 18, 190);
+          intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift, kind: 'shot' };
+        } else if (sp?.kind === 'CORNER') {
+          const d = setPieceTargetDir(state, sp, p);
+          intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 205, kind: 'cross' };
+        } else if (sp?.kind === 'GOAL KICK') {
+          const d = setPieceTargetDir(state, sp, p);
+          intent.kick = { dx: d.x, dy: d.y, power: shot.power, lift: 245, kind: 'cross' };
+        } else {
+          const aimed = assistedAim(state, t, i, aimX, aimY);
+          intent.kick = {
+            dx: aimed.x,
+            dy: aimed.y,
+            power: shot.power,
+            lift: shootingAtGoal(state, t, p, aimed) ? Math.min(shot.lift, SHOT_LIFT_MAX) : shot.lift,
+            kind: 'shot',
+          };
+        }
       }
     }
   }
