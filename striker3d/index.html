@@ -316,9 +316,10 @@ import { Signal } from '../src/net/signal.js';
 import { relayFor } from '../src/config.js';
 import { InputDevices, defaultBindings } from '../src/input.js';
 import { TouchControls, isTouchDevice } from '../src/touch.js';
+import { PRESETS as FORMATION_PRESETS } from '../src/game/formations.js';
 import {
   FRAME_TIME, BTN, FIELD, FIELD_W as SIM_FIELD_W, FIELD_H as SIM_FIELD_H,
-  CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT
+  CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT, SUB_TARGET_BITS
 } from '../src/constants.js';
 
 const PREMIUM_MODEL_URL='https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb';
@@ -362,6 +363,32 @@ const swapBtnEl=document.getElementById('btnSwap3d');
 const tacticHudEl=document.getElementById('tacticHud');
 const subsHudEl=document.getElementById('subsHud');
 const staminaMiniFillEl=document.getElementById('staminaMiniFill');
+const teamScreenEl=document.getElementById('teamScreen');
+const teamScreenMetaEl=document.getElementById('teamScreenMeta');
+const teamCloseEl=document.getElementById('teamClose');
+const openTeamScreenEl=document.getElementById('openTeamScreen');
+const squadRowsEl=document.getElementById('squadRows');
+const formationDotsEl=document.getElementById('formationDots');
+const playerDetailEl=document.getElementById('playerDetail');
+const rosterShapeLabelEl=document.getElementById('rosterShapeLabel');
+const mentalityChoicesEl=document.getElementById('mentalityChoices');
+const tacticImpactEl=document.getElementById('tacticImpact');
+const formationNameEl=document.getElementById('formationName');
+const formationNoteEl=document.getElementById('formationNote');
+const formationPrevEl=document.getElementById('formationPrev');
+const formationNextEl=document.getElementById('formationNext');
+const collectiveDescriptionEl=document.getElementById('collectiveDescription');
+const pressValueEl=document.getElementById('pressValue');
+const lineValueEl=document.getElementById('lineValue');
+const riskValueEl=document.getElementById('riskValue');
+const fitnessSummaryEl=document.getElementById('fitnessSummary');
+const subPickListEl=document.getElementById('subPickList');
+const prepareSubEl=document.getElementById('prepareSub');
+const benchRowsEl=document.getElementById('benchRows');
+const pendingSubInfoEl=document.getElementById('pendingSubInfo');
+const subsUsedLabelEl=document.getElementById('subsUsedLabel');
+const teamScreenHintEl=document.getElementById('teamScreenHint');
+const teamScreenOnlineNoteEl=document.getElementById('teamScreenOnlineNote');
 
 const devices=new InputDevices(defaultBindings());
 devices.ps2FaceButtons=true;
