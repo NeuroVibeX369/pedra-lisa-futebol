@@ -45,6 +45,139 @@ function nearestOpponent(state, teamIdx, x, y) {
   return { player: best, d: Math.sqrt(bestD) };
 }
 
+function premiumAI(state) {
+  return state.config?.premiumAI === true;
+}
+
+function ballSide(state) {
+  const dx = state.ball.x - FIELD.cx;
+  if (Math.abs(dx) < 42) return 0;
+  return dx < 0 ? -1 : 1;
+}
+
+function coverIndex(state, teamIdx, chaser) {
+  const team = state.teams[teamIdx];
+  const b = state.ball;
+  const gy = ownGoalY(team);
+  let best = -1;
+  let bestScore = Infinity;
+  for (let i = 1; i < team.players.length; i++) {
+    if (i === chaser) continue;
+    const p = team.players[i];
+    if (p.down > 0 || p.role === 'fw') continue;
+    // Prefer defenders/midfielders already goal-side and close enough to provide
+    // a second layer rather than sending another player straight at the ball.
+    const goalSide = Math.abs(p.y - gy) <= Math.abs(b.y - gy) + 70 ? 0 : 90;
+    const rolePenalty = p.role === 'df' ? 0 : (p.role === 'dm' ? 12 : 28);
+    const score = dist(p.x, p.y, b.x, b.y) + goalSide + rolePenalty;
+    if (score < bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function premiumAttackingSpot(state, teamIdx, i, home) {
+  const team = state.teams[teamIdx];
+  const p = team.players[i];
+  const f = team.formation[i];
+  const b = state.ball;
+  const owner = b.owner && b.owner.team === teamIdx ? team.players[b.owner.idx] : null;
+  if (!owner) return home;
+
+  const ownerAdv = advanceOf(team, owner.y);
+  const side = ballSide(state);
+  let xRel = f.x;
+  let yFrac = advanceOf(team, home.y);
+
+  if (p.role === 'fw') {
+    // Centre-forward attacks the gap beyond the carrier; wide forwards stretch
+    // the back line and bend their runs slightly inside near the final third.
+    const wide = Math.abs(f.x) > 0.35;
+    yFrac = Math.max(yFrac, ownerAdv + (wide ? 0.10 : 0.16));
+    if (wide) {
+      const sameSide = Math.sign(f.x) === side || side === 0;
+      xRel = sameSide ? Math.sign(f.x) * 0.74 : Math.sign(f.x) * 0.48;
+      if (ownerAdv > 0.68) xRel *= 0.72;
+    } else {
+      xRel = clamp((owner.x - FIELD.cx) / (FIELD.right - FIELD.cx) * 0.18, -0.18, 0.18);
+    }
+  } else if (p.role === 'am' || p.role === 'mf') {
+    // Midfielders form passing triangles instead of all running onto the same
+    // horizontal line as the ball carrier.
+    const lane = f.x === 0 ? -side * 0.18 : f.x;
+    xRel = clamp(lane + (side ? -side * 0.06 : 0), -0.72, 0.72);
+    yFrac = Math.max(yFrac, ownerAdv - (p.role === 'am' ? 0.01 : 0.08));
+    yFrac = Math.min(yFrac, ownerAdv + (p.role === 'am' ? 0.10 : 0.04));
+  } else if (p.role === 'dm') {
+    // Holding midfielder stays behind the ball as the reset option.
+    xRel = clamp(f.x * 0.6 - side * 0.10, -0.45, 0.45);
+    yFrac = Math.min(yFrac, Math.max(0.28, ownerAdv - 0.13));
+  } else if (p.role === 'df' && Math.abs(f.x) > 0.45) {
+    // Only the full-back on the ball side overlaps. The opposite full-back
+    // tucks in to leave a back three protecting counters.
+    const sameSide = side === 0 || Math.sign(f.x) === side;
+    if (sameSide && ownerAdv > 0.34) {
+      xRel = Math.sign(f.x) * 0.80;
+      yFrac = Math.max(yFrac, Math.min(ownerAdv + 0.03, 0.70));
+    } else {
+      xRel = Math.sign(f.x) * 0.48;
+      yFrac = Math.min(yFrac, 0.34);
+    }
+  } else if (p.role === 'df') {
+    // Centre-backs stay connected behind the attack.
+    xRel = f.x * 0.78;
+    yFrac = Math.min(yFrac, Math.max(0.22, ownerAdv - 0.28));
+  }
+
+  yFrac = holdTheLine(state, teamIdx, clamp(yFrac, 0.14, 0.93));
+  return posFor(team, clamp(xRel, -0.92, 0.92), yFrac);
+}
+
+function premiumDefendingSpot(state, teamIdx, i, home, chaser, cover) {
+  const team = state.teams[teamIdx];
+  const p = team.players[i];
+  const b = state.ball;
+  const gy = ownGoalY(team);
+  const side = ballSide(state);
+  let tx = home.x;
+  let ty = home.y;
+
+  if (i === cover) {
+    // Second defender blocks the route to goal instead of duplicating the press.
+    const toGoal = norm(FIELD.cx - b.x, gy - b.y);
+    tx = b.x + toGoal.x * 58;
+    ty = b.y + toGoal.y * 58;
+  } else if (p.role === 'df') {
+    // Back four slide as a unit, with centre-backs narrower than full-backs.
+    const f = team.formation[i];
+    const central = Math.abs(f.x) < 0.4;
+    tx += (b.x - FIELD.cx) * (central ? 0.14 : 0.22);
+    if (central) tx = clamp(tx, FIELD.cx - 118, FIELD.cx + 118);
+    // Don't let the whole line collapse onto the keeper.
+    const minAdvance = 0.16;
+    const curAdv = advanceOf(team, ty);
+    if (curAdv < minAdvance) ty = posFor(team, f.x, minAdvance).y;
+  } else if (p.role === 'dm' || p.role === 'mf') {
+    // Screen the central lane and shift toward the ball side while preserving
+    // staggered midfield depth.
+    tx += (b.x - tx) * (p.role === 'dm' ? 0.28 : 0.20);
+    if (side && Math.sign(team.formation[i].x || side) !== side) {
+      tx += side * 24;
+    }
+    ty += (gy - ty) * (p.role === 'dm' ? 0.04 : 0.02);
+  } else if (p.role === 'fw') {
+    // Forwards stay available for the counter instead of all collapsing deep.
+    tx += (b.x - tx) * 0.08;
+  }
+
+  return {
+    x: clamp(tx, FIELD.left + 18, FIELD.right - 18),
+    y: clamp(ty, FIELD.top + 18, FIELD.bottom - 18),
+  };
+}
+
 /** Which outfield player of this team chases the ball? */
 export function chaserIndex(state, teamIdx) {
   const team = state.teams[teamIdx];
@@ -149,7 +282,14 @@ function findPassTarget(state, teamIdx, from) {
     }
     if (blocked) continue;
 
-    const score = forward * 1.1 + marker * 1.6 - d * 0.25;
+    let score = forward * 1.1 + marker * 1.6 - d * 0.25;
+    if (premiumAI(state)) {
+      const runningForward = team.attackDir * m.vy;
+      const separation = nearestOpponent(state, teamIdx, m.x + m.vx * 0.16, m.y + m.vy * 0.16).d;
+      score += clamp(runningForward, -120, 180) * 0.18;
+      score += separation * 0.42;
+      if (m.role === 'fw' && forward > 20) score += 34;
+    }
     if (score > bestScore) {
       bestScore = score;
       best = m;
@@ -207,6 +347,11 @@ function ownerAction(state, teamIdx, i) {
     if (mate) {
       let aimX = mate.x;
       let aimY = mate.y;
+      if (premiumAI(state)) {
+        const lead = mate.role === 'fw' ? 0.22 : 0.14;
+        aimX += mate.vx * lead;
+        aimY += mate.vy * lead;
+      }
       if (skill.passError) {
         aimX += randRange(state, -skill.passError, skill.passError);
         aimY += randRange(state, -skill.passError, skill.passError);
@@ -276,18 +421,29 @@ export function aiMove(state, teamIdx, i, opts = {}) {
   let tx = home.x;
   let ty = home.y;
 
-  if (weHaveBall) {
-    // Get available: push up a little towards the opponent's goal.
+  if (premiumAI(state)) {
+    if (weHaveBall) {
+      const tactical = premiumAttackingSpot(state, teamIdx, i, home);
+      tx = tactical.x;
+      ty = tactical.y;
+    } else {
+      const chaser = chaserIndex(state, teamIdx);
+      const cover = coverIndex(state, teamIdx, chaser);
+      const tactical = premiumDefendingSpot(state, teamIdx, i, home, chaser, cover);
+      tx = tactical.x;
+      ty = tactical.y;
+      if (barred) {
+        const gy = ownGoalY(team);
+        ty += (gy - ty) * 0.08;
+      }
+    }
+  } else if (weHaveBall) {
+    // Classic behaviour used by FC Mukeka 2D.
     ty += team.attackDir * 26;
   } else {
-    // Defend: get between the ball and our own goal. Dropping off further than
-    // this while barred looks tidy but tips the whole side behind the ball, and
-    // the shape never comes back up: 0.15 scores 2.4 goals a match, 0.20 scores
-    // 0.5. Do not raise it without measuring.
     const gy = ownGoalY(team);
     tx += (b.x - tx) * 0.18;
     ty += (gy - ty) * (barred ? 0.12 : 0.06);
-
   }
 
   const d = norm(tx - p.x, ty - p.y);
