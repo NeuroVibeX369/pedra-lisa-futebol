@@ -42,7 +42,7 @@ export function step(state, inputs) {
   updateOwnership(state);
   updatePlayers(state, inputs, frozen);
   separatePlayers(state);
-  resolveTackles(state);
+  if (resolveTackles(state)) return state;
   updateBall(state, inputs);
 
   if (!frozen) {
@@ -69,6 +69,22 @@ function advancePhase(state) {
     case 'restart':
       state.phase = 'play';
       state.message = '';
+      if (state.config.premiumSetPieces && state.setPiece) {
+        const sp = state.setPiece;
+        const taker = state.teams[sp.team]?.players?.[sp.taker];
+        if (taker) {
+          state.ball.owner = { team: sp.team, idx: sp.taker };
+          state.ball.x = sp.x;
+          state.ball.y = sp.y;
+          state.ball.z = 0;
+          state.ball.vx = 0;
+          state.ball.vy = 0;
+          state.ball.vz = 0;
+          taker.holdTicks = 0;
+          state.teams[sp.team].controlled = sp.taker;
+          protectFor(state, sp.team, 'untilPlayed', PROTECT_TICKS * 2);
+        }
+      }
       state.events.push({ type: 'whistle', kind: 'start' });
       state.events.push({
         type: 'kickoff',
@@ -135,6 +151,17 @@ function updateOwnership(state) {
   const b = state.ball;
 
   if (b.owner) {
+    if (state.config.premiumSetPieces && state.setPiece
+        && b.owner.team === state.setPiece.team && b.owner.idx === state.setPiece.taker) {
+      b.x = state.setPiece.x;
+      b.y = state.setPiece.y;
+      b.z = 0;
+      b.vx = 0;
+      b.vy = 0;
+      b.vz = 0;
+      b.spin = 0;
+      return;
+    }
     const p = state.teams[b.owner.team].players[b.owner.idx];
     const r = p.role === 'gk' ? KEEPER_CONTROL_R : CONTROL_R;
     if (p.down > 0 || p.slide > 0 || p.cooldown > 0 || dist2(b.x, b.y, p.x, p.y) > (r * 2) ** 2) {
@@ -326,7 +353,14 @@ function updatePlayers(state, inputs, frozen) {
     for (let i = 0; i < team.players.length; i++) {
       const it = intents[t][i];
       if (it.kick) {
+        const takingSetPiece = state.config.premiumSetPieces
+          && state.setPiece?.team === t && state.setPiece?.taker === i;
+        const setPieceKind = takingSetPiece ? state.setPiece.kind : null;
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+        if (takingSetPiece) {
+          state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
+          state.setPiece = null;
+        }
         if (state.config.premiumAI && (it.kick.kind === 'pass' || it.kick.kind === 'through')) {
           if (it.kick.oneTwoReturn) {
             team.oneTwoPasser = -1;
@@ -440,7 +474,26 @@ function humanIntent(state, t, i, mask) {
   const aimX = dir.x || p.dirX;
   const aimY = dir.y || p.dirY;
 
-  if (owns) {
+  const sp = state.config.premiumSetPieces && state.setPiece
+    && state.setPiece.team === t && state.setPiece.taker === i
+    ? state.setPiece : null;
+
+  if (owns && sp?.kind === 'THROW-IN') {
+    if (passPressed || throughPressed || crossPressed || (shoot && !prevShoot)) {
+      p.charging = false;
+      p.charge = 0;
+      const aimed = assistedAim(state, t, i, aimX, aimY);
+      const longThrow = throughPressed || crossPressed || shoot;
+      const shot = chargeToShot(longThrow ? 13 : 6);
+      intent.kick = {
+        dx: aimed.x,
+        dy: aimed.y,
+        power: shot.power * (longThrow ? 1.08 : 0.90),
+        lift: longThrow ? 165 : 105,
+        kind: 'throw-in',
+      };
+    }
+  } else if (owns) {
     // Face buttons behave like a console football game:
     // × short grounded pass; △ stronger ball into space; ○ lofted cross;
     // □/legacy FIRE is the chargeable shot.
@@ -665,14 +718,15 @@ function resolveTackles(state) {
     for (const p of state.teams[t].players) {
       if (p.slide <= 0) continue;
 
-      // Against the ball
+      const ownerBefore = b.owner ? { team: b.owner.team, idx: b.owner.idx } : null;
+      let wonBall = false;
+
       const mayTouch = b.protectedFor === null || b.protectedFor === t;
       if (mayTouch && b.z < 20 && dist2(b.x, b.y, p.x, p.y) < (PLAYER_R + BALL_R + SLIDE_REACH) ** 2) {
         if (!b.owner || b.owner.team !== t) {
           const d = norm(p.vx, p.vy);
           const dx = d.l ? d.x : p.dirX;
           const dy = d.l ? d.y : p.dirY;
-          // Poked away rather than hammered clear, so it stays contestable.
           b.vx = dx * 230;
           b.vy = dy * 230;
           b.vz = 40;
@@ -680,21 +734,57 @@ function resolveTackles(state) {
           b.lastTouch = { team: t, idx: p.idx };
           b.kicker = null;
           p.cooldown = Math.max(p.cooldown, 10);
+          wonBall = true;
         }
       }
 
-      // Against opponents
       const opp = state.teams[1 - t];
       for (const o of opp.players) {
         if (o.down > 0) continue;
-        if (dist2(o.x, o.y, p.x, p.y) < (PLAYER_R * 2 + 3) ** 2) {
-          o.down = DOWN_TICKS;
-          o.vx = p.vx * 0.5;
-          o.vy = p.vy * 0.5;
-          if (b.owner && b.owner.team === opp.index && b.owner.idx === o.idx) b.owner = null;
+        if (dist2(o.x, o.y, p.x, p.y) >= (PLAYER_R * 2 + 3) ** 2) continue;
+
+        if (state.config.premiumSetPieces && !wonBall) {
+          const victimHadBall = ownerBefore && ownerBefore.team === opp.index && ownerBefore.idx === o.idx;
+          const nearBall = dist2(b.x, b.y, o.x, o.y) < 42 * 42;
+          if (victimHadBall || nearBall) {
+            const penalty = inOwnBox(state, t, o);
+            p.slide = 0;
+            p.cooldown = Math.max(p.cooldown, SLIDE_COOLDOWN);
+            o.down = Math.max(o.down, Math.floor(DOWN_TICKS * 0.72));
+            o.vx = p.vx * 0.32;
+            o.vy = p.vy * 0.32;
+            state.events.push({ type: 'card', color: 'yellow', team: t, idx: p.idx });
+            awardFoul(state, opp.index, o.x, o.y, penalty);
+            return true;
+          }
         }
+
+        o.down = DOWN_TICKS;
+        o.vx = p.vx * 0.5;
+        o.vy = p.vy * 0.5;
+        if (b.owner && b.owner.team === opp.index && b.owner.idx === o.idx) b.owner = null;
       }
     }
+  }
+  return false;
+}
+
+function awardFoul(state, attackingTeam, x, y, penalty) {
+  const kind = penalty ? 'PENALTY' : 'FREE KICK';
+  state.events.push({ type: 'foul', team: attackingTeam, kind, x, y });
+  if (penalty) {
+    const team = state.teams[attackingTeam];
+    const goalY = targetGoalY(team);
+    const spotY = goalY - team.attackDir * 92;
+    setRestart(state, FIELD.cx, spotY, attackingTeam, 'PENALTY', 9);
+  } else {
+    setRestart(
+      state,
+      clamp(x, FIELD.left + 26, FIELD.right - 26),
+      clamp(y, FIELD.top + 34, FIELD.bottom - 34),
+      attackingTeam,
+      'FREE KICK'
+    );
   }
 }
 
@@ -898,6 +988,84 @@ function checkOutOfPlay(state) {
   }
 }
 
+function arrangePremiumSetPiece(state, sp) {
+  const team = state.teams[sp.team];
+  const opp = state.teams[1 - sp.team];
+  const goalY = targetGoalY(team);
+  const ownY = ownGoalY(team);
+  const inside = (d) => goalY - team.attackDir * d;
+  const outsideOwn = (d) => ownY + team.attackDir * d;
+  const setP = (p, x, y) => {
+    if (!p) return;
+    p.x = clamp(x, FIELD.left + 14, FIELD.right - 14);
+    p.y = clamp(y, FIELD.top + 14, FIELD.bottom - 14);
+    p.vx = 0;
+    p.vy = 0;
+  };
+
+  if (sp.kind === 'CORNER') {
+    setP(team.players[9], FIELD.cx, inside(58));
+    setP(team.players[8], FIELD.cx - 62, inside(72));
+    setP(team.players[10], FIELD.cx + 62, inside(70));
+    setP(team.players[7], FIELD.cx, inside(112));
+    setP(team.players[6], FIELD.cx - 92, inside(122));
+    setP(opp.players[2], FIELD.cx - 32, inside(52));
+    setP(opp.players[3], FIELD.cx + 32, inside(52));
+    setP(opp.players[1], FIELD.cx - 78, inside(68));
+    setP(opp.players[4], FIELD.cx + 78, inside(68));
+    setP(opp.players[5], FIELD.cx, inside(92));
+  } else if (sp.kind === 'THROW-IN') {
+    const sx = sp.x < FIELD.cx ? 1 : -1;
+    setP(team.players[7], sp.x + sx * 58, sp.y - team.attackDir * 46);
+    setP(team.players[8], sp.x + sx * 84, sp.y + team.attackDir * 58);
+    setP(team.players[9], sp.x + sx * 118, sp.y + team.attackDir * 18);
+  } else if (sp.kind === 'FREE KICK' || sp.kind === 'OFFSIDE') {
+    const toGoal = norm(FIELD.cx - sp.x, goalY - sp.y);
+    const wallX = sp.x + toGoal.x * 66;
+    const wallY = sp.y + toGoal.y * 66;
+    const sideX = -toGoal.y;
+    const sideY = toGoal.x;
+    [1,2,3,4].forEach((idx,n)=>{
+      const off=(n-1.5)*22;
+      setP(opp.players[idx], wallX + sideX*off, wallY + sideY*off);
+    });
+    setP(team.players[9], FIELD.cx, inside(62));
+    setP(team.players[8], FIELD.cx - 78, inside(76));
+    setP(team.players[10], FIELD.cx + 78, inside(76));
+  } else if (sp.kind === 'PENALTY') {
+    const defending = opp;
+    setP(defending.players[0], FIELD.cx, goalY - team.attackDir * 14);
+    for (let i=1;i<11;i++) {
+      const lane=((i%5)-2)*48;
+      setP(defending.players[i], FIELD.cx + lane, inside(190 + (i%2)*20));
+    }
+    for (let i=1;i<11;i++) {
+      if (i===sp.taker) continue;
+      const lane=((i%5)-2)*44;
+      setP(team.players[i], FIELD.cx + lane, inside(205 + (i%2)*18));
+    }
+  } else if (sp.kind === 'GOAL KICK') {
+    setP(team.players[1], FIELD.cx - 150, outsideOwn(116));
+    setP(team.players[4], FIELD.cx + 150, outsideOwn(116));
+    setP(team.players[2], FIELD.cx - 62, outsideOwn(88));
+    setP(team.players[3], FIELD.cx + 62, outsideOwn(88));
+    setP(team.players[6], FIELD.cx, outsideOwn(178));
+  }
+
+  // Keep the designated taker on the correct side of the stationary ball.
+  const taker = team.players[sp.taker];
+  if (taker) {
+    const back = norm(FIELD.cx - sp.x, ownY - sp.y);
+    const d = sp.kind === 'THROW-IN' ? 16 : 13;
+    taker.x = sp.x + back.x * d;
+    taker.y = sp.y + back.y * d;
+    taker.vx = 0;
+    taker.vy = 0;
+    taker.dirX = -back.x;
+    taker.dirY = -back.y;
+  }
+}
+
 function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   const b = state.ball;
   b.x = x;
@@ -914,6 +1082,7 @@ function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   protectFor(state, teamIdx, 'untilTouch', PROTECT_TICKS);
 
   state.phase = 'restart';
+  if (!state.config.premiumSetPieces) state.setPiece = null;
   state.phaseTimer = RESTART_TICKS;
   state.restartTeam = teamIdx;
   state.message = message;
@@ -949,6 +1118,12 @@ function setRestart(state, x, y, teamIdx, message, forcedTaker = null) {
   taker.slide = 0;
   taker.down = 0;
   team.controlled = takerIdx;
+
+  if (state.config.premiumSetPieces) {
+    state.setPiece = { kind: message, team: teamIdx, taker: takerIdx, x, y };
+    arrangePremiumSetPiece(state, state.setPiece);
+    protectFor(state, teamIdx, 'untilPlayed', PROTECT_TICKS * 2);
+  }
 
   // Push opponents back to a fair distance.
   const opp = state.teams[1 - teamIdx];
