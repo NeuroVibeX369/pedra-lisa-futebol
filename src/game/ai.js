@@ -35,7 +35,7 @@ function nearestOpponent(state, teamIdx, x, y) {
   let best = null;
   let bestD = Infinity;
   for (const p of opp.players) {
-    if (p.down > 0) continue;
+    if (p.sentOff || p.down > 0) continue;
     const d = dist2(x, y, p.x, p.y);
     if (d < bestD) {
       bestD = d;
@@ -137,7 +137,7 @@ function findCrossTarget(state, teamIdx, from) {
   let bestScore = -Infinity;
   for (let i = 1; i < team.players.length; i++) {
     const m = team.players[i];
-    if (m.idx === from.idx || m.down > 0) continue;
+    if (m.idx === from.idx || m.sentOff || m.down > 0) continue;
     const adv = advanceOf(team, m.y);
     if (adv < 0.68) continue;
     const central = 1 - Math.min(1, Math.abs(m.x - FIELD.cx) / (FIELD_W * 0.38));
@@ -365,7 +365,7 @@ function findPassTarget(state, teamIdx, from) {
 
   for (let i = 1; i < team.players.length; i++) {
     const m = team.players[i];
-    if (m.idx === from.idx || m.down > 0) continue;
+    if (m.idx === from.idx || m.sentOff || m.down > 0) continue;
     const d = dist(from.x, from.y, m.x, m.y);
     if (d < 55 || d > 340) continue;
 
@@ -600,7 +600,7 @@ export function aiMove(state, teamIdx, i, opts = {}) {
   const p = team.players[i];
   const b = state.ball;
 
-  if (p.down > 0 || p.slide > 0) return { x: 0, y: 0 };
+  if (p.sentOff || p.down > 0 || p.slide > 0) return { x: 0, y: 0 };
 
   const owner = b.owner;
   const weHaveBall = owner && owner.team === teamIdx;
@@ -690,7 +690,7 @@ export function aiWantsSlide(state, teamIdx, i) {
   if (!b.owner || b.owner.team === teamIdx) return false;
   const team = state.teams[teamIdx];
   const p = team.players[i];
-  if (p.cooldown > 0 || p.slide > 0 || p.down > 0 || p.role === 'gk') return false;
+  if (p.sentOff || p.cooldown > 0 || p.slide > 0 || p.down > 0 || p.role === 'gk') return false;
   const carrier = state.teams[b.owner.team].players[b.owner.idx];
   const d = dist(p.x, p.y, carrier.x, carrier.y);
   // A slide has to be timed rather than thrown out hopefully from range. At 34
