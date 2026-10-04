@@ -523,6 +523,12 @@ function createPremiumFootballClips(root){
     [1,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
   ]);
 
+  add('Dribble',.56,[
+    [0,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
+    [.5,{spine_02:[.08,0,0],thigh_l:[.40,0,0],thigh_r:[-.34,0,0],calf_l:[-.10,0,0],calf_r:[.22,0,0],foot_l:[.10,0,0],upperarm_l:[-.24,0,-.88],upperarm_r:[.24,0,.88]}],
+    [1,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
+  ]);
+
   add('Charge',.45,[
     [0,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
     [1,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
@@ -870,6 +876,7 @@ function renderState(dt){
       if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
 
       const speed=Math.hypot(p.vx,p.vy);
+      const ownsBall=!!(match.ball.owner && match.ball.owner.team===t && match.ball.owner.idx===i);
       // Reset presentation-only action pose before applying the current one.
       v.root.rotation.x=0;
       v.root.rotation.z=0;
@@ -899,14 +906,33 @@ function renderState(dt){
       }else if(p.charging && v.actions.Charge){
         setAnim(v,'Charge');
       }else if(p.down>0)setAnim(v,v.actions.Knockdown?'Knockdown':'Idle');
-      else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
+      else if(ownsBall && speed>12 && v.actions.Dribble){
+        setAnim(v,'Dribble');
+        v.actions.Dribble.timeScale=Math.min(1.35,Math.max(.72,speed/118));
+      }else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
       else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
       else setAnim(v,'Idle');
     }
   }
 
   const bw=simToWorld(match.ball.x,match.ball.y,match.ball.z);
-  ball.position.set(bw.x,BALL_R+bw.y,bw.z);
+  if(match.ball.owner){
+    const o=match.ball.owner;
+    const p=match.teams[o.team].players[o.idx];
+    const pw=simToWorld(p.x,p.y,0);
+    const fx=-p.dirY,fz=p.dirX;
+    const fl=Math.hypot(fx,fz)||1;
+    const dx=fx/fl,dz=fz/fl;
+    const lx=-dz,lz=dx;
+    const speed=Math.hypot(p.vx,p.vy);
+    const stride=Math.sin(match.tick*.22);
+    const forward=speed>18?.63:.48;
+    const side=speed>18?stride*.12:0;
+    const bob=speed>18?Math.abs(Math.sin(match.tick*.22))*.025:0;
+    ball.position.set(pw.x+dx*forward+lx*side,BALL_R+bob,pw.z+dz*forward+lz*side);
+  }else{
+    ball.position.set(bw.x,BALL_R+bw.y,bw.z);
+  }
   ball.rotation.x+=match.ball.vy*dt*.006;
   ball.rotation.z-=match.ball.vx*dt*.006;
 
