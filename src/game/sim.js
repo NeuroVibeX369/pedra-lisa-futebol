@@ -236,7 +236,7 @@ export function clearProtection(state) {
 // Players
 // --------------------------------------------------------------------------
 
-const NO_INTENT = { x: 0, y: 0, kick: null, slide: false };
+const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false };
 
 /**
  * Three phases per tick. The split is not cosmetic: handling team 0 completely
@@ -291,6 +291,7 @@ function updatePlayers(state, inputs, frozen) {
     for (let i = 0; i < team.players.length; i++) {
       const it = intents[t][i];
       if (it.kick) kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+      if (it.press) tryStandingPressure(state, t, i);
       if (it.slide) startSlide(state, team.players[i]);
     }
   }
@@ -374,14 +375,15 @@ function humanIntent(state, t, i, mask) {
   const p = team.players[i];
   const b = state.ball;
   const dir = maskToDir(mask);
-  const intent = { x: dir.x, y: dir.y, kick: null, slide: false };
+  const intent = { x: dir.x, y: dir.y, kick: null, slide: false, press: false };
   const prev = team.prevMask | 0;
 
   // Legacy FIRE stays intact for Classic 2D and keyboard play. PS2 Web adds
   // four independent face-button actions on top of it.
   const shoot = (mask & (BTN.FIRE | BTN.SHOOT)) !== 0;
   const prevShoot = (prev & (BTN.FIRE | BTN.SHOOT)) !== 0;
-  const passPressed = (mask & BTN.PASS) !== 0 && (prev & BTN.PASS) === 0;
+  const passHeld = (mask & BTN.PASS) !== 0;
+  const passPressed = passHeld && (prev & BTN.PASS) === 0;
   const crossPressed = (mask & BTN.CROSS) !== 0 && (prev & BTN.CROSS) === 0;
   const throughPressed = (mask & BTN.THROUGH) !== 0 && (prev & BTN.THROUGH) === 0;
   const owns = b.owner && b.owner.team === t && b.owner.idx === i;
@@ -416,8 +418,33 @@ function humanIntent(state, t, i, mask) {
       p.charge = 0;
     }
   } else {
-    // Without the ball, ○ doubles as the slide tackle. Legacy FIRE keeps the
-    // old behaviour so Classic 2D is unchanged.
+    // Contextual aerial finish: square becomes a header when the ball is in a
+    // playable aerial window near the controlled player.
+    const headerRange = (PLAYER_R + 15) ** 2;
+    const headerBall = shoot && !prevShoot
+      && b.z > CONTROL_Z * 0.45 && b.z < CROSSBAR_H * 1.35
+      && dist2(b.x, b.y, p.x, p.y) < headerRange;
+    if (headerBall) {
+      const aimed = assistedAim(state, t, i, aimX, aimY);
+      const shot = chargeToShot(15);
+      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 35 };
+    }
+
+    // × without the ball is pressure / standing challenge. If no direction is
+    // being held, the player closes the ball automatically, like classic console
+    // football. At contact range the deterministic pressure routine can poke it
+    // free or win it cleanly.
+    if (passHeld && !headerBall) {
+      intent.press = true;
+      if (Math.abs(dir.x) < 0.01 && Math.abs(dir.y) < 0.01) {
+        const d = norm(b.x - p.x, b.y - p.y);
+        intent.x = d.l ? d.x : 0;
+        intent.y = d.l ? d.y : 0;
+      }
+    }
+
+    // ○ without the ball is the sliding tackle. Legacy FIRE keeps Classic 2D
+    // unchanged.
     const legacyFirePressed = (mask & BTN.FIRE) !== 0 && (prev & BTN.FIRE) === 0;
     if ((crossPressed || legacyFirePressed) && p.cooldown === 0 && p.slide === 0) {
       intent.slide = true;
@@ -455,6 +482,27 @@ function shootingAtGoal(state, t, p, aim) {
   const goalY = targetGoalY(state.teams[t]);
   if (dist(p.x, p.y, FIELD.cx, goalY) > SHOT_FLAT_RANGE) return false;
   return aimedAtGoal(state, t, p, aim);
+}
+
+function tryStandingPressure(state, teamIdx, playerIdx) {
+  const b = state.ball;
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (p.cooldown > 0 || p.slide > 0 || b.z > CONTROL_Z) return;
+  if (dist2(b.x, b.y, p.x, p.y) > (PLAYER_R * 2.25) ** 2) return;
+
+  // If an opponent is carrying it, a close pressure contact wins the ball.
+  // This is intentionally much shorter-ranged than a slide tackle.
+  if (b.owner && b.owner.team !== teamIdx) {
+    const old = state.teams[b.owner.team].players[b.owner.idx];
+    old.holdTicks = 0;
+    old.charging = false;
+    old.charge = 0;
+    b.owner = { team: teamIdx, idx: playerIdx };
+    b.lastTouch = { team: teamIdx, idx: playerIdx };
+    b.kicker = null;
+    p.holdTicks = 0;
+    state.events.push({ type: 'tackle', kind: 'standing', team: teamIdx, idx: playerIdx });
+  }
 }
 
 function startSlide(state, p) {
