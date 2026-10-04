@@ -436,6 +436,19 @@ const pendingSubInfoEl=document.getElementById('pendingSubInfo');
 const subsUsedLabelEl=document.getElementById('subsUsedLabel');
 const teamScreenHintEl=document.getElementById('teamScreenHint');
 const teamScreenOnlineNoteEl=document.getElementById('teamScreenOnlineNote');
+const teamStatsRowsEl=document.getElementById('teamStatsRows');
+const teamRatingsTableEl=document.getElementById('teamRatingsTable');
+const matchSummaryEl=document.getElementById('matchSummary');
+const summaryKickerEl=document.getElementById('summaryKicker');
+const summaryScoreEl=document.getElementById('summaryScore');
+const summaryStatsRowsEl=document.getElementById('summaryStatsRows');
+const summaryRatingsEl=document.getElementById('summaryRatings');
+const motmCardEl=document.getElementById('motmCard');
+const motmScoreEl=document.getElementById('motmScore');
+const motmNameEl=document.getElementById('motmName');
+const motmMetaEl=document.getElementById('motmMeta');
+const summaryContinueEl=document.getElementById('summaryContinue');
+const summaryTeamScreenEl=document.getElementById('summaryTeamScreen');
 
 const devices=new InputDevices(defaultBindings());
 devices.ps2FaceButtons=true;
@@ -1040,6 +1053,7 @@ let match=createMatch({
   premiumBallControl:true,
   premiumManagement:true,
   premiumRatings:true,
+  premiumStats:true,
   formations:['433','433']
 });
 let transport=null;
@@ -1065,6 +1079,7 @@ function resetMatch(opts={}){
     premiumBallControl:true,
     premiumManagement:true,
     premiumRatings:true,
+    premiumStats:true,
     formations:opts.formations||['433','433']
   });
   localTeam=opts.localTeam??0;
