@@ -178,16 +178,40 @@ function updateOwnership(state) {
     const stopped = state.teams[best.team].players[best.idx];
     // A save, not a pick-up: the keeper, a ball that was travelling, an opponent
     // who hit it, and close enough to his goal for it to have mattered.
-    if (stopped.role === 'gk' && struck > SAVE_SPEED
-        && b.lastTouch && b.lastTouch.team !== best.team
-        && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D) {
+    const isSave = stopped.role === 'gk' && struck > SAVE_SPEED
+      && b.lastTouch && b.lastTouch.team !== best.team
+      && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D;
+
+    if (isSave) {
+      const side = Math.sign(b.x - stopped.x) || 1;
+      const high = b.z > KEEPER_CONTROL_Z * 0.52;
+      // Very hard or high shots are punched/parried instead of magically glued
+      // to the keeper. This is fully deterministic, so online lockstep remains valid.
+      const parry = struck > SAVE_SPEED * 1.55 || high;
       state.events.push({
         type: 'save',
+        kind: parry ? 'parry' : 'catch',
         team: best.team,
         idx: best.idx,
-        side: Math.sign(b.x - stopped.x) || 1,
-        high: b.z > KEEPER_CONTROL_Z * 0.52,
+        side,
+        high,
+        speed: struck,
       });
+
+      if (parry) {
+        const awayY = Math.sign(FIELD.cy - ownGoalY(state.teams[best.team])) || 1;
+        const rebound = Math.max(SAVE_SPEED * 0.55, struck * 0.46);
+        b.owner = null;
+        b.lastTouch = { team: best.team, idx: best.idx };
+        b.kicker = null;
+        b.vx = side * rebound * 0.38;
+        b.vy = awayY * rebound * 0.78;
+        b.vz = Math.max(70, Math.abs(b.vz) * 0.35 + (high ? 85 : 45));
+        b.spin *= -0.35;
+        stopped.holdTicks = 0;
+        clearOffside(state);
+        return;
+      }
     }
 
     b.owner = best;
@@ -427,23 +451,31 @@ function humanIntent(state, t, i, mask) {
       p.charge = 0;
     }
   } else {
-    // Contextual aerial finish: square becomes a header when the ball is in a
-    // playable aerial window near the controlled player.
-    const headerRange = (PLAYER_R + 15) ** 2;
-    const headerBall = shoot && !prevShoot
-      && b.z > CONTROL_Z * 0.45 && b.z < CROSSBAR_H * 1.35
-      && dist2(b.x, b.y, p.x, p.y) < headerRange;
-    if (headerBall) {
+    // Contextual first-time finishes. Medium-height balls become volleys;
+    // higher balls become headers, all on the same □ button.
+    const aerialRange = (PLAYER_R + 15) ** 2;
+    const nearAerial = shoot && !prevShoot
+      && b.z > CONTROL_Z && b.z < CROSSBAR_H * 1.48
+      && dist2(b.x, b.y, p.x, p.y) < aerialRange;
+    const volleyBall = nearAerial && b.z < CONTROL_Z * 1.42;
+    const headerBall = nearAerial && !volleyBall;
+    if (nearAerial) {
       const aimed = assistedAim(state, t, i, aimX, aimY);
-      const shot = chargeToShot(15);
-      intent.kick = { dx: aimed.x, dy: aimed.y, power: shot.power, lift: 35, kind: 'header' };
+      const shot = chargeToShot(volleyBall ? 19 : 15);
+      intent.kick = {
+        dx: aimed.x,
+        dy: aimed.y,
+        power: volleyBall ? shot.power * 1.05 : shot.power,
+        lift: volleyBall ? 80 : 35,
+        kind: volleyBall ? 'volley' : 'header',
+      };
     }
 
     // × without the ball is pressure / standing challenge. If no direction is
     // being held, the player closes the ball automatically, like classic console
     // football. At contact range the deterministic pressure routine can poke it
     // free or win it cleanly.
-    if (passHeld && !headerBall) {
+    if (passHeld && !nearAerial) {
       intent.press = true;
       if (Math.abs(dir.x) < 0.01 && Math.abs(dir.y) < 0.01) {
         const d = norm(b.x - p.x, b.y - p.y);
@@ -792,7 +824,14 @@ function checkGoal(state) {
   state.phase = 'goal';
   state.phaseTimer = GOAL_CELEBRATION_TICKS;
   state.message = 'GOAL!';
-  state.events.push({ type: 'goal', team: scoringTeam });
+  state.events.push({
+    type: 'goal',
+    team: scoringTeam,
+    x: b.x,
+    y: b.y,
+    z: b.z,
+    speed: len(b.vx, b.vy),
+  });
   b.owner = null;
   b.kicker = null;
   b.vx *= 0.3;
