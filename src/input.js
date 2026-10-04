@@ -156,6 +156,7 @@ export class InputDevices {
     this.down = new Set();
     this.enabled = true;
     this.touch = null; // on-screen controls, when there are any
+    this.ps2FaceButtons = false; // opt-in; Classic 2D keeps its original pad mapping
     this.setBindings(bindings);
 
     this._onKeyDown = (e) => {
@@ -229,8 +230,18 @@ export class InputDevices {
     if (b[13] && b[13].pressed) m |= BTN.DOWN;
     if (b[14] && b[14].pressed) m |= BTN.LEFT;
     if (b[15] && b[15].pressed) m |= BTN.RIGHT;
-    for (const i of [0, 1, 2, 3, 6, 7]) {
-      if (b[i] && b[i].pressed) m |= BTN.FIRE;
+    if (this.ps2FaceButtons) {
+      // Standard browser gamepad order on a PlayStation-style controller:
+      // 0 cross, 1 circle, 2 square, 3 triangle.
+      if (b[0]?.pressed) m |= BTN.PASS;
+      if (b[1]?.pressed) m |= BTN.CROSS;
+      if (b[2]?.pressed) m |= BTN.SHOOT;
+      if (b[3]?.pressed) m |= BTN.THROUGH;
+      if (b[6]?.pressed || b[7]?.pressed) m |= BTN.SWITCH;
+    } else {
+      for (const i of [0, 1, 2, 3, 6, 7]) {
+        if (b[i] && b[i].pressed) m |= BTN.FIRE;
+      }
     }
     return m;
   }
