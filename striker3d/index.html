@@ -354,8 +354,6 @@
 </div>
 <script type="module">
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { createMatch } from '../src/game/state.js';
 import { step } from '../src/game/sim.js';
 import { LocalTransport, OnlineTransport } from '../src/net/transport.js';
@@ -369,8 +367,9 @@ import {
   CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT, SUB_TARGET_BITS
 } from '../src/constants.js';
 
-const PREMIUM_MODEL_URL='https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb';
-const FALLBACK_MODEL_URL='https://raw.githubusercontent.com/kendrekaran/striker-3d/57847f87ff3d924712a1bb37df9dae391aedc315/assets/player.glb';
+// Stable visual mode: low-poly native Three.js players, no external rig.
+const STABLE_VISUAL_MODE=true;
+const PREMATCH_PRESENTATION=false;
 let premiumRig=false;
 const app=document.getElementById('app');
 const statusEl=document.getElementById('status');
@@ -479,11 +478,10 @@ scene.background=new THREE.Color(0x90b7d1);
 scene.fog=new THREE.Fog(0x90b7d1,145,330);
 
 const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,550);
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled=false;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.92;
