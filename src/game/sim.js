@@ -158,11 +158,19 @@ function canControl(state, team, p) {
   const deliveryThreat = isKeeper && state.delivery
     && state.delivery.team !== team.index
     && (state.delivery.kind === 'CORNER' || state.delivery.kind === 'FREE KICK');
+  const gkReflex = state.config.premiumRatings && isKeeper ? (p.rating?.gk?.reflexo ?? 75) : 75;
+  const gkDefesa = state.config.premiumRatings && isKeeper ? (p.rating?.gk?.defesa ?? 75) : 75;
+  const gkReach = state.config.premiumRatings && isKeeper
+    ? clamp(1 + (gkReflex - 75) * 0.003, 0.96, 1.04)
+    : 1;
+  const gkHeight = state.config.premiumRatings && isKeeper
+    ? clamp(1 + (gkDefesa - 75) * 0.003, 0.96, 1.04)
+    : 1;
   const r = isKeeper
-    ? KEEPER_CONTROL_R * (deliveryThreat ? 1.22 : 1)
+    ? KEEPER_CONTROL_R * (deliveryThreat ? 1.22 : 1) * gkReach
     : CONTROL_R;
   const zMax = isKeeper
-    ? KEEPER_CONTROL_Z * (deliveryThreat ? 1.16 : 1)
+    ? KEEPER_CONTROL_Z * (deliveryThreat ? 1.16 : 1) * gkHeight
     : CONTROL_Z;
   if (b.z > zMax) return false;
   return dist2(b.x, b.y, p.x, p.y) < r * r;
@@ -279,7 +287,11 @@ function updateOwnership(state) {
       const high = b.z > KEEPER_CONTROL_Z * 0.52;
       // Very hard or high shots are punched/parried instead of magically glued
       // to the keeper. This is fully deterministic, so online lockstep remains valid.
-      const parry = struck > SAVE_SPEED * 1.55 || high;
+      const handling = state.config.premiumRatings ? (stopped.rating?.gk?.defesa ?? 75) : 75;
+      const catchThreshold = state.config.premiumRatings
+        ? 1.55 + (handling - 75) * 0.006
+        : 1.55;
+      const parry = struck > SAVE_SPEED * catchThreshold || high;
       state.events.push({
         type: 'save',
         kind: parry ? 'parry' : 'catch',
@@ -319,7 +331,12 @@ function updateOwnership(state) {
     }
 
     if (state.config.premiumBallControl && stopped.role !== 'gk') {
-      const touchTicks = struck > 55 ? clamp(Math.round(struck / 48) + 2, 3, 9) : 0;
+      const baseTouchTicks = struck > 55 ? clamp(Math.round(struck / 48) + 2, 3, 9) : 0;
+      const dri = ratingValue(state, stopped, 'dri', 72);
+      const touchScale = state.config.premiumRatings
+        ? clamp(1 - (dri - 72) * 0.010, 0.82, 1.12)
+        : 1;
+      const touchTicks = baseTouchTicks ? clamp(Math.round(baseTouchTicks * touchScale), 2, 10) : 0;
       stopped.firstTouchTicks = touchTicks;
       stopped.firstTouchSpeed = struck;
       if (touchTicks > 0) {
@@ -396,6 +413,30 @@ function updateDelivery(state) {
 // --------------------------------------------------------------------------
 // Players
 // --------------------------------------------------------------------------
+
+function ratingValue(state, p, key, fallback = 72) {
+  if (!state.config.premiumRatings) return fallback;
+  return p.rating?.[key] ?? fallback;
+}
+
+function speedRatingFactor(state, p) {
+  if (!state.config.premiumRatings) return 1;
+  const value = p.role === 'gk' ? (p.rating?.gk?.saida ?? 74) : (p.rating?.vel ?? 72);
+  return clamp(1 + (value - 72) * 0.0032, 0.94, 1.05);
+}
+
+function kickRatingFactor(state, p, kind) {
+  if (!state.config.premiumRatings) return 1;
+  const passing = ['pass', 'through', 'cross', 'throw-in'].includes(kind);
+  const value = passing ? (p.rating?.pas ?? 72) : (p.rating?.fin ?? 72);
+  return clamp(1 + (value - 72) * (passing ? 0.0020 : 0.0026), 0.95, 1.05);
+}
+
+function staminaRatingFactor(state, p) {
+  if (!state.config.premiumRatings) return 1;
+  const fis = p.rating?.fis ?? 72;
+  return clamp(1 - (fis - 72) * 0.0040, 0.92, 1.08);
+}
 
 const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false, shield: false, skill: null };
 
@@ -786,7 +827,13 @@ function updatePlayers(state, inputs, frozen) {
           keeper.vy = 0;
           state.events.push({ type: 'penalty-dive', team: defendingTeam, idx: 0, side: dive });
         }
-        kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
+        const ratingFactor = kickRatingFactor(state, p, it.kick.kind);
+        const ratedPower = it.kick.power * ratingFactor;
+        const ratedLift = state.config.premiumRatings
+          && ['shot','placed-shot','low-shot','power-shot','chip-shot','volley','header'].includes(it.kick.kind)
+          ? it.kick.lift * clamp(1 - ((p.rating?.fin ?? 72) - 72) * 0.0018, 0.96, 1.04)
+          : it.kick.lift;
+        kickBall(state, t, i, it.kick.dx, it.kick.dy, ratedPower, ratedLift);
         if (typeof it.kick.spin === 'number') state.ball.spin = it.kick.spin;
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
@@ -1170,15 +1217,19 @@ function startSkillDribble(state, teamIdx, playerIdx, skill) {
   const d = norm(skill.dx, skill.dy);
   if (d.l < 0.2) return;
 
-  p.skillTicks = 11;
-  p.skillCooldown = 34;
+  const dri = ratingValue(state, p, 'dri', 72);
+  p.skillTicks = state.config.premiumRatings ? clamp(Math.round(12 - (dri - 72) * 0.05), 10, 13) : 11;
+  p.skillCooldown = state.config.premiumRatings ? clamp(Math.round(34 - (dri - 72) * 0.16), 29, 38) : 34;
   p.skillDirX = d.x;
   p.skillDirY = d.y;
   p.dirX = d.x;
   p.dirY = d.y;
   p.shielding = false;
-  p.vx += d.x * 48;
-  p.vy += d.y * 48;
+  const skillBurst = state.config.premiumRatings
+    ? 48 * clamp(1 + (dri - 72) * 0.0035, 0.94, 1.06)
+    : 48;
+  p.vx += d.x * skillBurst;
+  p.vy += d.y * skillBurst;
 
   b.x = p.x + d.x * (DRIBBLE_DIST + 7);
   b.y = p.y + d.y * (DRIBBLE_DIST + 7);
@@ -1250,7 +1301,10 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
     if (state.config.premiumBallControl && old.shielding) {
       const rel = norm(p.x - old.x, p.y - old.y);
       const front = old.dirX * rel.x + old.dirY * rel.y;
-      if (front < 0.55) {
+      const shieldLimit = state.config.premiumRatings
+        ? clamp(0.55 + ((old.rating?.fis ?? 72) - (p.rating?.def ?? 72)) * 0.005, 0.42, 0.68)
+        : 0.55;
+      if (front < shieldLimit) {
         p.cooldown = Math.max(p.cooldown, 6);
         old.vx *= 0.96;
         old.vy *= 0.96;
@@ -1306,6 +1360,12 @@ function movePlayer(state, t, p, mv) {
       : owns ? PLAYER_SPEED_BALL : PLAYER_SPEED) * handicap;
     let accel = PLAYER_ACC;
 
+    if (state.config.premiumRatings) {
+      const ratedSpeed = speedRatingFactor(state, p);
+      speed *= ratedSpeed;
+      accel *= clamp(0.96 + ratedSpeed * 0.04, 0.96, 1.04);
+    }
+
     if (state.config.premiumManagement && p.role !== 'gk') {
       const staminaRatio = clamp(p.stamina / 600, 0, 1);
       speed *= 0.84 + staminaRatio * 0.16;
@@ -1348,7 +1408,7 @@ function movePlayer(state, t, p, mv) {
     const effort = clamp(len(p.vx, p.vy) / Math.max(1, paceBase), 0, 1.35);
     const tacticDrain = team.mentality > 0 ? 1.16 : team.mentality < 0 ? 0.90 : 1;
     const pressDrain = team.pressTicks > 0 ? 1.20 : 1;
-    let drain = effort * 0.030 * tacticDrain * pressDrain;
+    let drain = effort * 0.030 * tacticDrain * pressDrain * staminaRatingFactor(state, p);
     if (p.skillTicks > 0) drain += 0.018;
     if (p.slide > 0) drain += 0.020;
     const recovery = effort < 0.22 && !owns ? 0.012 : 0;
@@ -1596,7 +1656,10 @@ function resolveTackles(state) {
       let wonBall = false;
 
       const mayTouch = b.protectedFor === null || b.protectedFor === t;
-      if (mayTouch && b.z < 20 && dist2(b.x, b.y, p.x, p.y) < (PLAYER_R + BALL_R + SLIDE_REACH) ** 2) {
+      const ratedReach = state.config.premiumRatings
+        ? SLIDE_REACH + clamp(((p.rating?.def ?? 72) - 72) * 0.08, -1.4, 1.4)
+        : SLIDE_REACH;
+      if (mayTouch && b.z < 20 && dist2(b.x, b.y, p.x, p.y) < (PLAYER_R + BALL_R + ratedReach) ** 2) {
         if (!b.owner || b.owner.team !== t) {
           const d = norm(p.vx, p.vy);
           const dx = d.l ? d.x : p.dirX;
