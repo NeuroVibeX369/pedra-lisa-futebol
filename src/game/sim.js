@@ -181,7 +181,13 @@ function updateOwnership(state) {
     if (stopped.role === 'gk' && struck > SAVE_SPEED
         && b.lastTouch && b.lastTouch.team !== best.team
         && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D) {
-      state.events.push({ type: 'save', team: best.team });
+      state.events.push({
+        type: 'save',
+        team: best.team,
+        idx: best.idx,
+        side: Math.sign(b.x - stopped.x) || 1,
+        high: b.z > KEEPER_CONTROL_Z * 0.52,
+      });
     }
 
     b.owner = best;
