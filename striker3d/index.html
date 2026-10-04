@@ -1291,6 +1291,41 @@ function processVisualEvents(){
     }
   }
 }
+function setPieceCamera(nowSec,bw){
+  const sp=match.setPiece;
+  if(!sp || presentation.active || replay.active)return false;
+  const w=simToWorld(sp.x,sp.y,0);
+  const attackGoalX=match.teams[sp.team].attackDir<0?-FIELD_L/2:FIELD_L/2;
+
+  if(sp.kind==='PENALTY'){
+    camera.position.set(w.x+(attackGoalX>w.x?-9:9),4.1,w.z+8.6);
+    camera.fov=30;
+    camera.lookAt(attackGoalX,1.05,0);
+  }else if(sp.kind==='CORNER'){
+    camera.position.set(w.x+(attackGoalX>w.x?-7:7),5.8,w.z+(w.z>0?8:-8));
+    camera.fov=34;
+    camera.lookAt(attackGoalX,1.0,0);
+  }else if(sp.kind==='THROW-IN'){
+    camera.position.set(w.x,5.0,w.z+(w.z>0?13:-13));
+    camera.fov=35;
+    camera.lookAt(w.x,1.1,w.z);
+  }else if(sp.kind==='FREE KICK'||sp.kind==='OFFSIDE'){
+    camera.position.set(w.x+(attackGoalX>w.x?-8:8),5.2,w.z+7.4);
+    camera.fov=33;
+    camera.lookAt(attackGoalX,1.05,0);
+  }else if(sp.kind==='GOAL KICK'){
+    camera.position.set(w.x+(attackGoalX>w.x?10:-10),7.1,w.z+12);
+    camera.fov=36;
+    camera.lookAt(0,1.0,0);
+  }else{
+    camera.position.set(0,8.6,19);
+    camera.fov=34;
+    camera.lookAt(0,1.0,0);
+  }
+  camera.updateProjectionMatrix();
+  return true;
+}
+
 function renderState(dt){
   refreshControlled();
   processVisualEvents();
@@ -1470,6 +1505,8 @@ function renderState(dt){
     camera.position.set(bw.x-10,7.0,THREE.MathUtils.clamp(bw.z+15,-23,23));
     camera.fov=34;
     camera.lookAt(bw.x,1.05,bw.z);
+  }else if(setPieceCamera(nowSec,bw)){
+    // Dedicated broadcast framing while a restart is waiting to be taken.
   }else{
     if(camMode==='close'){camera.position.set(focusX,8.6,21.5);camera.fov=42}
     else if(camMode==='tactical'){camera.position.set(focusX,32,48);camera.fov=38}
