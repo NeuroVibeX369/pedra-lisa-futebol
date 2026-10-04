@@ -9,7 +9,7 @@ import {
   RESTART_TICKS,
   RUN_ADVANCE, SAVE_SPEED, SHOT_FLAT_RANGE, SHOT_LIFT_MAX,
   SIX_D, SLIDE_COOLDOWN, SLIDE_DECAY, SLIDE_REACH, SLIDE_SPEED, SLIDE_TICKS, SPIN_DECAY,
-  WORLD_H, WORLD_W,
+  WORLD_H, WORLD_W, SUB_TARGET_BITS,
 } from '../constants.js';
 import { clamp, dist, dist2, len, norm } from '../util.js';
 import { maskToDir } from '../input.js';
@@ -18,6 +18,7 @@ import { chargeToShot, kickBall } from './kick.js';
 import { advanceOf, ownGoalY, setupKickoff, targetGoalY } from './state.js';
 import { clearOffside } from './offside.js';
 import { aimedAtGoal, assistedAim } from './aim.js';
+import { lineupFrom, PRESETS as FORMATION_PRESETS } from './formations.js';
 
 /**
  * The only place where the match changes.
@@ -641,6 +642,16 @@ function applyPendingSubstitution(state, teamIdx) {
 
   p.displayName = inName;
   p.shirtNumber = inNumber;
+  if (state.config.premiumRatings) {
+    const delta = ((inNumber + teamIdx * 3) % 5) - 2;
+    const targetOverall = clamp((p.overall || 72) - 2 + delta, 66, 78);
+    const currentOverall = Math.max(1, p.overall || 72);
+    const scale = targetOverall / currentOverall;
+    for (const key of ['vel','fin','pas','dri','def','fis']) {
+      if (typeof p.rating?.[key] === 'number') p.rating[key] = clamp(Math.round(p.rating[key] * scale), 55, 84);
+    }
+    p.overall = targetOverall;
+  }
   p.stamina = 1000;
   p.substitute = true;
   p.yellowCards = 0;
@@ -704,6 +715,25 @@ function updateCpuManagement(state) {
   }
 }
 
+function cycleFormation(state, teamIdx, delta) {
+  const team = state.teams[teamIdx];
+  const keys = FORMATION_PRESETS.map(p => p.key);
+  let at = keys.indexOf(team.formationKey);
+  if (at < 0) at = 0;
+  const nextKey = keys[(at + delta + keys.length) % keys.length];
+  team.formationKey = nextKey;
+  team.formation = lineupFrom(nextKey);
+  for (let i = 0; i < team.players.length; i++) {
+    team.players[i].role = team.formation[i].role;
+  }
+  state.events.push({
+    type: 'formation',
+    team: teamIdx,
+    key: nextKey,
+    label: FORMATION_PRESETS.find(p => p.key === nextKey)?.label || nextKey,
+  });
+}
+
 function updatePremiumManagementControls(state, inputs) {
   if (!state.config.premiumManagement) return;
   updateCpuManagement(state);
@@ -716,10 +746,33 @@ function updatePremiumManagementControls(state, inputs) {
     const down = (mask & BTN.TACTIC_DOWN) !== 0 && (prev & BTN.TACTIC_DOWN) === 0;
     const up = (mask & BTN.TACTIC_UP) !== 0 && (prev & BTN.TACTIC_UP) === 0;
     const sub = (mask & BTN.SUB) !== 0 && (prev & BTN.SUB) === 0;
+    const exactDef = (mask & BTN.MENTALITY_DEF) !== 0 && (prev & BTN.MENTALITY_DEF) === 0;
+    const exactBal = (mask & BTN.MENTALITY_BAL) !== 0 && (prev & BTN.MENTALITY_BAL) === 0;
+    const exactAtt = (mask & BTN.MENTALITY_ATT) !== 0 && (prev & BTN.MENTALITY_ATT) === 0;
+    const formPrev = (mask & BTN.FORMATION_PREV) !== 0 && (prev & BTN.FORMATION_PREV) === 0;
+    const formNext = (mask & BTN.FORMATION_NEXT) !== 0 && (prev & BTN.FORMATION_NEXT) === 0;
 
-    if (down) setMentality(state, t, team.mentality - 1);
-    if (up) setMentality(state, t, team.mentality + 1);
-    if (sub) queueSubstitution(state, t, team.controlled, 'manual');
+    if (exactDef) setMentality(state, t, -1);
+    else if (exactBal) setMentality(state, t, 0);
+    else if (exactAtt) setMentality(state, t, 1);
+    else {
+      if (down) setMentality(state, t, team.mentality - 1);
+      if (up) setMentality(state, t, team.mentality + 1);
+    }
+
+    if (formPrev) cycleFormation(state, t, -1);
+    if (formNext) cycleFormation(state, t, 1);
+
+    let targetedSub = -1;
+    for (let i = 1; i < SUB_TARGET_BITS.length; i++) {
+      const bit = SUB_TARGET_BITS[i];
+      if ((mask & bit) !== 0 && (prev & bit) === 0) {
+        targetedSub = i;
+        break;
+      }
+    }
+    if (targetedSub >= 0) queueSubstitution(state, t, targetedSub, 'screen');
+    else if (sub) queueSubstitution(state, t, team.controlled, 'manual');
   }
 }
 
