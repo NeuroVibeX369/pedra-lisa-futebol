@@ -157,6 +157,7 @@ export class InputDevices {
     this.enabled = true;
     this.touch = null; // on-screen controls, when there are any
     this.ps2FaceButtons = false; // opt-in; Classic 2D keeps its original pad mapping
+    this.premiumManagement = false; // opt-in team tactics/substitutions
     this.setBindings(bindings);
 
     this._onKeyDown = (e) => {
@@ -208,6 +209,11 @@ export class InputDevices {
     }
     // The on-screen controls drive the first slot, which is the one every
     // single player and online match uses.
+    if (this.premiumManagement) {
+      if (this.down.has('KeyZ')) m |= BTN.TACTIC_DOWN;
+      if (this.down.has('KeyX')) m |= BTN.TACTIC_UP;
+      if (this.down.has('KeyC')) m |= BTN.SUB;
+    }
     const touch = slot === 0 && this.touch ? this.touch.mask : 0;
     return m | touch | this.gamepadMask(slot);
   }
@@ -238,6 +244,11 @@ export class InputDevices {
       if (b[2]?.pressed) m |= BTN.SHOOT;
       if (b[3]?.pressed) m |= BTN.THROUGH;
       if (b[6]?.pressed || b[7]?.pressed) m |= BTN.SWITCH;
+      if (this.premiumManagement) {
+        if (b[4]?.pressed) m |= BTN.TACTIC_DOWN;
+        if (b[5]?.pressed) m |= BTN.TACTIC_UP;
+        if (b[8]?.pressed || b[9]?.pressed) m |= BTN.SUB;
+      }
     } else {
       for (const i of [0, 1, 2, 3, 6, 7]) {
         if (b[i] && b[i].pressed) m |= BTN.FIRE;
