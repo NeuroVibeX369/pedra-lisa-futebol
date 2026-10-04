@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Pedra Lisa Futebol — Striker 3D Híbrido</title>
+  <title>Pedra Lisa PS2 Web</title>
   <style>
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     #app{position:fixed;inset:0}canvas{display:block}
@@ -18,6 +18,19 @@
     .status{position:absolute;left:14px;top:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:11px;color:#b8c9bf;max-width:390px;transition:opacity .5s}
     .playercard{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;backdrop-filter:blur(8px)}
     .phase{position:absolute;left:50%;top:82px;transform:translateX(-50%);font-size:22px;font-weight:900;letter-spacing:.09em;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .15s}
+    .lobby{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(4,10,7,.78);backdrop-filter:blur(10px);padding:18px}
+    .lobby.hidden{display:none}.lobbyBox{width:min(560px,100%);background:#0d1912;border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+    .lobbyBox h1{margin:0 0 6px;font-size:32px}.lobbyBox p{color:#aebdb4;line-height:1.5}.lobbyBtns{display:grid;gap:10px;margin-top:18px}
+    .lobbyBtns button,.joinRow button{min-height:50px;border:0;border-radius:13px;font-weight:900;font-size:15px;cursor:pointer}.playBtn{background:#178a3c;color:#fff}.onlineBtn{background:#1d2d22;color:#fff;border:1px solid #365743!important}
+    .joinRow{display:grid;grid-template-columns:1fr 150px;gap:8px;margin-top:10px}.joinRow input{min-width:0;border-radius:12px;border:1px solid #365743;background:#08110c;color:#fff;padding:0 14px;font-size:20px;text-transform:uppercase;letter-spacing:.18em}
+    .room{font-size:34px;font-weight:1000;letter-spacing:.22em;text-align:center;color:#8fe8aa;margin:14px 0}.lobbyStatus{min-height:22px;color:#b9c9c0;font-size:13px;margin-top:10px}
+    #touch3d{position:fixed;z-index:15;inset:0;pointer-events:none}.touchHidden{display:none!important}
+    #stick3d{position:absolute;left:22px;bottom:24px;width:126px;height:126px;border-radius:50%;background:rgba(5,12,8,.42);border:2px solid rgba(255,255,255,.24);pointer-events:auto;touch-action:none}
+    #knob3d{position:absolute;left:50%;top:50%;width:56px;height:56px;transform:translate(-50%,-50%);border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.5)}
+    #touchBtns3d{position:absolute;right:18px;bottom:24px;display:flex;align-items:flex-end;gap:12px;pointer-events:auto}
+    #touchBtns3d button{width:84px;height:84px;border-radius:50%;border:2px solid rgba(255,255,255,.25);color:white;background:rgba(10,25,15,.67);font-weight:900;touch-action:none}#btnSwap3d{width:68px!important;height:68px!important;font-size:11px}
+    #touchBtns3d button.pressed{transform:scale(.95);background:rgba(23,138,60,.85)}
+    @media(max-width:700px){.top{top:7px;padding:7px 9px;gap:6px;font-size:11px}.score{font-size:16px}.small{display:none}.info{display:none}.back{top:7px;right:7px;padding:7px 9px;font-size:11px}.status{max-width:55%;font-size:9px}.playercard{bottom:6px;font-size:10px;padding:6px 10px}.joinRow{grid-template-columns:1fr 115px}}
   </style>
   <script type="importmap">
   {
@@ -29,21 +42,45 @@
   </script>
 </head>
 <body>
+<div id="browserLobby" class="lobby">
+  <div class="lobbyBox">
+    <div class="small">PEDRA LISA GAMES · SEM DOWNLOAD</div>
+    <h1>PEDRA LISA PS2 WEB</h1>
+    <p>Jogue direto no navegador. Contra a CPU funciona imediatamente. Para jogar com um amigo, um cria a sala e envia o código de 4 letras.</p>
+    <div class="lobbyBtns">
+      <button id="playCpu" class="playBtn" type="button">JOGAR CONTRA CPU</button>
+      <button id="createRoom" class="onlineBtn" type="button">CRIAR SALA ONLINE</button>
+    </div>
+    <div id="room3d" class="room" hidden></div>
+    <div class="joinRow">
+      <input id="joinCode3d" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+      <button id="joinRoom" class="onlineBtn" type="button">ENTRAR</button>
+    </div>
+    <div id="lobbyStatus3d" class="lobbyStatus">PC: WASD + Espaço + Q · celular: controles na tela.</div>
+  </div>
+</div>
+<div id="touch3d" class="touchHidden">
+  <div id="stick3d"><div id="knob3d"></div></div>
+  <div id="touchBtns3d">
+    <button id="btnSwap3d" type="button">TROCAR</button>
+    <button id="btnKick3d" type="button">PASSE / CHUTE</button>
+  </div>
+</div>
 <div id="app"></div>
 <div id="hud">
   <div class="top">
     <span>PEDRA LISA</span><span class="score" id="score">0 — 0</span><span>INDEPENDÊNCIA</span>
-    <span class="clock" id="clock">1T · 00:00</span><span class="small">HÍBRIDO 3D · ARCADE 94</span>
+    <span class="clock" id="clock">1T · 00:00</span><span class="small">PS2 WEB · NAVEGADOR</span>
   </div>
   <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
   <div class="phase" id="phase"></div>
   <a class="back" href="../">← HUB</a>
   <div class="info">
-    <div><b>WebSoccer × Striker 3D · visual arcade 1994</b></div>
+    <div><b>Pedra Lisa PS2 Web · motor determinístico</b></div>
     <div class="keys">WASD / setas: mover · Espaço: passe/chute (segure para força) · Q: trocar jogador · 1/2/3: Broadcast / Close / Tactical</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
-  <div class="tag">Referência visual: futebol arcade 3D de 1994 · sem usar assets da SEGA</div>
+  <div class="tag">Versão web própria · sem download</div>
 </div>
 <script type="module">
 import * as THREE from 'three';
@@ -51,6 +88,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { createMatch } from '../src/game/state.js';
 import { step } from '../src/game/sim.js';
+import { LocalTransport, OnlineTransport } from '../src/net/transport.js';
+import { Signal } from '../src/net/signal.js';
+import { relayFor } from '../src/config.js';
+import { InputDevices, defaultBindings } from '../src/input.js';
+import { TouchControls, isTouchDevice } from '../src/touch.js';
 import {
   FRAME_TIME, BTN, FIELD, FIELD_W as SIM_FIELD_W, FIELD_H as SIM_FIELD_H,
   CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT
@@ -63,6 +105,24 @@ const scoreEl=document.getElementById('score');
 const clockEl=document.getElementById('clock');
 const cardEl=document.getElementById('playercard');
 const phaseEl=document.getElementById('phase');
+const lobbyEl=document.getElementById('browserLobby');
+const lobbyStatusEl=document.getElementById('lobbyStatus3d');
+const roomEl=document.getElementById('room3d');
+
+const devices=new InputDevices(defaultBindings());
+devices.attach();
+const touch3d=new TouchControls();
+const touchDevice=isTouchDevice();
+if(touchDevice){
+  touch3d.attach({
+    root:document.getElementById('touch3d'),
+    stick:document.getElementById('stick3d'),
+    knob:document.getElementById('knob3d'),
+    kick:document.getElementById('btnKick3d'),
+    swap:document.getElementById('btnSwap3d'),
+  });
+  devices.touch=touch3d;
+}
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8cde6);
@@ -287,7 +347,54 @@ let match=createMatch({
   offside:true,
   formations:['433','433']
 });
+let transport=null;
+let signal=null;
+let matchActive=false;
+let localTeam=0;
 respawnVisuals();
+
+function resetMatch(opts={}){
+  match=createMatch({
+    seed:opts.seed||((Date.now()&0x7fffffff)||1),
+    halfSeconds:opts.halfSeconds||120,
+    humans:opts.humans||[true,false],
+    difficulty:opts.difficulty||'normal',
+    offside:opts.offside!==false,
+    formations:opts.formations||['433','433']
+  });
+  localTeam=opts.localTeam??0;
+  selectedIdx=-1;
+  respawnVisuals();
+  refreshControlled();
+}
+
+function showTouch(on){
+  if(!touchDevice)return;
+  document.getElementById('touch3d').classList.toggle('touchHidden',!on);
+  touch3d.show(on);
+}
+
+function beginCpu(){
+  transport?.dispose?.();
+  signal=null;
+  resetMatch({humans:[true,false],difficulty:'normal',localTeam:0});
+  transport=new LocalTransport(devices,[0]);
+  matchActive=true;
+  lobbyEl.classList.add('hidden');
+  showTouch(true);
+  statusEl.textContent='Pedra Lisa PS2 Web · contra CPU';
+}
+
+function beginOnline({seed,localTeam:team,signal:sig}){
+  transport?.dispose?.();
+  signal=sig;
+  resetMatch({seed,humans:[true,true],localTeam:team,formations:['433','433']});
+  transport=new OnlineTransport({signal:sig,devices,localTeam:team});
+  matchActive=true;
+  lobbyEl.classList.add('hidden');
+  showTouch(true);
+  statusEl.textContent='ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+}
 
 function simToWorld(x,y,z=0){
   return {
@@ -301,12 +408,13 @@ let selectedIdx=-1;
 let ring=new THREE.Mesh(new THREE.RingGeometry(.58,.78,32),new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
 ring.rotation.x=-Math.PI/2;ring.position.y=.035;
 function refreshControlled(){
-  const idx=match.teams[0].controlled;
+  const team=localTeam||0;
+  const idx=match.teams[team].controlled;
   if(idx===selectedIdx)return;
   if(ring.parent)ring.parent.remove(ring);
   selectedIdx=idx;
-  visuals[0][idx].root.add(ring);
-  const r=PLAYER_ROSTERS[0][idx];
+  visuals[team][idx].root.add(ring);
+  const r=PLAYER_ROSTERS[team][idx];
   cardEl.textContent='#'+r.number+' '+r.name;
 }
 refreshControlled();
@@ -320,33 +428,21 @@ try{
   template.traverse(o=>{if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){o.computeBoundingBox();tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);box.union(tmp)}});
   if(!box.isEmpty()){const h=box.max.y-box.min.y;fitScale=h>1e-4?1.88/h:1;fitMinY=box.min.y}
   respawnVisuals();selectedIdx=-1;refreshControlled();
-  statusEl.textContent='Híbrido ativo · motor WebSoccer + modelo CC0 · '+Object.keys(clipMap).length+' animações';
+  statusEl.textContent='Pedra Lisa PS2 Web · modelo 3D CC0 · '+Object.keys(clipMap).length+' animações';
   setTimeout(()=>statusEl.style.opacity='.55',3200);
 }catch(err){
   console.warn(err);
   statusEl.textContent='Motor WebSoccer ativo · modelo remoto indisponível, usando fallback 3D';
 }
 
-const keys=new Set();
 addEventListener('keydown',e=>{
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.code==='Digit1')camMode='broadcast';
   if(e.code==='Digit2')camMode='close';
   if(e.code==='Digit3')camMode='tactical';
-  keys.add(e.code);
 });
-addEventListener('keyup',e=>keys.delete(e.code));
-addEventListener('blur',()=>keys.clear());
 
 function inputMask(){
-  let m=0;
-  if(keys.has('KeyW')||keys.has('ArrowUp'))m|=BTN.UP;
-  if(keys.has('KeyS')||keys.has('ArrowDown'))m|=BTN.DOWN;
-  if(keys.has('KeyA')||keys.has('ArrowLeft'))m|=BTN.LEFT;
-  if(keys.has('KeyD')||keys.has('ArrowRight'))m|=BTN.RIGHT;
-  if(keys.has('Space'))m|=BTN.FIRE;
-  if(keys.has('KeyQ'))m|=BTN.SWITCH;
-  return m;
+  return devices.mask(0);
 }
 
 let camMode='broadcast',acc=0,last=performance.now(),focusX=0,lastKicker='';
@@ -361,7 +457,7 @@ function renderState(dt){
         // simulation has him guarding the line. WebSoccer uses a much wider
         // abstract goal than a 3D football pitch, so the clamp is presentation
         // only and avoids the keeper appearing beside the posts.
-        const ownGoalX=match.teams[t].attackDir<0 ? FIELD_L/2 : -FIELD_L/2;
+        const ownGoalX=match.teams[t].attackDir<0 ? -FIELD_L/2 : FIELD_L/2;
         if(Math.abs(w.x-ownGoalX)<10){
           w.z=THREE.MathUtils.clamp(w.z,-4.45,4.45);
           w.x=ownGoalX + (ownGoalX>0?-1:1)*Math.max(.8,Math.abs(w.x-ownGoalX));
@@ -414,8 +510,12 @@ function renderState(dt){
 function frame(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
   let guard=0;
-  while(acc>=FRAME_TIME&&guard<8){
-    step(match,[inputMask(),0]);
+  while(matchActive&&acc>=FRAME_TIME&&guard<8){
+    const tick=match.tick;
+    transport?.sample?.(tick);
+    if(transport?.ready && !transport.ready(tick))break;
+    step(match,transport?.poll?transport.poll(tick):[inputMask(),0]);
+    transport?.afterStep?.(match);
     acc-=FRAME_TIME;guard++;
   }
   if(guard>=8)acc=0;
@@ -424,6 +524,46 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+function connectSignal(){
+  signal?.close?.();
+  const s=new Signal(relayFor(location));
+  signal=s;
+  s.on('error',()=>lobbyStatusEl.textContent='Não foi possível conectar ao servidor de salas.');
+  s.on('close',()=>{if(!matchActive)lobbyStatusEl.textContent='Conexão com o servidor encerrada.'});
+  return s;
+}
+
+document.getElementById('playCpu').addEventListener('click',beginCpu);
+
+document.getElementById('createRoom').addEventListener('click',()=>{
+  const s=connectSignal();
+  lobbyStatusEl.textContent='Criando sala…';
+  s.on('room',m=>{
+    roomEl.hidden=false;
+    roomEl.textContent=m.code;
+    lobbyStatusEl.textContent='Envie este código ao seu amigo e aguarde.';
+  });
+  let started=false;
+  s.on('peer',()=>{
+    if(started)return;
+    started=true;
+    const seed=(Date.now()&0x7fffffff)||1;
+    s.send({t:'start',seed,halfSeconds:120,offside:true,formations:['433','433']});
+    beginOnline({seed,localTeam:0,signal:s});
+  });
+  s.create();
+});
+
+document.getElementById('joinRoom').addEventListener('click',()=>{
+  const code=document.getElementById('joinCode3d').value.toUpperCase().trim();
+  if(code.length<4){lobbyStatusEl.textContent='Digite o código de 4 letras.';return;}
+  const s=connectSignal();
+  lobbyStatusEl.textContent='Entrando na sala '+code+'…';
+  s.on('room',()=>lobbyStatusEl.textContent='Conectado. Aguardando o início da partida…');
+  s.on('start',m=>beginOnline({seed:m.seed,localTeam:1,signal:s}));
+  s.join(code);
+});
 
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script>
