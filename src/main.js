@@ -890,7 +890,7 @@ function openMatchCenter2d(kind = 'live') {
   if (!game.state) return;
   game.matchCenterKind = kind;
   matchCenterTitle.textContent = kind === 'full' ? 'FIM DE JOGO' : kind === 'half' ? 'INTERVALO' : 'CENTRAL DA PARTIDA';
-  document.getElementById('matchCenterContinue').textContent = kind === 'full' ? 'VER RESULTADO' : 'CONTINUAR';
+  document.getElementById('matchCenterContinue').textContent = kind === 'full' ? 'FINALIZAR PARTIDA' : 'CONTINUAR';
   matchCenterBox.classList.remove('hidden');
   pauseBox.classList.add('hidden');
   if (!game.transport?.online) game.paused = true;
@@ -920,7 +920,16 @@ function handle2dUiEvents(events) {
 
 document.getElementById('openMatchCenter').addEventListener('click', () => openMatchCenter2d('live'));
 document.getElementById('closeMatchCenter').addEventListener('click', closeMatchCenter2d);
-document.getElementById('matchCenterContinue').addEventListener('click', closeMatchCenter2d);
+document.getElementById('matchCenterContinue').addEventListener('click', () => {
+  if (game.matchCenterKind === 'full') {
+    matchCenterBox.classList.add('hidden');
+    game.paused = false;
+    if (!game.transport?.online && offerHighscore()) return;
+    toMenu();
+    return;
+  }
+  closeMatchCenter2d();
+});
 document.getElementById('matchCenterMenu').addEventListener('click', toMenu);
 document.getElementById('pauseDef').addEventListener('click', () => applyPausedManagement(BTN.MENTALITY_DEF));
 document.getElementById('pauseBal').addEventListener('click', () => applyPausedManagement(BTN.MENTALITY_BAL));
