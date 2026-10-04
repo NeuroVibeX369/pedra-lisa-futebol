@@ -148,8 +148,15 @@ function canControl(state, team, p) {
   // A restart that has not been taken, or a keeper with the ball: hands off.
   if (b.protectedFor !== null && b.protectedFor !== team.index) return false;
   const isKeeper = p.role === 'gk';
-  const r = isKeeper ? KEEPER_CONTROL_R : CONTROL_R;
-  const zMax = isKeeper ? KEEPER_CONTROL_Z : CONTROL_Z;
+  const deliveryThreat = isKeeper && state.delivery
+    && state.delivery.team !== team.index
+    && (state.delivery.kind === 'CORNER' || state.delivery.kind === 'FREE KICK');
+  const r = isKeeper
+    ? KEEPER_CONTROL_R * (deliveryThreat ? 1.22 : 1)
+    : CONTROL_R;
+  const zMax = isKeeper
+    ? KEEPER_CONTROL_Z * (deliveryThreat ? 1.16 : 1)
+    : CONTROL_Z;
   if (b.z > zMax) return false;
   return dist2(b.x, b.y, p.x, p.y) < r * r;
 }
@@ -210,6 +217,10 @@ function updateOwnership(state) {
   if (best) {
     const struck = len(b.vx, b.vy);
     const stopped = state.teams[best.team].players[best.idx];
+    const deliveryClaim = stopped.role === 'gk' && state.delivery
+      && state.delivery.team !== best.team
+      && (state.delivery.kind === 'CORNER' || state.delivery.kind === 'FREE KICK')
+      && b.z > 4;
     // A save, not a pick-up: the keeper, a ball that was travelling, an opponent
     // who hit it, and close enough to his goal for it to have mattered.
     const isSave = stopped.role === 'gk' && struck > SAVE_SPEED
@@ -248,8 +259,21 @@ function updateOwnership(state) {
       }
     }
 
+    if (deliveryClaim && !isSave) {
+      state.events.push({
+        type: 'save',
+        kind: 'claim',
+        team: best.team,
+        idx: best.idx,
+        side: Math.sign(b.x - stopped.x) || 0,
+        high: b.z > KEEPER_CONTROL_Z * 0.58,
+        speed: struck,
+      });
+    }
+
     b.owner = best;
     b.lastTouch = { team: best.team, idx: best.idx };
+    if (state.delivery) state.delivery = null;
     b.kicker = null;
     const p = state.teams[best.team].players[best.idx];
     p.holdTicks = 0;
@@ -509,8 +533,17 @@ function updatePlayers(state, inputs, frozen) {
           const defendingTeam = 1 - t;
           const keeper = state.teams[defendingTeam].players[0];
           let dive = sp.keeperDive || 0;
-          if (!state.teams[defendingTeam].human && dive === 0) {
-            dive = ((state.seed + state.tick + defendingTeam) & 1) ? 1 : -1;
+          if (!state.teams[defendingTeam].human) {
+            const shotSide = Math.abs(it.kick.dx) < 0.08 ? 0 : (it.kick.dx < 0 ? -1 : 1);
+            const roll = Math.abs((state.seed ^ (state.tick * 1103515245) ^ (defendingTeam * 7919))) % 100;
+            if (roll < 30) {
+              // Sometimes the keeper reads the body shape correctly.
+              dive = shotSide;
+            } else {
+              // Otherwise he commits before the strike, including an occasional centre stay.
+              const pick = Math.abs((state.seed + state.tick * 31 + defendingTeam * 17)) % 5;
+              dive = pick < 2 ? -1 : pick < 4 ? 1 : 0;
+            }
           }
           keeper.x = clamp(FIELD.cx + dive * GOAL_W * 0.27, FIELD.cx - GOAL_W * 0.42, FIELD.cx + GOAL_W * 0.42);
           keeper.vx = dive * KEEPER_SPEED * 0.65;
@@ -520,6 +553,11 @@ function updatePlayers(state, inputs, frozen) {
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
         if (takingSetPiece) {
           state.events.push({ type: 'set-piece-taken', kind: setPieceKind, team: t, idx: i });
+          if (setPieceKind === 'CORNER' || setPieceKind === 'FREE KICK') {
+            state.delivery = { kind: setPieceKind, team: t, ticks: 150 };
+          } else {
+            state.delivery = null;
+          }
           state.setPiece = null;
         }
         if (state.config.premiumAI && (it.kick.kind === 'pass' || it.kick.kind === 'through')) {
@@ -1463,6 +1501,8 @@ function arrangePremiumSetPiece(state, sp) {
   };
 
   if (sp.kind === 'CORNER') {
+    const nearPost = Math.sign(sp.x - FIELD.cx) || 1;
+    setP(opp.players[0], FIELD.cx + nearPost * 24, inside(15));
     setP(team.players[9], FIELD.cx, inside(58));
     setP(team.players[8], FIELD.cx - 62, inside(72));
     setP(team.players[10], FIELD.cx + 62, inside(70));
@@ -1479,6 +1519,8 @@ function arrangePremiumSetPiece(state, sp) {
     setP(team.players[8], sp.x + sx * 84, sp.y + team.attackDir * 58);
     setP(team.players[9], sp.x + sx * 118, sp.y + team.attackDir * 18);
   } else if (sp.kind === 'FREE KICK' || sp.kind === 'OFFSIDE') {
+    const ballSide = Math.sign(sp.x - FIELD.cx) || 1;
+    setP(opp.players[0], FIELD.cx - ballSide * 18, inside(14));
     const toGoal = norm(FIELD.cx - sp.x, goalY - sp.y);
     const wallX = sp.x + toGoal.x * 66;
     const wallY = sp.y + toGoal.y * 66;
