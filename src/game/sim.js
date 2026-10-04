@@ -296,6 +296,7 @@ function registerPossession(state, newTeam, x, y) {
   if (oldTeam === newTeam) return;
 
   if (oldTeam >= 0 && oldTeam !== newTeam && state.phase === 'play' && !state.setPiece) {
+    if (state.config.premiumStats) state.matchStats.assistCandidate[oldTeam] = null;
     const winner = state.teams[newTeam];
     const loser = state.teams[oldTeam];
     const gainAdvance = advanceOf(winner, y);
@@ -390,6 +391,11 @@ function updateOwnership(state) {
     const isSave = stopped.role === 'gk' && struck > SAVE_SPEED
       && b.lastTouch && b.lastTouch.team !== best.team
       && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D;
+    const statSave = state.config.premiumStats
+      && stopped.role === 'gk'
+      && state.matchStats.lastShot
+      && state.matchStats.lastShot.team !== best.team
+      && Math.abs(b.y - ownGoalY(state.teams[best.team])) < PEN_D;
 
     if (isSave) {
       recordSaveStat(state, best.team, best.idx);
@@ -427,6 +433,8 @@ function updateOwnership(state) {
         return;
       }
     }
+
+    if (statSave && !isSave) recordSaveStat(state, best.team, best.idx);
 
     if (deliveryClaim && !isSave) {
       state.events.push({
@@ -2109,10 +2117,21 @@ function checkGoal(state) {
   if (scoringTeam < 0) return false;
 
   if (state.config.premiumStats) {
-    const scorerIdx = state.matchStats.lastShot?.team === scoringTeam
+    const hadTrackedShot = state.matchStats.lastShot?.team === scoringTeam;
+    const scorerIdx = hadTrackedShot
       ? state.matchStats.lastShot.idx
       : (b.lastTouch?.team === scoringTeam ? b.lastTouch.idx : -1);
-    markShotOnTarget(state, scoringTeam);
+    if (!hadTrackedShot && scorerIdx >= 0) {
+      state.matchStats.teams[scoringTeam].shots++;
+      state.matchStats.teams[scoringTeam].shotsOnTarget++;
+      const scorer = state.teams[scoringTeam].players[scorerIdx];
+      if (scorer) {
+        scorer.matchStats.shots++;
+        scorer.matchStats.shotsOnTarget++;
+      }
+    } else {
+      markShotOnTarget(state, scoringTeam);
+    }
     if (scorerIdx >= 0) {
       const scorer = state.teams[scoringTeam].players[scorerIdx];
       if (scorer) scorer.matchStats.goals++;
