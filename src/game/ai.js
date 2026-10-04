@@ -420,6 +420,68 @@ function ownerAction(state, teamIdx, i) {
   const dGoal = dist(p.x, p.y, goalX, goalY);
   const pressure = nearestOpponent(state, teamIdx, p.x, p.y).d;
 
+  const sp = state.config?.premiumSetPieces && state.setPiece
+    && state.setPiece.team === teamIdx && state.setPiece.taker === i
+    ? state.setPiece : null;
+
+  if (sp?.kind === 'KICKOFF') {
+    const mate = team.players[sp.mate ?? 7] || findPassTarget(state, teamIdx, p);
+    if (mate) {
+      const d = norm(mate.x - p.x, mate.y - p.y);
+      return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(420), lift: 0, kind: 'pass' } };
+    }
+  }
+
+  if (sp?.kind === 'THROW-IN') {
+    const mate = findPassTarget(state, teamIdx, p) || team.players[7];
+    const tx = mate ? mate.x + mate.vx * 0.10 : FIELD.cx;
+    const ty = mate ? mate.y + mate.vy * 0.10 : p.y + team.attackDir * 90;
+    const d = norm(tx - p.x, ty - p.y);
+    const dd = mate ? dist(p.x, p.y, mate.x, mate.y) : 120;
+    return {
+      x: 0, y: 0,
+      kick: { dx: d.x, dy: d.y, power: speedForDistance(clamp(dd * 2.2, 420, 690)), lift: dd > 150 ? 155 : 105, kind: 'throw-in' },
+    };
+  }
+
+  if (sp?.kind === 'CORNER') {
+    const mate = findCrossTarget(state, teamIdx, p) || team.players[9];
+    const d = norm(mate.x - p.x, mate.y - p.y);
+    return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(760), lift: 235, kind: 'cross' } };
+  }
+
+  if (sp?.kind === 'PENALTY') {
+    const side = ((state.seed + state.tick + teamIdx) & 1) ? 1 : -1;
+    const aimX = FIELD.cx + side * (GOAL_W * 0.27);
+    const d = norm(aimX - p.x, goalY - p.y);
+    return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(845), lift: 12, kind: 'shot' } };
+  }
+
+  if (sp?.kind === 'FREE KICK' || sp?.kind === 'OFFSIDE') {
+    if (dGoal < 335 && sp.kind === 'FREE KICK') {
+      const side = p.x < FIELD.cx ? 1 : -1;
+      const aimX = FIELD.cx + side * (GOAL_W * 0.22);
+      const d = norm(aimX - p.x, goalY - p.y);
+      return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(820), lift: 145, kind: 'shot' } };
+    }
+    const mate = findPassTarget(state, teamIdx, p) || team.players[6];
+    const d = norm(mate.x - p.x, mate.y - p.y);
+    const dd = dist(p.x, p.y, mate.x, mate.y);
+    return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(clamp(dd * 2.25, 420, 760)), lift: dd > 210 ? 145 : 0, kind: 'pass' } };
+  }
+
+  if (sp?.kind === 'GOAL KICK') {
+    const candidates = [team.players[2], team.players[3], team.players[1], team.players[4]].filter(Boolean);
+    let mate = candidates[0];
+    let best = -Infinity;
+    for (const m of candidates) {
+      const space = nearestOpponent(state, teamIdx, m.x, m.y).d;
+      if (space > best) { best = space; mate = m; }
+    }
+    const d = norm(mate.x - p.x, mate.y - p.y);
+    return { x: 0, y: 0, kick: { dx: d.x, dy: d.y, power: speedForDistance(650), lift: 95, kind: 'pass' } };
+  }
+
   // Keeper: hold on to it briefly, then hoof it upfield.
   if (p.role === 'gk') {
     if (p.holdTicks > 34) {
