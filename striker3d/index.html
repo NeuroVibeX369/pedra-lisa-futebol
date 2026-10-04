@@ -523,6 +523,11 @@ function createPremiumFootballClips(root){
     [1,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
   ]);
 
+  add('Charge',.45,[
+    [0,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
+    [1,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
+  ]);
+
   add('Pass',.46,[
     [0,{spine_02:[-.04,-.10,0],thigh_r:[-.34,0,0],calf_r:[.22,0,0]}],
     [.46,{spine_02:[.07,.14,0],thigh_r:[.62,0,0],calf_r:[-.28,0,0],foot_r:[.20,0,0]}],
@@ -610,13 +615,18 @@ function setAnim(v,name,oneShot=false){
   next.reset().setLoop(oneShot?THREE.LoopOnce:THREE.LoopRepeat,Infinity);
   next.clampWhenFinished=oneShot;next.fadeIn(.12).play();v.active=name;
 }
-function playAction(v,kind,clip,duration=.38){
+function playAction(v,kind,clip,duration=.38,contact=0){
   const now=performance.now()/1000;
   v.actionKind=kind;
   v.actionStarted=now;
   v.actionDuration=duration;
   v.actionUntil=now+duration;
   setAnim(v,clip,true);
+  const action=v.actions[clip];
+  if(premiumRig && action && contact>0){
+    const d=action.getClip()?.duration||duration;
+    action.time=Math.min(d*.92,Math.max(0,d*contact));
+  }
 }
 function respawnVisuals(){
   for(const team of visuals)for(const v of team)world.remove(v.root);
@@ -673,6 +683,29 @@ function startCrowdAudio(){
     const filter=ac.createBiquadFilter();filter.type='bandpass';filter.frequency.value=720;filter.Q.value=.35;
     const gain=ac.createGain();gain.gain.value=.055;
     src.connect(filter);filter.connect(gain);gain.connect(ac.destination);src.start();
+  }catch{}
+}
+
+let matchAudioCtx=null;
+function ensureMatchAudio(){
+  if(matchAudioCtx)return matchAudioCtx;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return null;
+  matchAudioCtx=new AC();
+  return matchAudioCtx;
+}
+function playBallContactSound(kind='pass'){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+    const now=ac.currentTime;
+    o.type='sine';
+    o.frequency.setValueAtTime(kind==='shot'?128:(kind==='header'?92:108),now);
+    o.frequency.exponentialRampToValueAtTime(58,now+.075);
+    f.type='lowpass';f.frequency.value=850;
+    g.gain.setValueAtTime(kind==='shot'?.14:.09,now);
+    g.gain.exponentialRampToValueAtTime(.0001,now+.085);
+    o.connect(f);f.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.09);
   }catch{}
 }
 
@@ -789,11 +822,12 @@ function processVisualEvents(){
     const ev=visualEvents.shift();
     if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
-      if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58);
-      else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68);
-      else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64);
-      else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52);
-      else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46);
+      playBallContactSound(ev.kind);
+      if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
+      else if(ev.kind==='shot')playAction(v,'shot',v.actions.Shoot?'Shoot':'Punch',.68,.44);
+      else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
+      else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52,.48);
+      else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46,.46);
     }else if(ev.type==='tackle' && visuals[ev.team]?.[ev.idx]){
       const v=visuals[ev.team][ev.idx];
       playAction(v,'standing-tackle',v.actions.Tackle?'Tackle':'Punch',.34);
@@ -862,6 +896,8 @@ function renderState(dt){
         }else if(v.actionKind==='celebrate'){
           v.root.position.y+=Math.sin(phase*Math.PI*2)*.10;
         }
+      }else if(p.charging && v.actions.Charge){
+        setAnim(v,'Charge');
       }else if(p.down>0)setAnim(v,v.actions.Knockdown?'Knockdown':'Idle');
       else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
       else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
@@ -878,7 +914,7 @@ function renderState(dt){
   if(kicker&&kicker!==lastKicker){
     const [t,i]=kicker.split(':').map(Number);
     const v=visuals[t][i];
-    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick',v.actions.Shoot?'Shoot':'Punch',.46);
+    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick',v.actions.Shoot?'Shoot':'Punch',.46,.44);
   }
   lastKicker=kicker;
 
