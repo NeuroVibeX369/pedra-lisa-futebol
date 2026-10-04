@@ -61,7 +61,7 @@
       <input id="joinCode3d" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
       <button id="joinRoom" class="onlineBtn" type="button">ENTRAR</button>
     </div>
-    <div id="lobbyStatus3d" class="lobbyStatus">PC: WASD + Espaço + Q · celular: quatro botões de ação em formato geométrico.</div>
+    <div id="lobbyStatus3d" class="lobbyStatus">Controle/celular: × passe/pressão · ○ cruzar/carrinho · □ chute/cabeceio · △ profundidade.</div>
   </div>
 </div>
 <div id="touch3d" class="touchHidden">
@@ -87,7 +87,7 @@
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>Pedra Lisa PS2 Web · motor determinístico</b></div>
-    <div class="keys">PC: WASD / setas + Espaço + Q · celular: × passe · □ chute · ○ cruzar · △ profundidade</div>
+    <div class="keys">Ataque: × passe · □ chute/cabeceio · ○ cruzar · △ profundidade · Defesa: × pressionar/desarmar · ○ carrinho</div>
   </div>
   <div class="playercard" id="playercard">Carregando…</div>
   <div class="tag">Versão web própria · sem download</div>
@@ -120,6 +120,7 @@ const lobbyStatusEl=document.getElementById('lobbyStatus3d');
 const roomEl=document.getElementById('room3d');
 
 const devices=new InputDevices(defaultBindings());
+devices.ps2FaceButtons=true;
 devices.attach();
 const touch3d=new TouchControls();
 const touchDevice=isTouchDevice();
