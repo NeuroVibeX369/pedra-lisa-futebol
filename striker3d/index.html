@@ -760,6 +760,7 @@ let match=createMatch({
   difficulty:'normal',
   offside:true,
   premiumAI:true,
+  premiumSetPieces:true,
   formations:['433','433']
 });
 let transport=null;
@@ -776,6 +777,7 @@ function resetMatch(opts={}){
     difficulty:opts.difficulty||'normal',
     offside:opts.offside!==false,
     premiumAI:true,
+    premiumSetPieces:true,
     formations:opts.formations||['433','433']
   });
   localTeam=opts.localTeam??0;
