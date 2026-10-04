@@ -136,6 +136,8 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       cooldown: 0,
       holdTicks: 0,
       supportRunTicks: 0,
+      yellowCards: 0,
+      sentOff: false,
       // Where the current run with the ball began, and whether it has already
       // been remarked upon.
       runFrom: null,
@@ -205,6 +207,11 @@ export function setupKickoff(state, kickoffTeam, reason = 'start') {
       pl.y = p.y;
       pl.vx = 0;
       pl.vy = 0;
+      if (pl.sentOff) {
+        pl.x = 8;
+        pl.y = FIELD.cy;
+        continue;
+      }
       pl.dirX = 0;
       pl.dirY = team.attackDir;
       pl.charge = 0;
@@ -294,6 +301,8 @@ export function hashState(state) {
     mix(team.oneTwoTicks);
     for (const p of team.players) {
       mix(p.supportRunTicks);
+      mix(p.yellowCards);
+      mix(p.sentOff ? 1 : 0);
       mix(p.x);
       mix(p.y);
       mix(p.vx);
