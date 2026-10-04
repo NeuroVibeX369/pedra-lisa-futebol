@@ -220,6 +220,7 @@ function updateOwnership(state) {
       b.owner = null;
       p.holdTicks = 0;
       p.charging = false;
+      p.shielding = false;
       p.charge = 0;
     } else {
       p.holdTicks++;
@@ -309,6 +310,25 @@ function updateOwnership(state) {
       });
     }
 
+    if (state.config.premiumBallControl && stopped.role !== 'gk') {
+      const touchTicks = struck > 55 ? clamp(Math.round(struck / 48) + 2, 3, 9) : 0;
+      stopped.firstTouchTicks = touchTicks;
+      stopped.firstTouchSpeed = struck;
+      if (touchTicks > 0) {
+        const incoming = norm(b.vx, b.vy);
+        const carry = Math.min(42, struck * 0.075);
+        stopped.vx = stopped.vx * 0.82 + incoming.x * carry;
+        stopped.vy = stopped.vy * 0.82 + incoming.y * carry;
+        state.events.push({
+          type: 'first-touch',
+          team: best.team,
+          idx: best.idx,
+          speed: struck,
+          high: b.z > CONTROL_Z * 0.55,
+        });
+      }
+    }
+
     registerPossession(state, best.team, b.x, b.y);
     b.owner = best;
     b.lastTouch = { team: best.team, idx: best.idx };
@@ -369,7 +389,7 @@ function updateDelivery(state) {
 // Players
 // --------------------------------------------------------------------------
 
-const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false };
+const NO_INTENT = { x: 0, y: 0, kick: null, slide: false, press: false, shield: false, skill: null };
 
 /**
  * Three phases per tick. The split is not cosmetic: handling team 0 completely
@@ -519,6 +539,15 @@ function updatePlayers(state, inputs, frozen) {
     for (const p of team.players) {
       if (p.cooldown > 0) p.cooldown--;
       if (state.config.premiumAI && p.supportRunTicks > 0) p.supportRunTicks--;
+      if (state.config.premiumBallControl) {
+        if (p.firstTouchTicks > 0) p.firstTouchTicks--;
+        if (p.skillTicks > 0) p.skillTicks--;
+        if (p.skillCooldown > 0) p.skillCooldown--;
+        const owns = state.ball.owner
+          && state.ball.owner.team === team.index
+          && state.ball.owner.idx === p.idx;
+        if (!owns) p.shielding = false;
+      }
     }
   }
   for (let t = 0; t < 2; t++) {
@@ -555,6 +584,8 @@ function updatePlayers(state, inputs, frozen) {
           y: mv.y,
           kick: mv.kick || null,
           slide: !team.human && aiWantsSlide(state, t, i),
+          shield: !!mv.shield,
+          skill: mv.skill || null,
         };
       }
     }
@@ -565,6 +596,12 @@ function updatePlayers(state, inputs, frozen) {
     const team = state.teams[t];
     for (let i = 0; i < team.players.length; i++) {
       const it = intents[t][i];
+      const p = team.players[i];
+      const ownsNow = state.ball.owner && state.ball.owner.team === t && state.ball.owner.idx === i;
+      if (state.config.premiumBallControl) {
+        p.shielding = !!it.shield && ownsNow && p.skillTicks <= 0;
+        if (it.skill) startSkillDribble(state, t, i, it.skill);
+      }
       if (it.kick) {
         const takingSetPiece = state.config.premiumSetPieces
           && state.setPiece?.team === t && state.setPiece?.taker === i;
@@ -705,7 +742,7 @@ function humanIntent(state, t, i, mask) {
   const p = team.players[i];
   const b = state.ball;
   const dir = maskToDir(mask);
-  const intent = { x: dir.x, y: dir.y, kick: null, slide: false, press: false };
+  const intent = { x: dir.x, y: dir.y, kick: null, slide: false, press: false, shield: false, skill: null };
   const prev = team.prevMask | 0;
 
   // Legacy FIRE stays intact for Classic 2D and keyboard play. PS2 Web adds
@@ -716,6 +753,8 @@ function humanIntent(state, t, i, mask) {
   const passPressed = passHeld && (prev & BTN.PASS) === 0;
   const crossPressed = (mask & BTN.CROSS) !== 0 && (prev & BTN.CROSS) === 0;
   const throughPressed = (mask & BTN.THROUGH) !== 0 && (prev & BTN.THROUGH) === 0;
+  const switchHeld = (mask & BTN.SWITCH) !== 0;
+  const switchPressed = switchHeld && (prev & BTN.SWITCH) === 0;
   const owns = b.owner && b.owner.team === t && b.owner.idx === i;
   const aimX = dir.x || p.dirX;
   const aimY = dir.y || p.dirY;
@@ -792,6 +831,18 @@ function humanIntent(state, t, i, mask) {
       }
     }
   } else if (owns) {
+    if (state.config.premiumBallControl) {
+      const moving = len(dir.x, dir.y) > 0.2;
+      const facePressed = passPressed || throughPressed || crossPressed || (shoot && !prevShoot);
+      if (switchPressed && moving && !facePressed && p.skillCooldown === 0 && p.firstTouchTicks === 0) {
+        intent.skill = { dx: dir.x, dy: dir.y };
+      } else if (switchHeld && !facePressed) {
+        intent.shield = true;
+        intent.x *= 0.58;
+        intent.y *= 0.58;
+      }
+    }
+
     // Face buttons behave like a console football game:
     // × short grounded pass; △ stronger ball into space; ○ lofted cross;
     // □/legacy FIRE is the chargeable shot.
@@ -912,6 +963,31 @@ function shootingAtGoal(state, t, p, aim) {
   return aimedAtGoal(state, t, p, aim);
 }
 
+function startSkillDribble(state, teamIdx, playerIdx, skill) {
+  if (!state.config.premiumBallControl) return;
+  const b = state.ball;
+  const p = state.teams[teamIdx].players[playerIdx];
+  if (!b.owner || b.owner.team !== teamIdx || b.owner.idx !== playerIdx) return;
+  if (p.skillCooldown > 0 || p.firstTouchTicks > 0) return;
+
+  const d = norm(skill.dx, skill.dy);
+  if (d.l < 0.2) return;
+
+  p.skillTicks = 11;
+  p.skillCooldown = 34;
+  p.skillDirX = d.x;
+  p.skillDirY = d.y;
+  p.dirX = d.x;
+  p.dirY = d.y;
+  p.shielding = false;
+  p.vx += d.x * 48;
+  p.vy += d.y * 48;
+
+  b.x = p.x + d.x * (DRIBBLE_DIST + 7);
+  b.y = p.y + d.y * (DRIBBLE_DIST + 7);
+  state.events.push({ type: 'dribble', kind: 'skill-touch', team: teamIdx, idx: playerIdx });
+}
+
 function tryStandingPressure(state, teamIdx, playerIdx) {
   const b = state.ball;
   const p = state.teams[teamIdx].players[playerIdx];
@@ -974,6 +1050,18 @@ function tryStandingPressure(state, teamIdx, playerIdx) {
       }
     }
 
+    if (state.config.premiumBallControl && old.shielding) {
+      const rel = norm(p.x - old.x, p.y - old.y);
+      const front = old.dirX * rel.x + old.dirY * rel.y;
+      if (front < 0.55) {
+        p.cooldown = Math.max(p.cooldown, 6);
+        old.vx *= 0.96;
+        old.vy *= 0.96;
+        state.events.push({ type: 'shield', team: oldTeam, idx: old.idx });
+        return false;
+      }
+    }
+
     // Clean shoulder-to-shoulder pressure still wins the ball at contact range.
     old.holdTicks = 0;
     old.charging = false;
@@ -1016,17 +1104,34 @@ function movePlayer(state, t, p, mv) {
     // A CPU team runs at a fraction of full speed on the easier settings. Human
     // teams (including your AI team-mates) always run at full speed.
     const handicap = state.teams[t].human ? 1 : state.teams[t].ai.speed;
-    const speed = (p.role === 'gk'
+    let speed = (p.role === 'gk'
       ? KEEPER_SPEED
       : owns ? PLAYER_SPEED_BALL : PLAYER_SPEED) * handicap;
+    let accel = PLAYER_ACC;
+
+    if (state.config.premiumBallControl && owns && p.role !== 'gk') {
+      if (p.firstTouchTicks > 0) {
+        speed *= 0.78;
+        accel *= 0.82;
+      }
+      if (p.shielding) {
+        speed *= 0.60;
+        accel *= 0.74;
+      }
+      if (p.skillTicks > 0) {
+        speed *= 1.16;
+        accel *= 1.58;
+      }
+    }
+
     const l = len(mv.x, mv.y);
     if (l > 0.02) {
       p.dirX = mv.x / l;
       p.dirY = mv.y / l;
       const tvx = mv.x * speed;
       const tvy = mv.y * speed;
-      p.vx += clamp(tvx - p.vx, -PLAYER_ACC * DT, PLAYER_ACC * DT);
-      p.vy += clamp(tvy - p.vy, -PLAYER_ACC * DT, PLAYER_ACC * DT);
+      p.vx += clamp(tvx - p.vx, -accel * DT, accel * DT);
+      p.vy += clamp(tvy - p.vy, -accel * DT, accel * DT);
     } else {
       p.vx *= PLAYER_DAMP;
       p.vy *= PLAYER_DAMP;
@@ -1407,10 +1512,32 @@ function updateBall(state, inputs) {
 
   if (b.owner) {
     const p = state.teams[b.owner.team].players[b.owner.idx];
-    const tx = p.x + p.dirX * DRIBBLE_DIST;
-    const ty = p.y + p.dirY * DRIBBLE_DIST;
-    b.x += (tx - b.x) * DRIBBLE_LERP;
-    b.y += (ty - b.y) * DRIBBLE_LERP;
+    let carryDist = DRIBBLE_DIST;
+    let carryLerp = DRIBBLE_LERP;
+    let carryX = p.dirX;
+    let carryY = p.dirY;
+
+    if (state.config.premiumBallControl && p.role !== 'gk') {
+      if (p.firstTouchTicks > 0) {
+        carryDist += Math.min(8, 2 + p.firstTouchSpeed * 0.014);
+        carryLerp = Math.max(0.22, DRIBBLE_LERP * 0.72);
+      }
+      if (p.shielding) {
+        carryDist *= 0.54;
+        carryLerp = Math.min(0.88, DRIBBLE_LERP + 0.18);
+      }
+      if (p.skillTicks > 0) {
+        carryDist += 7;
+        carryLerp = Math.min(0.90, DRIBBLE_LERP + 0.20);
+        carryX = p.skillDirX;
+        carryY = p.skillDirY;
+      }
+    }
+
+    const tx = p.x + carryX * carryDist;
+    const ty = p.y + carryY * carryDist;
+    b.x += (tx - b.x) * carryLerp;
+    b.y += (ty - b.y) * carryLerp;
     b.vx = p.vx;
     b.vy = p.vy;
     b.z = 0;
