@@ -20,6 +20,7 @@ export function createMatch(options = {}) {
     premiumBallControl: false, // first touch, shielding and skill touches; Premium only
     premiumManagement: false, // tactics, fatigue and substitutions; Premium only
     premiumRatings: false, // OVR + attributes affect Premium gameplay only
+    premiumStats: false, // match stats, player ratings and match summary; Premium only
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -38,6 +39,7 @@ export function createMatch(options = {}) {
       premiumBallControl: opts.premiumBallControl === true,
       premiumManagement: opts.premiumManagement === true,
       premiumRatings: opts.premiumRatings === true,
+      premiumStats: opts.premiumStats === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
@@ -45,6 +47,12 @@ export function createMatch(options = {}) {
     halfTick: 0,
     score: [0, 0],
     message: '',
+    matchStats: {
+      teams: [newTeamMatchStats(), newTeamMatchStats()],
+      pendingPass: null,
+      lastShot: null,
+      assistCandidate: [null, null],
+    },
     // What happened this tick: the renderer and the sound react to these, the
     // simulation itself never reads them back. Cleared at the top of every step.
     events: [],
@@ -67,6 +75,38 @@ export function createMatch(options = {}) {
 
   setupKickoff(state, 0);
   return state;
+}
+
+function newTeamMatchStats() {
+  return {
+    possessionTicks: 0,
+    shots: 0,
+    shotsOnTarget: 0,
+    passes: 0,
+    passesCompleted: 0,
+    fouls: 0,
+    corners: 0,
+    offsides: 0,
+    saves: 0,
+    yellow: 0,
+    red: 0,
+  };
+}
+
+function newPlayerMatchStats() {
+  return {
+    goals: 0,
+    assists: 0,
+    shots: 0,
+    shotsOnTarget: 0,
+    passes: 0,
+    passesCompleted: 0,
+    tackles: 0,
+    saves: 0,
+    fouls: 0,
+    yellow: 0,
+    red: 0,
+  };
 }
 
 function newBall() {
@@ -142,6 +182,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     nextBenchNumber: 12,
     lastAutoSubHalfTick: -99999,
     pendingSubIdx: -1,
+    subArchive: [],
     players: formation.map((f, i) => {
       const identity = PLAYER_ROSTERS[index]?.[i] || { name: 'Jogador', number: i + 1, position: 'MEI' };
       const rating = PLAYER_RATINGS[index]?.[i] || { vel:72, fin:72, pas:72, dri:72, def:72, fis:72 };
@@ -154,6 +195,7 @@ function makeTeam(index, human, attackDir, ai, lineup) {
       shirtNumber: identity.number,
       rating: { ...rating, gk: rating.gk ? { ...rating.gk } : undefined },
       overall: ovr,
+      matchStats: newPlayerMatchStats(),
       x: FIELD.cx,
       y: FIELD.cy,
       vx: 0,
@@ -376,6 +418,20 @@ export function hashState(state) {
   mix(state.delivery?.ticks ?? 0);
   mix(state.delivery?.kind === 'CORNER' ? 1 : state.delivery?.kind === 'FREE KICK' ? 2 : 0);
   mix(state.possessionTeam);
+  for (const s of state.matchStats.teams) {
+    mix(s.possessionTicks); mix(s.shots); mix(s.shotsOnTarget);
+    mix(s.passes); mix(s.passesCompleted); mix(s.fouls);
+    mix(s.corners); mix(s.offsides); mix(s.saves); mix(s.yellow); mix(s.red);
+  }
+  mix(state.matchStats.pendingPass?.team ?? -1);
+  mix(state.matchStats.pendingPass?.idx ?? -1);
+  mix(state.matchStats.lastShot?.team ?? -1);
+  mix(state.matchStats.lastShot?.idx ?? -1);
+  mix(state.matchStats.lastShot?.onTarget ? 1 : 0);
+  mix(state.matchStats.assistCandidate?.[0]?.passer ?? -1);
+  mix(state.matchStats.assistCandidate?.[0]?.receiver ?? -1);
+  mix(state.matchStats.assistCandidate?.[1]?.passer ?? -1);
+  mix(state.matchStats.assistCandidate?.[1]?.receiver ?? -1);
   for (const team of state.teams) {
     mix(team.oneTwoPasser);
     mix(team.oneTwoTicks);
@@ -406,6 +462,17 @@ export function hashState(state) {
       mix(p.skillDirY);
       mix(p.stamina);
       mix(p.overall || 0);
+      mix(p.matchStats?.goals || 0);
+      mix(p.matchStats?.assists || 0);
+      mix(p.matchStats?.shots || 0);
+      mix(p.matchStats?.shotsOnTarget || 0);
+      mix(p.matchStats?.passes || 0);
+      mix(p.matchStats?.passesCompleted || 0);
+      mix(p.matchStats?.tackles || 0);
+      mix(p.matchStats?.saves || 0);
+      mix(p.matchStats?.fouls || 0);
+      mix(p.matchStats?.yellow || 0);
+      mix(p.matchStats?.red || 0);
       mix(p.rating?.vel || 0);
       mix(p.rating?.fin || 0);
       mix(p.rating?.pas || 0);
