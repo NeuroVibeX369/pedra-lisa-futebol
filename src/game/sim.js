@@ -948,6 +948,188 @@ function separatePlayers(state) {
 }
 
 /** Slide tackles: poke the ball away and bring opponents down. */
+function defendersGoalSide(state, defendingTeam, victim) {
+  const team = state.teams[defendingTeam];
+  const gy = ownGoalY(team);
+  const victimGoalDist = Math.abs(victim.y - gy);
+  let n = 0;
+  for (let i = 1; i < team.players.length; i++) {
+    const p = team.players[i];
+    if (p.sentOff || p.down > 0) continue;
+    if (Math.abs(p.y - gy) < victimGoalDist + 12
+        && Math.abs(p.x - FIELD.cx) < PEN_W * 0.72) n++;
+  }
+  return n;
+}
+
+function classifyFoul(state, defendingTeam, tackler, victim) {
+  const attackingTeam = 1 - defendingTeam;
+  const b = state.ball;
+  const speed = len(tackler.vx, tackler.vy);
+  const vm = norm(victim.vx, victim.vy);
+  const rel = norm(tackler.x - victim.x, tackler.y - victim.y);
+  const fromBehind = vm.l > 18 && (vm.x * rel.x + vm.y * rel.y) < -0.28;
+  const late = dist2(b.x, b.y, victim.x, victim.y) > 29 * 29;
+  const advanced = advanceOf(state.teams[attackingTeam], victim.y);
+  const central = Math.abs(victim.x - FIELD.cx) < PEN_W * 0.58;
+  const dogso = advanced > 0.72 && central
+    && defendersGoalSide(state, defendingTeam, victim) <= 1
+    && fromBehind;
+
+  if (dogso) {
+    return { type: 'DOGSO', label: 'ÚLTIMO HOMEM', card: 'red', directRed: true, fromBehind, late, speed };
+  }
+  if (fromBehind && speed > SLIDE_SPEED * 0.58) {
+    return { type: 'RECKLESS', label: 'CARRINHO POR TRÁS', card: 'yellow', directRed: false, fromBehind, late, speed };
+  }
+  if (late || speed > SLIDE_SPEED * 0.76) {
+    return { type: 'LATE', label: 'CARRINHO ATRASADO', card: 'yellow', directRed: false, fromBehind, late, speed };
+  }
+  return { type: 'TRIP', label: 'FALTA', card: null, directRed: false, fromBehind, late, speed };
+}
+
+function canPlayAdvantage(state, attackingTeam, victim, penalty) {
+  if (penalty) return false;
+  const team = state.teams[attackingTeam];
+  let nearest = Infinity;
+  for (const p of team.players) {
+    if (p.idx === victim.idx || p.sentOff || p.down > 0) continue;
+    nearest = Math.min(nearest, dist(p.x, p.y, state.ball.x, state.ball.y));
+  }
+  const movingForward = team.attackDir * state.ball.vy > 42;
+  const usefulZone = advanceOf(team, victim.y) > 0.34;
+  return nearest < 92 || (movingForward && usefulZone);
+}
+
+function sendOffPlayer(state, teamIdx, idx) {
+  const p = state.teams[teamIdx]?.players?.[idx];
+  if (!p || p.sentOff) return;
+  p.sentOff = true;
+  p.x = 8;
+  p.y = FIELD.cy;
+  p.vx = 0;
+  p.vy = 0;
+  p.slide = 0;
+  p.charging = false;
+  p.charge = 0;
+}
+
+function applyDiscipline(state, foul) {
+  if (!foul || !foul.card) return;
+  const p = state.teams[foul.offenderTeam]?.players?.[foul.offenderIdx];
+  if (!p || p.sentOff) return;
+
+  if (foul.card === 'red' || foul.directRed) {
+    sendOffPlayer(state, foul.offenderTeam, foul.offenderIdx);
+    state.events.push({
+      type: 'card',
+      color: 'red',
+      team: foul.offenderTeam,
+      idx: foul.offenderIdx,
+      direct: true,
+      reason: foul.label,
+    });
+    return;
+  }
+
+  p.yellowCards = (p.yellowCards || 0) + 1;
+  const secondYellow = p.yellowCards >= 2;
+  if (secondYellow) sendOffPlayer(state, foul.offenderTeam, foul.offenderIdx);
+  state.events.push({
+    type: 'card',
+    color: secondYellow ? 'red' : 'yellow',
+    team: foul.offenderTeam,
+    idx: foul.offenderIdx,
+    secondYellow,
+    reason: foul.label,
+  });
+}
+
+function beginAdvantage(state, attackingTeam, x, y, foul) {
+  const team = state.teams[attackingTeam];
+  state.advantage = {
+    team: attackingTeam,
+    x,
+    y,
+    startAdvance: advanceOf(team, y),
+    ticksLeft: 132,
+    graceTicks: 12,
+    possessionTicks: 0,
+    offenderTeam: foul.offenderTeam,
+    offenderIdx: foul.offenderIdx,
+    foulType: foul.type,
+    foulLabel: foul.label,
+    card: foul.card,
+    directRed: foul.directRed,
+  };
+  state.events.push({
+    type: 'advantage',
+    team: attackingTeam,
+    foulType: foul.type,
+    label: foul.label,
+  });
+}
+
+function settleAdvantage(state, successful) {
+  const adv = state.advantage;
+  if (!adv) return;
+  state.advantage = null;
+
+  applyDiscipline(state, adv);
+  state.events.push({
+    type: 'advantage-end',
+    team: adv.team,
+    successful: !!successful,
+    foulType: adv.foulType,
+  });
+
+  if (!successful) {
+    awardFoul(state, adv.team, adv.x, adv.y, false, adv);
+  }
+}
+
+function updateAdvantage(state) {
+  const adv = state.advantage;
+  if (!adv) return false;
+
+  adv.ticksLeft--;
+  if (adv.graceTicks > 0) adv.graceTicks--;
+
+  const b = state.ball;
+  if (b.owner) {
+    if (b.owner.team === adv.team) {
+      adv.possessionTicks++;
+      const owner = state.teams[adv.team].players[b.owner.idx];
+      const gained = advanceOf(state.teams[adv.team], owner.y) - adv.startAdvance;
+      if (adv.possessionTicks >= 18 || gained > 0.075) {
+        settleAdvantage(state, true);
+        return false;
+      }
+    } else if (adv.graceTicks <= 0) {
+      settleAdvantage(state, false);
+      return true;
+    }
+  } else {
+    adv.possessionTicks = Math.max(0, adv.possessionTicks - 1);
+  }
+
+  const out = b.x < FIELD.left - BALL_R || b.x > FIELD.right + BALL_R
+    || b.y < FIELD.top - BALL_R || b.y > FIELD.bottom + BALL_R;
+  if (out && adv.possessionTicks < 10) {
+    settleAdvantage(state, false);
+    return true;
+  }
+
+  if (adv.ticksLeft <= 0) {
+    if (adv.possessionTicks >= 8) settleAdvantage(state, true);
+    else {
+      settleAdvantage(state, false);
+      return true;
+    }
+  }
+  return false;
+}
+
 function resolveTackles(state) {
   const b = state.ball;
   for (let t = 0; t < 2; t++) {
@@ -976,7 +1158,7 @@ function resolveTackles(state) {
 
       const opp = state.teams[1 - t];
       for (const o of opp.players) {
-        if (o.down > 0) continue;
+        if (o.sentOff || o.down > 0) continue;
         if (dist2(o.x, o.y, p.x, p.y) >= (PLAYER_R * 2 + 3) ** 2) continue;
 
         if (state.config.premiumSetPieces && !wonBall) {
@@ -984,23 +1166,42 @@ function resolveTackles(state) {
           const nearBall = dist2(b.x, b.y, o.x, o.y) < 42 * 42;
           if (victimHadBall || nearBall) {
             const penalty = inOwnBox(state, t, o);
+            const foul = classifyFoul(state, t, p, o);
+            foul.offenderTeam = t;
+            foul.offenderIdx = p.idx;
+
             p.slide = 0;
             p.cooldown = Math.max(p.cooldown, SLIDE_COOLDOWN);
-            o.down = Math.max(o.down, Math.floor(DOWN_TICKS * 0.72));
-            o.vx = p.vx * 0.32;
-            o.vy = p.vy * 0.32;
-            p.yellowCards = (p.yellowCards || 0) + 1;
-            const sentOff = p.yellowCards >= 2;
-            if (sentOff) {
-              p.sentOff = true;
-              p.x = 8;
-              p.y = FIELD.cy;
-              p.vx = 0;
-              p.vy = 0;
-              p.slide = 0;
+            o.down = Math.max(o.down, Math.floor(DOWN_TICKS * (penalty ? 0.72 : 0.42)));
+            o.vx = p.vx * 0.28;
+            o.vy = p.vy * 0.28;
+
+            state.events.push({
+              type: 'foul',
+              team: opp.index,
+              kind: penalty ? 'PENALTY' : 'FREE KICK',
+              foulType: foul.type,
+              label: foul.label,
+              advantage: !penalty && canPlayAdvantage(state, opp.index, o, false),
+              x: o.x,
+              y: o.y,
+            });
+
+            if (!penalty && canPlayAdvantage(state, opp.index, o, false)) {
+              if (b.owner && b.owner.team === opp.index && b.owner.idx === o.idx) {
+                b.owner = null;
+                b.x = o.x + o.dirX * (PLAYER_R + BALL_R + 2);
+                b.y = o.y + o.dirY * (PLAYER_R + BALL_R + 2);
+                b.vx = o.vx * 0.75;
+                b.vy = o.vy * 0.75;
+                b.vz = 0;
+              }
+              beginAdvantage(state, opp.index, o.x, o.y, foul);
+              return false;
             }
-            state.events.push({ type: 'card', color: sentOff ? 'red' : 'yellow', team: t, idx: p.idx, secondYellow: sentOff });
-            awardFoul(state, opp.index, o.x, o.y, penalty);
+
+            applyDiscipline(state, foul);
+            awardFoul(state, opp.index, o.x, o.y, penalty, foul);
             return true;
           }
         }
@@ -1015,9 +1216,8 @@ function resolveTackles(state) {
   return false;
 }
 
-function awardFoul(state, attackingTeam, x, y, penalty) {
+function awardFoul(state, attackingTeam, x, y, penalty, foul = null) {
   const kind = penalty ? 'PENALTY' : 'FREE KICK';
-  state.events.push({ type: 'foul', team: attackingTeam, kind, x, y });
   if (penalty) {
     const team = state.teams[attackingTeam];
     const goalY = targetGoalY(team);
@@ -1032,6 +1232,19 @@ function awardFoul(state, attackingTeam, x, y, penalty) {
       'FREE KICK'
     );
   }
+  if (state.setPiece && foul) {
+    state.setPiece.foulType = foul.foulType || foul.type || null;
+    state.setPiece.foulLabel = foul.foulLabel || foul.label || null;
+  }
+  state.events.push({
+    type: 'foul-awarded',
+    team: attackingTeam,
+    kind,
+    foulType: foul?.foulType || foul?.type || null,
+    label: foul?.foulLabel || foul?.label || null,
+    x,
+    y,
+  });
 }
 
 // --------------------------------------------------------------------------
