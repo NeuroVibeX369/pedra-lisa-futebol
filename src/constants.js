@@ -234,8 +234,8 @@ export const AI_LEVELS = {
 export const BTN = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, FIRE: 16, SWITCH: 32 };
 
 export const TEAM_PRESETS = [
-  { name: 'BLUE', shirt: '#2f6fd0', shorts: '#1b3f7a', trim: '#ffffff', skin: '#e8b98a', hair: '#3a2415' },
-  { name: 'RED', shirt: '#d33b3b', shorts: '#7a1b1b', trim: '#ffffff', skin: '#8d5524', hair: '#221109' },
+  { name: 'PEDRA LISA', shirt: '#178a3c', shorts: '#ffffff', trim: '#178a3c', skin: '#e8b98a', hair: '#3a2415' },
+  { name: 'INDEPENDÊNCIA', shirt: '#f5f5f5', shorts: '#111111', trim: '#111111', skin: '#8d5524', hair: '#221109' },
 ];
 
 export const KEEPER_KIT = [
@@ -275,15 +275,51 @@ export const SKIN_TONES = [
  * `id` is the sprite cache key: players sharing a kit and a tone share sprites,
  * so this costs a dozen little canvases, not twenty-two sets of them.
  */
+// Visual player data only. These values do not change physics, speed,
+// collisions, kicking, AI, or deterministic online simulation.
+// skinTone indexes SKIN_TONES. height/build are render-only multipliers.
+export const PLAYER_ROSTERS = [
+  [
+    { name: 'Olavo Lobão',      number: 1,  position: 'GOL', skinTone: 1, hair: '#2a1a10', height: 1.06, build: 1.03 },
+    { name: 'Neto Bode',        number: 6,  position: 'LE',  skinTone: 2, hair: '#241811', height: 0.90, build: 0.96 },
+    { name: 'Djha',             number: 2,  position: 'ZAG', skinTone: 1, hair: '#2a1a10', height: 0.96, build: 1.05 },
+    { name: 'Bastiaozão Rei',   number: 4,  position: 'ZAG', skinTone: 0, hair: null, bald: true, height: 1.06, build: 1.08 },
+    { name: 'Bruno',            number: 2,  position: 'LD',  skinTone: 3, hair: '#1d1109', height: 0.93, build: 0.98 },
+    { name: 'Manoel',           number: 6,  position: 'VOL', skinTone: 1, hair: '#5a3924', height: 0.93, build: 0.97 },
+    { name: 'Ronilton',         number: 8,  position: 'MEI', skinTone: 1, hair: '#2b1d16', height: 0.96, build: 0.98 },
+    { name: 'Luciano',          number: 10, position: 'MEI', skinTone: 1, hair: '#2a1a10', height: 1.00, build: 0.98 },
+    { name: 'Helio',            number: 11, position: 'PE',  skinTone: 1, hair: '#201712', height: 0.96, build: 0.97 },
+    { name: 'Bastiaozinho',     number: 9,  position: 'ATA', skinTone: 1, hair: '#2a1a10', height: 1.06, build: 1.04 },
+    { name: 'Ricardo',          number: 7,  position: 'PD',  skinTone: 2, hair: '#241811', height: 0.96, build: 0.96 },
+  ],
+  [
+    { name: 'Junior Paredão',   number: 1,  position: 'GOL', skinTone: 0, hair: '#1d1109', height: 1.07, build: 1.05 },
+    { name: 'Neto',             number: 6,  position: 'LE',  skinTone: 2, hair: '#2a1a10', height: 0.97, build: 0.96 },
+    { name: 'Aberlado',         number: 3,  position: 'ZAG', skinTone: 0, hair: '#3a2415', height: 1.05, build: 1.05 },
+    { name: 'Zé Neto',          number: 4,  position: 'ZAG', skinTone: 0, hair: '#8a5a2b', height: 1.05, build: 1.05 },
+    { name: 'Edimar',           number: 2,  position: 'LD',  skinTone: 5, hair: '#1a0e06', height: 0.97, build: 0.96 },
+    { name: 'Maninho',          number: 5,  position: 'VOL', skinTone: 4, hair: '#221109', height: 1.00, build: 1.00 },
+    { name: 'Auristênio',       number: 8,  position: 'VOL', skinTone: 3, hair: '#1d1109', height: 1.00, build: 0.99 },
+    { name: 'Chico Baião',      number: 10, position: 'MEI', skinTone: 2, hair: '#2a1a10', height: 0.98, build: 0.97 },
+    { name: 'Alex',             number: 7,  position: 'MEI', skinTone: 1, hair: '#3a2415', height: 0.98, build: 0.97 },
+    { name: 'Valdeke Mattos',   number: 9,  position: 'ATA', skinTone: 0, hair: '#8a5a2b', height: 1.05, build: 1.04 },
+    { name: 'Clodoaldo',        number: 11, position: 'SA',  skinTone: 5, hair: '#1a0e06', height: 1.00, build: 0.99 },
+  ],
+];
+
 export function kitFor(teamIdx, playerIdx) {
   const base = playerIdx === 0 ? KEEPER_KIT[teamIdx] : TEAM_PRESETS[teamIdx];
-  const toneIdx = (playerIdx * 5 + teamIdx * 3) % SKIN_TONES.length;
+  const player = PLAYER_ROSTERS[teamIdx]?.[playerIdx];
+  const autoToneIdx = (playerIdx * 5 + teamIdx * 3) % SKIN_TONES.length;
+  const toneIdx = Number.isInteger(player?.skinTone)
+    ? Math.max(0, Math.min(SKIN_TONES.length - 1, player.skinTone))
+    : autoToneIdx;
   const tone = SKIN_TONES[toneIdx];
   return {
     ...base,
     skin: tone.skin,
-    hair: tone.hair,
-    id: `${teamIdx}${playerIdx === 0 ? 'gk' : ''}-${toneIdx}`,
+    hair: player?.bald ? tone.skin : (player?.hair || tone.hair),
+    id: `${teamIdx}-${playerIdx}${playerIdx === 0 ? '-gk' : ''}-${toneIdx}-${player?.bald ? 'bald' : (player?.hair || tone.hair)}`,
   };
 }
 
