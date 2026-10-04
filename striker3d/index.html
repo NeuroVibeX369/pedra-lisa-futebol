@@ -1892,48 +1892,16 @@ function refreshControlled(){
 }
 refreshControlled();
 
-try{
-  const loader=new GLTFLoader();
-  let gltf;
-  try{
-    gltf=await loader.loadAsync(PREMIUM_MODEL_URL);
-    premiumRig=!!gltf.scene.getObjectByName('thigh_r') && !!gltf.scene.getObjectByName('spine_02');
-  }catch(primaryErr){
-    console.warn('Premium CC0 rig unavailable, loading fallback.',primaryErr);
-    gltf=await loader.loadAsync(FALLBACK_MODEL_URL);
-    premiumRig=false;
-  }
+// Stable build deliberately avoids the previous external skinned character.
+template=null;
+clipMap={};
+premiumRig=false;
+respawnVisuals();
+selectedIdx=-1;
+refreshControlled();
+statusEl.textContent='FC Mukeka Premium · modo estável · jogadores 3D leves';
+setTimeout(()=>statusEl.style.opacity='.55',2600);
 
-  template=gltf.scene;
-  clipMap=premiumRig?createPremiumFootballClips(template):{};
-  if(!premiumRig){
-    for(const clip of gltf.animations)clipMap[clip.name.replace(/^HumanArmature\|Man_/,'')]=clip;
-  }
-
-  template.updateMatrixWorld(true);
-  const box=new THREE.Box3(),tmp=new THREE.Box3();box.makeEmpty();
-  template.traverse(o=>{
-    if(o.isSkinnedMesh&&typeof o.computeBoundingBox==='function'){
-      o.computeBoundingBox();
-      tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);
-      box.union(tmp);
-    }
-  });
-  if(!box.isEmpty()){
-    const h=box.max.y-box.min.y;
-    fitScale=h>1e-4?1.84/h:1;
-    fitMinY=box.min.y;
-  }
-
-  respawnVisuals();selectedIdx=-1;refreshControlled();
-  statusEl.textContent=premiumRig
-    ?'FC Mukeka Premium · rig CC0 + '+Object.keys(clipMap).length+' animações de futebol próprias'
-    :'FC Mukeka Premium · rig CC0 de fallback · '+Object.keys(clipMap).length+' animações';
-  setTimeout(()=>statusEl.style.opacity='.55',3200);
-}catch(err){
-  console.warn(err);
-  statusEl.textContent='Motor ativo · modelo 3D indisponível, usando jogador procedural';
-}
 addEventListener('keydown',e=>{
   if(e.code==='Escape'&&matchActive&&!presentation.active){
     e.preventDefault();
