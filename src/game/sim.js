@@ -328,11 +328,16 @@ function updatePlayers(state, inputs, frozen) {
       if (it.kick) {
         kickBall(state, t, i, it.kick.dx, it.kick.dy, it.kick.power, it.kick.lift);
         if (state.config.premiumAI && (it.kick.kind === 'pass' || it.kick.kind === 'through')) {
-          const passer = team.players[i];
-          passer.supportRunTicks = it.kick.kind === 'through' ? 126 : 102;
-          team.oneTwoPasser = i;
-          team.oneTwoTicks = 132;
-          state.events.push({ type: 'support-run', team: t, idx: i, kind: it.kick.kind });
+          if (it.kick.oneTwoReturn) {
+            team.oneTwoPasser = -1;
+            team.oneTwoTicks = 0;
+          } else {
+            const passer = team.players[i];
+            passer.supportRunTicks = it.kick.kind === 'through' ? 126 : 102;
+            team.oneTwoPasser = i;
+            team.oneTwoTicks = 132;
+            state.events.push({ type: 'support-run', team: t, idx: i, kind: it.kick.kind });
+          }
         }
         if (it.kick.kind) state.events.push({ type: 'action', kind: it.kick.kind, team: t, idx: i });
       }
