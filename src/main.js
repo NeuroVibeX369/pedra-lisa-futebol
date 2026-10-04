@@ -149,7 +149,7 @@ function startLocal({ players, halfSeconds }) {
     humans: [true, players === 2],
     difficulty,
     offside,
-    premiumAI: true,
+    premiumAI: false,
     premiumManagement: true,
     premiumRatings: true,
     premiumStats: true,
@@ -164,7 +164,7 @@ function startOnline(opts) {
   // sides. Only the seed and the team assignment come from the host.
   const state = createMatch({
     seed, halfSeconds, humans: [true, true], offside: opts.offside,
-    premiumAI: true,
+    premiumAI: false,
     premiumManagement: true,
     premiumRatings: true,
     premiumStats: true,
