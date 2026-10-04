@@ -15,6 +15,7 @@ export function createMatch(options = {}) {
     humans: [true, false], // [is team 0 human?, is team 1 human?]
     difficulty: 'hard', // only affects CPU teams; a string, or one key per team
     offside: true, // the offside rule, whistle and all
+    premiumAI: false, // richer off-ball tactics; opt-in so FC Mukeka 2D stays unchanged
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -28,6 +29,7 @@ export function createMatch(options = {}) {
     config: {
       halfTicks: Math.round(opts.halfSeconds * TICK_RATE),
       offside: opts.offside !== false,
+      premiumAI: opts.premiumAI === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
