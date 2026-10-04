@@ -1,5 +1,5 @@
 import {
-  AI_LEVELS, CENTER_R, FIELD, FIELD_H, FIELD_W, TEAM_PRESETS, PLAYER_ROSTERS,
+  AI_LEVELS, CENTER_R, FIELD, FIELD_H, FIELD_W, TEAM_PRESETS, PLAYER_ROSTERS, PLAYER_RATINGS, overallFor,
   KICKOFF_TICKS, PROTECT_TICKS, TICK_RATE,
 } from '../constants.js';
 import { lineupFrom } from './formations.js';
@@ -19,6 +19,7 @@ export function createMatch(options = {}) {
     premiumSetPieces: false, // console-style restarts/fouls; opt-in for Premium only
     premiumBallControl: false, // first touch, shielding and skill touches; Premium only
     premiumManagement: false, // tactics, fatigue and substitutions; Premium only
+    premiumRatings: false, // OVR + attributes affect Premium gameplay only
     // One line-up per team: a preset key, eleven spots from the editor, or null
     // for the default. Both machines in an online match are handed the same two.
     formations: [null, null],
@@ -36,6 +37,7 @@ export function createMatch(options = {}) {
       premiumSetPieces: opts.premiumSetPieces === true,
       premiumBallControl: opts.premiumBallControl === true,
       premiumManagement: opts.premiumManagement === true,
+      premiumRatings: opts.premiumRatings === true,
     },
     phase: 'kickoff', // kickoff | play | goal | restart | halftime | fulltime
     phaseTimer: KICKOFF_TICKS,
@@ -140,12 +142,17 @@ function makeTeam(index, human, attackDir, ai, lineup) {
     lastAutoSubHalfTick: -99999,
     pendingSubIdx: -1,
     players: formation.map((f, i) => {
-      const identity = PLAYER_ROSTERS[index]?.[i] || { name: 'Jogador', number: i + 1 };
+      const identity = PLAYER_ROSTERS[index]?.[i] || { name: 'Jogador', number: i + 1, position: 'MEI' };
+      const rating = PLAYER_RATINGS[index]?.[i] || { vel:72, fin:72, pas:72, dri:72, def:72, fis:72 };
+      const ovr = overallFor(identity.position, rating);
       return {
       idx: i,
       role: f.role,
+      position: identity.position,
       displayName: identity.name,
       shirtNumber: identity.number,
+      rating: { ...rating, gk: rating.gk ? { ...rating.gk } : undefined },
+      overall: ovr,
       x: FIELD.cx,
       y: FIELD.cy,
       vx: 0,
@@ -391,6 +398,18 @@ export function hashState(state) {
       mix(p.skillDirX);
       mix(p.skillDirY);
       mix(p.stamina);
+      mix(p.overall || 0);
+      mix(p.rating?.vel || 0);
+      mix(p.rating?.fin || 0);
+      mix(p.rating?.pas || 0);
+      mix(p.rating?.dri || 0);
+      mix(p.rating?.def || 0);
+      mix(p.rating?.fis || 0);
+      mix(p.rating?.gk?.defesa || 0);
+      mix(p.rating?.gk?.reflexo || 0);
+      mix(p.rating?.gk?.pos || 0);
+      mix(p.rating?.gk?.saida || 0);
+      mix(p.rating?.gk?.pes || 0);
       mix(p.substitute ? 1 : 0);
       mix(p.shirtNumber || 0);
       mix(p.yellowCards);
