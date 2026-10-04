@@ -52,8 +52,8 @@ export class TouchControls {
     stick.addEventListener('pointerup', release);
     stick.addEventListener('pointercancel', release);
 
-    this.button(kick, BTN.FIRE);
-    this.button(swap, BTN.SWITCH);
+    if (kick) this.button(kick, BTN.FIRE);
+    if (swap) this.button(swap, BTN.SWITCH);
   }
 
   button(el, bit) {
