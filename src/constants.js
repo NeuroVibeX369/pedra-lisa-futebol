@@ -231,7 +231,14 @@ export const AI_LEVELS = {
   },
 };
 
-export const BTN = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, FIRE: 16, SWITCH: 32 };
+export const BTN = {
+  UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8,
+  FIRE: 16, SWITCH: 32,
+  // Extra face-button actions used by Pedra Lisa PS2 Web. The classic 2D game
+  // keeps using FIRE/SWITCH, so its controls and deterministic replays remain
+  // compatible.
+  PASS: 64, SHOOT: 128, CROSS: 256, THROUGH: 512,
+};
 
 export const TEAM_PRESETS = [
   { name: 'PEDRA LISA', shirt: '#178a3c', shorts: '#ffffff', trim: '#178a3c', skin: '#e8b98a', hair: '#3a2415' },
