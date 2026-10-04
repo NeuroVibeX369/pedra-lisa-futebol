@@ -1,5 +1,5 @@
 import {
-  BALL_R, CHARGE_MAX, FIELD, FIELD_H, PLAYER_R, TEAM_PRESETS, kitFor,
+  BALL_R, CHARGE_MAX, FIELD, FIELD_H, PLAYER_R, PLAYER_ROSTERS, TEAM_PRESETS, kitFor,
   WORLD_H, WORLD_W,
 } from '../constants.js';
 import { clamp } from '../util.js';
@@ -103,6 +103,9 @@ export class Renderer {
   drawPlayer(ctx, state, t, i, p) {
     const team = state.teams[t];
     const kit = kitFor(t, i);
+    const appearance = PLAYER_ROSTERS[t]?.[i] || {};
+    const visualHeight = Math.max(0.88, Math.min(1.18, appearance.height || 1));
+    const visualBuild = Math.max(0.88, Math.min(1.15, appearance.build || 1));
     const isControlled = team.human && team.controlled === i;
     const sprites = kitSprites(kit, ZOOM, kit.id);
 
@@ -136,11 +139,15 @@ export class Renderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
     const at = this.toScreen(p.x, p.y);
+    const drawW = Math.round(sprite.width * visualBuild);
+    const drawH = Math.round(sprite.height * visualHeight);
     ctx.drawImage(
       sprite,
-      at.x - Math.round(sprite.width / 2),
+      at.x - Math.round(drawW / 2),
       // Feet a little below the point the simulation tracks, so he stands on it.
-      at.y - Math.round(sprite.height * 0.60),
+      at.y - Math.round(drawH * 0.60),
+      drawW,
+      drawH,
     );
     ctx.imageSmoothingEnabled = true;
     ctx.restore();
@@ -154,6 +161,23 @@ export class Renderer {
       ctx.lineTo(p.x + 4, p.y - PLAYER_R - 9);
       ctx.closePath();
       ctx.fill();
+
+      // Name/number only for the controlled player; cosmetic only.
+      if (appearance.name) {
+        const label = `${appearance.number ?? ''} ${appearance.name}`.trim();
+        const nameAt = this.toScreen(p.x, p.y - PLAYER_R - 16);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const width = Math.ceil(ctx.measureText(label).width) + 8;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.fillRect(Math.round(nameAt.x - width / 2), nameAt.y - 14, width, 14);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(label, nameAt.x, nameAt.y - 2);
+        ctx.restore();
+      }
 
       if (p.charging && p.charge > 0) {
         const w = 22;
