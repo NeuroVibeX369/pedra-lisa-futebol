@@ -172,6 +172,95 @@
   <div id="kickoffFlash" class="kickoffFlash">VAI COMEÇAR</div>
   <button id="skipIntro" class="skipIntro" type="button">PULAR APRESENTAÇÃO</button>
 </div>
+<div id="teamScreen" class="teamScreen" aria-hidden="true">
+  <div class="teamShell">
+    <div class="teamScreenHeader">
+      <div>
+        <div class="teamScreenTitle">ELENCO & TÁTICAS</div>
+        <div id="teamScreenMeta" class="teamScreenMeta">PEDRA LISA · FC MUKEKA PREMIUM</div>
+      </div>
+      <button id="teamClose" class="teamClose" type="button">VOLTAR AO JOGO</button>
+    </div>
+    <div class="teamTabs">
+      <button type="button" data-team-tab="roster" class="active">ELENCO</button>
+      <button type="button" data-team-tab="tactics">TÁTICAS</button>
+      <button type="button" data-team-tab="subs">SUBSTITUIÇÕES</button>
+    </div>
+    <div class="teamBody">
+      <section id="teamPaneRoster" class="teamPane active">
+        <div class="squadLayout">
+          <div class="panelBox">
+            <div class="panelHead"><span>11 EM CAMPO</span><small id="rosterShapeLabel">4-3-3</small></div>
+            <div id="squadRows" class="squadRows"></div>
+          </div>
+          <div class="panelBox">
+            <div class="panelHead"><span>FORMAÇÃO</span><small>ATAQUE PARA CIMA</small></div>
+            <div id="tacticsPitch" class="tacticsPitch">
+              <div class="pitchBoxTop"></div><div class="pitchBoxBottom"></div>
+              <div id="formationDots"></div>
+            </div>
+          </div>
+          <div class="panelBox detailCard" id="playerDetail"></div>
+        </div>
+      </section>
+      <section id="teamPaneTactics" class="teamPane">
+        <div class="tacticsLayout">
+          <div class="tacticCard">
+            <h3>Mentalidade</h3>
+            <p>Altera altura da linha, quantidade de jogadores na pressão, profundidade dos ataques e risco dos passes.</p>
+            <div id="mentalityChoices" class="choiceRow">
+              <button class="choiceBtn" type="button" data-mentality="-1">DEFENSIVO</button>
+              <button class="choiceBtn" type="button" data-mentality="0">EQUILIBRADO</button>
+              <button class="choiceBtn" type="button" data-mentality="1">OFENSIVO</button>
+            </div>
+            <div id="tacticImpact" class="tacticImpact"></div>
+          </div>
+          <div class="tacticCard">
+            <h3>Formação</h3>
+            <p>Troca a estrutura da equipe durante a partida. Os jogadores assumem os novos papéis sem reiniciar o jogo.</p>
+            <div class="formationControl">
+              <button id="formationPrev" type="button">◀</button>
+              <div class="formationCurrent"><b id="formationName">4-3-3</b><small id="formationNote">FORMAÇÃO ATUAL</small></div>
+              <button id="formationNext" type="button">▶</button>
+            </div>
+          </div>
+          <div class="tacticCard">
+            <h3>Comportamento coletivo</h3>
+            <p id="collectiveDescription">Bloco equilibrado, pressão moderada e saída apoiada.</p>
+            <div class="tacticImpact">
+              <div class="impactBox"><b id="pressValue">3</b><span>PRESSÃO PÓS-PERDA</span></div>
+              <div class="impactBox"><b id="lineValue">MÉDIA</b><span>ALTURA DA LINHA</span></div>
+              <div class="impactBox"><b id="riskValue">MÉDIO</b><span>RISCO NO PASSE</span></div>
+            </div>
+          </div>
+          <div class="tacticCard">
+            <h3>Estado físico</h3>
+            <p>A energia interfere em aceleração, velocidade, pressão e capacidade de repetir sprints.</p>
+            <div id="fitnessSummary" class="detailStatus"></div>
+          </div>
+        </div>
+      </section>
+      <section id="teamPaneSubs" class="teamPane">
+        <div class="subsLayout">
+          <div class="panelBox">
+            <div class="panelHead"><span>ESCOLHA QUEM SAI</span><small id="subsUsedLabel">0/3 USADAS</small></div>
+            <div id="subPickList" class="subPickList"></div>
+            <button id="prepareSub" class="subAction" type="button">PREPARAR SUBSTITUIÇÃO</button>
+          </div>
+          <div class="panelBox">
+            <div class="panelHead"><span>BANCO</span><small>PROVISÓRIO</small></div>
+            <div id="benchRows" class="benchRows"></div>
+            <div id="pendingSubInfo" class="detailStatus" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="screenFooter">
+      <span id="teamScreenHint">ESC fecha esta tela · a partida fica pausada contra a CPU.</span>
+      <span id="teamScreenOnlineNote" class="onlineNote"></span>
+    </div>
+  </div>
+</div>
 <div id="touch3d" class="touchHidden">
   <div id="stick3d"><div id="knob3d"></div></div>
   <div id="managementBtns3d">
@@ -207,6 +296,7 @@
   <div class="cardToast" id="cardToast"><span class="yellowCard"></span><span id="cardText">CARTÃO AMARELO</span></div>
   <div class="refToast" id="refToast">VANTAGEM</div>
   <div class="powerWrap" id="powerWrap"><div class="powerFill" id="powerFill"></div></div>
+  <button id="openTeamScreen" class="squadOpen" type="button">ELENCO / TÁTICAS</button>
   <a class="back" href="../">← HUB</a>
   <div class="info">
     <div><b>FC Mukeka Premium · motor determinístico</b></div>
