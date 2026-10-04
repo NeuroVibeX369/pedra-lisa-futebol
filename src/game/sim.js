@@ -1257,46 +1257,48 @@ function resolveTackles(state) {
         if (state.config.premiumSetPieces && !wonBall) {
           const victimHadBall = ownerBefore && ownerBefore.team === opp.index && ownerBefore.idx === o.idx;
           const nearBall = dist2(b.x, b.y, o.x, o.y) < 42 * 42;
-          if (victimHadBall || nearBall) {
-            const penalty = inOwnBox(state, t, o);
-            const foul = classifyFoul(state, t, p, o);
-            foul.offenderTeam = t;
-            foul.offenderIdx = p.idx;
+          const offBall = !victimHadBall && !nearBall;
+          const penalty = inOwnBox(state, t, o);
+          const foul = offBall
+            ? { type: 'OFFBALL', label: 'ENTRADA SEM BOLA', card: 'yellow', directRed: false }
+            : classifyFoul(state, t, p, o);
+          foul.offenderTeam = t;
+          foul.offenderIdx = p.idx;
 
-            p.slide = 0;
-            p.cooldown = Math.max(p.cooldown, SLIDE_COOLDOWN);
-            o.down = Math.max(o.down, Math.floor(DOWN_TICKS * (penalty ? 0.72 : 0.42)));
-            o.vx = p.vx * 0.28;
-            o.vy = p.vy * 0.28;
+          p.slide = 0;
+          p.cooldown = Math.max(p.cooldown, SLIDE_COOLDOWN);
+          o.down = Math.max(o.down, Math.floor(DOWN_TICKS * (penalty ? 0.72 : offBall ? 0.52 : 0.42)));
+          o.vx = p.vx * 0.28;
+          o.vy = p.vy * 0.28;
 
-            state.events.push({
-              type: 'foul',
-              team: opp.index,
-              kind: penalty ? 'PENALTY' : 'FREE KICK',
-              foulType: foul.type,
-              label: foul.label,
-              advantage: !penalty && canPlayAdvantage(state, opp.index, o, false),
-              x: o.x,
-              y: o.y,
-            });
+          const advantage = !penalty && canPlayAdvantage(state, opp.index, o, false);
+          state.events.push({
+            type: 'foul',
+            team: opp.index,
+            kind: penalty ? 'PENALTY' : 'FREE KICK',
+            foulType: foul.type,
+            label: foul.label,
+            advantage,
+            x: o.x,
+            y: o.y,
+          });
 
-            if (!penalty && canPlayAdvantage(state, opp.index, o, false)) {
-              if (b.owner && b.owner.team === opp.index && b.owner.idx === o.idx) {
-                b.owner = null;
-                b.x = o.x + o.dirX * (PLAYER_R + BALL_R + 2);
-                b.y = o.y + o.dirY * (PLAYER_R + BALL_R + 2);
-                b.vx = o.vx * 0.75;
-                b.vy = o.vy * 0.75;
-                b.vz = 0;
-              }
-              beginAdvantage(state, opp.index, o.x, o.y, foul);
-              return false;
+          if (advantage) {
+            if (b.owner && b.owner.team === opp.index && b.owner.idx === o.idx) {
+              b.owner = null;
+              b.x = o.x + o.dirX * (PLAYER_R + BALL_R + 2);
+              b.y = o.y + o.dirY * (PLAYER_R + BALL_R + 2);
+              b.vx = o.vx * 0.75;
+              b.vy = o.vy * 0.75;
+              b.vz = 0;
             }
-
-            applyDiscipline(state, foul);
-            awardFoul(state, opp.index, o.x, o.y, penalty, foul);
-            return true;
+            beginAdvantage(state, opp.index, o.x, o.y, foul);
+            return false;
           }
+
+          applyDiscipline(state, foul);
+          awardFoul(state, opp.index, o.x, o.y, penalty, foul);
+          return true;
         }
 
         o.down = DOWN_TICKS;
