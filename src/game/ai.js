@@ -612,6 +612,13 @@ export function aiMove(state, teamIdx, i, opts = {}) {
     return { x: 0, y: 0 };
   }
 
+  // During a console-style restart everybody except the taker holds the staged
+  // shape until the ball is actually played. This keeps walls, penalty lines,
+  // corner runs and goal-kick outlets from dissolving before the kick.
+  if (state.config?.premiumSetPieces && state.setPiece) {
+    return { x: 0, y: 0 };
+  }
+
   if (p.role === 'gk') return keeperMove(state, teamIdx);
 
   if (premiumAI(state) && weHaveBall && p.supportRunTicks > 0) {
