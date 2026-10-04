@@ -1010,7 +1010,7 @@ function presentationPose(teamIdx,idx,nowSec){
 
   // During the toss, the two number 10s step a little closer to the centre;
   // everyone else remains lined up. This is presentation-only.
-  const isRepresentative=idx===7 && teamIdx===0 || idx===8 && teamIdx===1;
+  const isRepresentative=idx===7;
   if(t<9.2 && isRepresentative){
     const q=THREE.MathUtils.clamp((t-7.55)/.8,0,1);
     return {
