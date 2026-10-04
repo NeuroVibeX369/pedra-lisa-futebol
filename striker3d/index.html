@@ -45,6 +45,15 @@
     .lineupAway .lineupList b{color:#fff}
     .skipIntro{pointer-events:auto;position:absolute;right:18px;bottom:18px;border:1px solid rgba(255,255,255,.26);background:rgba(5,12,8,.72);color:white;border-radius:8px;padding:9px 13px;font:900 10px system-ui;letter-spacing:.12em;cursor:pointer}
     .kickoffFlash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);font-size:clamp(30px,7vw,72px);font-weight:1000;letter-spacing:.12em;text-shadow:0 6px 25px #000;opacity:0;transition:opacity .18s,transform .18s}
+    .playerSpotlight{position:absolute;left:50%;bottom:10%;transform:translateX(-50%) translateY(18px);min-width:min(360px,82vw);display:flex;align-items:center;gap:13px;padding:11px 16px;border-radius:10px;background:linear-gradient(90deg,rgba(10,78,37,.94),rgba(7,13,9,.94));border:1px solid rgba(255,255,255,.2);box-shadow:0 16px 38px rgba(0,0,0,.35);opacity:0;transition:opacity .18s,transform .18s}
+    .playerSpotlight.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .spotNumber{display:grid;place-items:center;width:48px;height:48px;border-radius:8px;background:#eff4ef;color:#102116;font-size:22px;font-weight:1000}
+    .spotText{min-width:0}.spotTeam{font-size:8px;letter-spacing:.18em;color:#a8b9af;font-weight:900}.spotName{font-size:20px;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.spotRole{font-size:9px;color:#c8d5cd;letter-spacing:.08em;margin-top:2px}
+    .coinToss{position:absolute;left:50%;top:51%;transform:translate(-50%,-50%);display:grid;place-items:center;gap:12px;opacity:0;transition:opacity .2s}
+    .coinToss.show{opacity:1}.coin{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 28%,#f7e7a5,#c79a2e 64%,#7d5814);border:4px solid #ecd47a;color:#18351f;font-weight:1000;font-size:17px;box-shadow:0 12px 36px rgba(0,0,0,.38);transform-style:preserve-3d}
+    .coinToss.spin .coin{animation:coinFlip .48s linear infinite}.coinLabel{font-size:11px;font-weight:1000;letter-spacing:.15em;text-shadow:0 2px 8px #000}
+    @keyframes coinFlip{0%{transform:rotateY(0) rotateX(0)}50%{transform:rotateY(180deg) rotateX(24deg)}100%{transform:rotateY(360deg) rotateX(0)}}
+    .entranceLabel{position:absolute;left:50%;top:73%;transform:translateX(-50%);padding:7px 12px;border-radius:8px;background:rgba(4,10,7,.65);font-size:9px;font-weight:1000;letter-spacing:.18em;opacity:0;transition:opacity .18s}.entranceLabel.show{opacity:1}
     .kickoffFlash.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
     @media(max-width:700px){.pregameTitle{grid-template-columns:1fr auto 1fr;gap:9px}.lineupCard{bottom:12%;padding:13px;gap:10px}.lineupList{grid-template-columns:1fr;font-size:9px;max-height:154px;overflow:hidden}.pregameMatch{top:10%}.skipIntro{bottom:205px}}
     .lobby{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(4,10,7,.78);backdrop-filter:blur(10px);padding:18px}
@@ -112,6 +121,12 @@
       <div id="lineupAwayList" class="lineupList"></div>
     </div>
   </div>
+  <div id="playerSpotlight" class="playerSpotlight">
+    <div id="spotNumber" class="spotNumber">10</div>
+    <div class="spotText"><div id="spotTeam" class="spotTeam">PEDRA LISA</div><div id="spotName" class="spotName">JOGADOR</div><div id="spotRole" class="spotRole">DESTAQUE DA PARTIDA</div></div>
+  </div>
+  <div id="coinToss" class="coinToss"><div id="coin" class="coin">PL</div><div id="coinLabel" class="coinLabel">SORTEIO DE SAÍDA</div></div>
+  <div id="entranceLabel" class="entranceLabel">TIMES ENTRANDO EM CAMPO</div>
   <div id="kickoffFlash" class="kickoffFlash">VAI COMEÇAR</div>
   <button id="skipIntro" class="skipIntro" type="button">PULAR APRESENTAÇÃO</button>
 </div>
@@ -186,6 +201,15 @@ const lineupHomeListEl=document.getElementById('lineupHomeList');
 const lineupAwayListEl=document.getElementById('lineupAwayList');
 const kickoffFlashEl=document.getElementById('kickoffFlash');
 const skipIntroEl=document.getElementById('skipIntro');
+const playerSpotlightEl=document.getElementById('playerSpotlight');
+const spotNumberEl=document.getElementById('spotNumber');
+const spotTeamEl=document.getElementById('spotTeam');
+const spotNameEl=document.getElementById('spotName');
+const spotRoleEl=document.getElementById('spotRole');
+const coinTossEl=document.getElementById('coinToss');
+const coinEl=document.getElementById('coin');
+const coinLabelEl=document.getElementById('coinLabel');
+const entranceLabelEl=document.getElementById('entranceLabel');
 
 const devices=new InputDevices(defaultBindings());
 devices.ps2FaceButtons=true;
@@ -806,7 +830,9 @@ function playBallContactSound(kind='pass'){
 const presentation={
   active:false,
   started:0,
-  duration:7.2,
+  duration:11.0,
+  featured:null,
+  whistlePlayed:false,
   onDone:null,
   online:false,
 };
@@ -841,6 +867,9 @@ function finishPresentation(){
   pregameMatchEl.classList.remove('show');
   lineupCardEl.classList.remove('show');
   kickoffFlashEl.classList.remove('show');
+  playerSpotlightEl.classList.remove('show');
+  coinTossEl.classList.remove('show','spin');
+  entranceLabelEl.classList.remove('show');
   showTouch(true);
   const done=presentation.onDone;
   presentation.onDone=null;
@@ -858,51 +887,180 @@ function startPresentation(onDone,{online=false}={}){
   pregameMatchEl.classList.add('show');
   lineupCardEl.classList.remove('show');
   kickoffFlashEl.classList.remove('show');
+  playerSpotlightEl.classList.remove('show');
+  coinTossEl.classList.remove('show','spin');
+  entranceLabelEl.classList.remove('show');
+  presentation.featured=null;
+  presentation.whistlePlayed=false;
   playPresentationSting();
 }
 
 skipIntroEl.addEventListener('click',finishPresentation);
 
+function playWhistle(){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const now=ac.currentTime;
+    for(const detune of [-10,10]){
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='square';o.frequency.value=1760;o.detune.value=detune;
+      g.gain.setValueAtTime(.0001,now);
+      g.gain.exponentialRampToValueAtTime(.032,now+.012);
+      g.gain.setValueAtTime(.032,now+.18);
+      g.gain.exponentialRampToValueAtTime(.0001,now+.30);
+      o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.32);
+    }
+  }catch{}
+}
+
+const presentationFeatures=[
+  [0,0,'GOLEIRO'],
+  [1,0,'GOLEIRO'],
+  [0,7,'MEIO-CAMPO'],
+  [1,9,'ATAQUE'],
+];
+
+function setFeaturedPlayer(slot){
+  const item=presentationFeatures[slot%presentationFeatures.length];
+  if(!item)return;
+  const [team,idx,role]=item;
+  const p=PLAYER_ROSTERS[team][idx];
+  presentation.featured={team,idx};
+  spotNumberEl.textContent=p.number;
+  spotTeamEl.textContent=team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+  spotNameEl.textContent=p.name;
+  spotRoleEl.textContent=role+' · DESTAQUE DA APRESENTAÇÃO';
+}
+
 function updatePresentation(nowSec){
   if(!presentation.active)return;
   const t=nowSec-presentation.started;
-  pregameMatchEl.classList.toggle('show',t<3.25);
-  lineupCardEl.classList.toggle('show',t>=1.6&&t<5.65);
-  kickoffFlashEl.classList.toggle('show',t>=5.65);
+
+  // 0–1.25s: stadium/title. 1.15–4.8s: teams leave the tunnel.
+  pregameMatchEl.classList.toggle('show',t<2.15);
+  entranceLabelEl.classList.toggle('show',t>=1.1&&t<4.75);
+
+  // 4.5–7.55s: formation card + broadcast close-ups of selected players.
+  lineupCardEl.classList.toggle('show',t>=4.45&&t<7.55);
+  const spotlightOn=t>=4.65&&t<7.55;
+  playerSpotlightEl.classList.toggle('show',spotlightOn);
+  if(spotlightOn){
+    const slot=Math.min(3,Math.floor((t-4.65)/.73));
+    if(!presentation.featured || presentation.featured.slot!==slot){
+      setFeaturedPlayer(slot);
+      presentation.featured.slot=slot;
+    }
+  }else{
+    presentation.featured=null;
+  }
+
+  // 7.55–9.2s: deterministic kickoff-team reveal from the actual match.
+  const tossOn=t>=7.55&&t<9.2;
+  coinTossEl.classList.toggle('show',tossOn);
+  coinTossEl.classList.toggle('spin',t>=7.55&&t<8.45);
+  if(tossOn){
+    const team=match.kickoffTeam??match.firstKickoffTeam??0;
+    if(t<8.45){
+      coinEl.textContent=t%0.24<.12?'PL':'IND';
+      coinLabelEl.textContent='SORTEIO DE SAÍDA';
+    }else{
+      coinEl.textContent=team===0?'PL':'IND';
+      coinLabelEl.textContent=(team===0?'PEDRA LISA':'INDEPENDÊNCIA')+' DÁ A SAÍDA';
+    }
+  }
+
+  // 9.15–11s: whistle + transition to gameplay camera.
+  kickoffFlashEl.classList.toggle('show',t>=9.15);
+  if(t>=9.35&&!presentation.whistlePlayed){
+    presentation.whistlePlayed=true;
+    playWhistle();
+  }
   if(t>=presentation.duration)finishPresentation();
 }
 
 function presentationPose(teamIdx,idx,nowSec){
   if(!presentation.active)return null;
   const t=nowSec-presentation.started;
-  // First show the stadium, then line both elevens up near midfield like a TV intro.
-  if(t<1.35)return null;
+  if(t<1.05)return null;
+
   const spread=2.45;
-  return {
-    x:teamIdx===0?-3.1:3.1,
-    y:0,
-    z:-12.3+idx*spread,
-    rot:teamIdx===0?0:Math.PI,
-  };
+  const lineupX=teamIdx===0?-3.15:3.15;
+  const lineupZ=-12.3+idx*spread;
+
+  // Both teams emerge through the tunnel on the near stand, staggered by player.
+  if(t<4.7){
+    const delay=idx*.075+teamIdx*.035;
+    const q=THREE.MathUtils.clamp((t-1.05-delay)/3.05,0,1);
+    const ease=q*q*(3-2*q);
+    const startX=teamIdx===0?-2.1:2.1;
+    const startZ=37.4+idx*.34;
+    return {
+      x:THREE.MathUtils.lerp(startX,lineupX,ease),
+      y:0,
+      z:THREE.MathUtils.lerp(startZ,lineupZ,ease),
+      rot:Math.PI,
+      mode:q<.98?'walk':'idle',
+    };
+  }
+
+  // During the player close-ups, everybody holds the ceremonial lineup.
+  if(t<7.55){
+    return {x:lineupX,y:0,z:lineupZ,rot:teamIdx===0?0:Math.PI,mode:'idle'};
+  }
+
+  // During the toss, the two number 10s step a little closer to the centre;
+  // everyone else remains lined up. This is presentation-only.
+  const isRepresentative=idx===7 && teamIdx===0 || idx===8 && teamIdx===1;
+  if(t<9.2 && isRepresentative){
+    const q=THREE.MathUtils.clamp((t-7.55)/.8,0,1);
+    return {
+      x:THREE.MathUtils.lerp(lineupX,teamIdx===0?-1.1:1.1,q),
+      y:0,
+      z:THREE.MathUtils.lerp(lineupZ,0,q),
+      rot:teamIdx===0?Math.PI/2:-Math.PI/2,
+      mode:q<.95?'walk':'idle',
+    };
+  }
+
+  return {x:lineupX,y:0,z:lineupZ,rot:teamIdx===0?0:Math.PI,mode:'idle'};
 }
 
 function presentationCamera(nowSec){
   if(!presentation.active)return false;
   const t=nowSec-presentation.started;
-  if(t<1.5){
-    const q=t/1.5;
-    camera.position.set(-35+q*16,20-q*5,42-q*8);
-    camera.fov=38;
-    camera.lookAt(0,1.1,0);
-  }else if(t<5.65){
-    const q=(t-1.5)/4.15;
-    camera.position.set(-10+q*20,4.4,18-Math.sin(q*Math.PI)*5);
-    camera.fov=32;
-    camera.lookAt(0,1.15,-8+q*16);
+
+  if(t<1.15){
+    const q=t/1.15;
+    camera.position.set(-38+q*12,21-q*4,43-q*5);
+    camera.fov=40;
+    camera.lookAt(0,1.0,0);
+  }else if(t<4.55){
+    // Low tunnel camera following the entrance procession.
+    const q=(t-1.15)/3.4;
+    camera.position.set(-8+q*13,3.0,31-q*17);
+    camera.fov=31;
+    camera.lookAt(0,1.2,THREE.MathUtils.lerp(24,-2,q));
+  }else if(t<7.55){
+    // Close-ups follow the currently highlighted player.
+    const feat=presentation.featured||{team:0,idx:0};
+    const pose=presentationPose(feat.team,feat.idx,nowSec);
+    const px=pose?.x??0,pz=pose?.z??0;
+    const side=feat.team===0?-1:1;
+    camera.position.set(px+side*4.5,2.5,pz+4.8);
+    camera.fov=28;
+    camera.lookAt(px,1.25,pz);
+  }else if(t<9.2){
+    camera.position.set(0,4.7,10.8);
+    camera.fov=30;
+    camera.lookAt(0,1.0,0);
   }else{
-    const q=Math.min(1,(t-5.65)/1.55);
-    camera.position.set(THREE.MathUtils.lerp(0,focusX,q),THREE.MathUtils.lerp(8.5,13.6,q),THREE.MathUtils.lerp(17,30.5,q));
-    camera.fov=THREE.MathUtils.lerp(32,36,q);
+    const q=Math.min(1,(t-9.2)/1.8);
+    camera.position.set(
+      THREE.MathUtils.lerp(0,focusX,q),
+      THREE.MathUtils.lerp(7.2,13.6,q),
+      THREE.MathUtils.lerp(15.5,30.5,q)
+    );
+    camera.fov=THREE.MathUtils.lerp(31,36,q);
     camera.lookAt(THREE.MathUtils.lerp(0,focusX,q),1.0,0);
   }
   camera.updateProjectionMatrix();
@@ -1115,7 +1273,7 @@ function renderState(dt){
       const px=rp?rp.x:p.x,py=rp?rp.y:p.y,pdirX=rp?rp.dirX:p.dirX,pdirY=rp?rp.dirY:p.dirY;
       const introPose=presentationPose(t,i,nowSec);
       const w=introPose?{x:introPose.x,y:introPose.y,z:introPose.z}:simToWorld(px,py,0);
-      if(i===0){
+      if(i===0 && !presentation.active){
         // Keep the goalkeeper visually in front of the goal mouth when the
         // simulation has him guarding the line. WebSoccer uses a much wider
         // abstract goal than a 3D football pitch, so the clamp is presentation
@@ -1139,7 +1297,10 @@ function renderState(dt){
       const actionActive=v.actionUntil>nowSec;
 
       if(presentation.active && introPose){
-        setAnim(v,'Idle');
+        if(introPose.mode==='walk'){
+          setAnim(v,v.actions.Walk?'Walk':'Run');
+          if(v.actions.Walk)v.actions.Walk.timeScale=1.05;
+        }else setAnim(v,'Idle');
       }else if(p.slide>0){
         setAnim(v,v.actions.Slide?'Slide':'Punch');
         // A short forward body tilt makes the generic Punch clip read much more
