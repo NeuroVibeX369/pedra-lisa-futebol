@@ -999,6 +999,11 @@ let transport=null;
 let signal=null;
 let matchActive=false;
 let localTeam=0;
+let teamScreenOpen=false;
+let teamScreenTab='roster';
+let teamSelectedIdx=9;
+let uiPaused=false;
+let lastTeamScreenRender=0;
 respawnVisuals();
 
 function resetMatch(opts={}){
@@ -1019,7 +1024,230 @@ function resetMatch(opts={}){
   selectedIdx=-1;
   respawnVisuals();
   refreshControlled();
+  teamSelectedIdx=9;
+  if(teamScreenOpen)renderTeamScreen();
 }
+
+function teamLabel(idx){return idx===0?'PEDRA LISA':'INDEPENDÊNCIA'}
+
+function formationPreset(key){
+  return FORMATION_PRESETS.find(p=>p.key===key)||FORMATION_PRESETS[0];
+}
+
+function playerAttrEntries(p){
+  if(p.position==='GOL'&&p.rating?.gk){
+    return [
+      ['DEF',p.rating.gk.defesa],['REF',p.rating.gk.reflexo],['POS',p.rating.gk.pos],
+      ['SAÍ',p.rating.gk.saida],['PÉS',p.rating.gk.pes],
+    ];
+  }
+  return [
+    ['VEL',p.rating?.vel??72],['FIN',p.rating?.fin??72],['PAS',p.rating?.pas??72],
+    ['DRI',p.rating?.dri??72],['DEF',p.rating?.def??72],['FIS',p.rating?.fis??72],
+  ];
+}
+
+function renderPlayerDetail(team,p){
+  if(!p){playerDetailEl.innerHTML='';return}
+  const energy=Math.round((p.stamina??1000)/10);
+  const attrs=playerAttrEntries(p).map(([label,value])=>
+    '<div class="attr"><span>'+label+'</span><span class="attrTrack"><i style="width:'+Math.max(0,Math.min(100,value))+'%"></i></span><span class="attrVal">'+value+'</span></div>'
+  ).join('');
+  const card=p.sentOff?'EXPULSO':p.yellowCards?'AMARELO '+p.yellowCards:'SEM CARTÃO';
+  const pending=team.pendingSubIdx===p.idx?' · TROCA PREPARADA':'';
+  playerDetailEl.innerHTML=
+    '<div class="detailHero"><div class="detailOvr">'+(p.overall??'--')+'</div><div><div class="detailName">#'+p.shirtNumber+' '+p.displayName+'</div><div class="detailSub">'+(p.position||p.role.toUpperCase())+' · '+card+pending+'</div></div></div>'+
+    '<div class="attrGrid">'+attrs+'</div>'+
+    '<div class="detailStatus"><b>ENERGIA '+energy+'%</b><br>OVR é calculado pelos atributos e pelo peso da posição. Energia baixa reduz principalmente aceleração e repetição de esforços.</div>';
+}
+
+function renderRosterPane(){
+  const team=match.teams[localTeam];
+  const selected=team.players[teamSelectedIdx]||team.players[team.controlled]||team.players[1];
+  const shape=formationPreset(team.formationKey);
+  rosterShapeLabelEl.textContent=shape.label;
+
+  squadRowsEl.innerHTML=team.players.map((p,i)=>{
+    const energy=Math.round((p.stamina??1000)/10);
+    const state=p.sentOff?'EXPULSO':p.substitute?'RESERVA EM CAMPO':p.yellowCards?'CA '+p.yellowCards:'TITULAR';
+    return '<div class="squadRow '+(i===teamSelectedIdx?'selected ':'')+(p.sentOff?'sent':'')+'" data-squad-player="'+i+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div>'+
+      '<div><div class="squadName">'+p.displayName+'</div><div class="squadMeta">'+(p.position||p.role.toUpperCase())+' · '+state+'</div></div>'+
+      '<div class="ovrPill">'+(p.overall??'--')+'</div>'+
+      '<div class="energyCell"><span>'+energy+'%</span><span class="energyBar"><i style="width:'+energy+'%"></i></span></div>'+
+    '</div>';
+  }).join('');
+
+  formationDotsEl.innerHTML=team.players.map((p,i)=>{
+    if(p.sentOff)return '';
+    const spot=team.formation[i];
+    const left=Math.max(5,Math.min(95,(spot.x+1)*50));
+    const top=Math.max(5,Math.min(95,(1-spot.y)*100));
+    const bg=localTeam===0?'#0d2c18':'#e8eee9';
+    const fg=localTeam===0?'#fff':'#102017';
+    return '<button class="formationDot '+(i===teamSelectedIdx?'selected':'')+'" data-squad-player="'+i+'" style="left:'+left+'%;top:'+top+'%;background:'+bg+';color:'+fg+'">'+
+      p.shirtNumber+'<small>'+p.overall+'</small></button>';
+  }).join('');
+
+  renderPlayerDetail(team,selected);
+}
+
+function renderTacticsPane(){
+  const team=match.teams[localTeam];
+  const mentality=team.mentality||0;
+  for(const btn of mentalityChoicesEl.querySelectorAll('[data-mentality]')){
+    btn.classList.toggle('active',Number(btn.dataset.mentality)===mentality);
+  }
+  const preset=formationPreset(team.formationKey);
+  formationNameEl.textContent=preset.label;
+  formationNoteEl.textContent=preset.note||'FORMAÇÃO ATUAL';
+
+  const descriptions={
+    '-1':'Bloco mais baixo, menos jogadores na pressão e prioridade para proteger o centro antes de sair em contra-ataque.',
+    '0':'Bloco equilibrado, pressão moderada e ocupação balanceada dos corredores.',
+    '1':'Linha mais alta, mais jogadores na pressão e procura maior por passes verticais e finalizações.'
+  };
+  collectiveDescriptionEl.textContent=descriptions[String(mentality)];
+  pressValueEl.textContent=mentality<0?'2':mentality>0?'4':'3';
+  lineValueEl.textContent=mentality<0?'BAIXA':mentality>0?'ALTA':'MÉDIA';
+  riskValueEl.textContent=mentality<0?'BAIXO':mentality>0?'ALTO':'MÉDIO';
+
+  tacticImpactEl.innerHTML=
+    '<div class="impactBox"><b>'+(mentality<0?'−':mentality>0?'+':'=')+'</b><span>ALTURA DA EQUIPE</span></div>'+
+    '<div class="impactBox"><b>'+(mentality<0?'2':mentality>0?'4':'3')+'</b><span>PRESSORES</span></div>'+
+    '<div class="impactBox"><b>'+(mentality<0?'SEGURO':mentality>0?'VERTICAL':'MISTO')+'</b><span>PASSE</span></div>';
+
+  const active=team.players.filter(p=>!p.sentOff);
+  const avg=active.length?Math.round(active.reduce((s,p)=>s+(p.stamina??1000),0)/active.length/10):0;
+  const tired=active.filter(p=>(p.stamina??1000)<500).length;
+  const critical=active.filter(p=>(p.stamina??1000)<300).length;
+  fitnessSummaryEl.innerHTML='<b>ENERGIA MÉDIA '+avg+'%</b><br>'+tired+' jogador(es) abaixo de 50% · '+critical+' abaixo de 30%. Mentalidade ofensiva e pressão pós-perda aumentam o desgaste.';
+}
+
+function provisionalBenchOverall(team,number,basePlayer){
+  const base=basePlayer?.overall??72;
+  const delta=((number+localTeam*3)%5)-2;
+  return Math.max(66,Math.min(78,base-2+delta));
+}
+
+function renderSubsPane(){
+  const team=match.teams[localTeam];
+  const selected=team.players[teamSelectedIdx];
+  subsUsedLabelEl.textContent=team.subsUsed+'/3 USADAS';
+
+  subPickListEl.innerHTML=team.players.map((p,i)=>{
+    const energy=Math.round((p.stamina??1000)/10);
+    const disabled=i===0||p.sentOff||p.substitute||team.subsUsed>=3;
+    const status=team.pendingSubIdx===i?'TROCA PREPARADA':p.substitute?'JÁ ENTROU':p.sentOff?'EXPULSO':'ENERGIA '+energy+'%';
+    return '<div class="subPick '+(i===teamSelectedIdx?'selected ':'')+(disabled?'disabled':'')+'" data-sub-player="'+i+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div><div><div class="squadName">'+p.displayName+'</div><div class="squadMeta">'+(p.position||p.role.toUpperCase())+' · '+status+'</div></div>'+
+      '<div class="ovrPill">'+p.overall+'</div><div class="energyCell"><span>'+energy+'%</span><span class="energyBar"><i style="width:'+energy+'%"></i></span></div></div>';
+  }).join('');
+
+  const start=Math.max(12,team.nextBenchNumber);
+  benchRowsEl.innerHTML=Array.from({length:7},(_,j)=>{
+    const num=start+j;
+    const ovr=provisionalBenchOverall(team,num,selected);
+    return '<div class="benchRow '+(j===0?'next':'')+'"><div class="squadNum">'+num+'</div><div><div class="squadName">Reserva '+num+'</div><div class="squadMeta">'+(j===0?'PRÓXIMO A ENTRAR · ':'')+'IDENTIDADE PROVISÓRIA</div></div><div class="ovrPill">'+ovr+'</div></div>';
+  }).join('');
+
+  const can=!!selected&&teamSelectedIdx>0&&!selected.sentOff&&!selected.substitute&&team.subsUsed<3&&team.pendingSubIdx<0;
+  prepareSubEl.disabled=!can;
+  prepareSubEl.textContent=team.pendingSubIdx>=0?'SUBSTITUIÇÃO JÁ PREPARADA':can?'PREPARAR: SAI '+selected.displayName:'SUBSTITUIÇÃO INDISPONÍVEL';
+
+  if(team.pendingSubIdx>=0){
+    const out=team.players[team.pendingSubIdx];
+    pendingSubInfoEl.innerHTML='<b>AGUARDANDO PARALISAÇÃO</b><br>Sai '+out.displayName+' e entra Reserva '+team.nextBenchNumber+'.';
+  }else{
+    pendingSubInfoEl.innerHTML='<b>BANCO PROVISÓRIO</b><br>Os nomes dos reservas ainda serão cadastrados. A troca mantém a posição do jogador que saiu e coloca um atleta descansado.';
+  }
+}
+
+function renderTeamScreen(){
+  if(!teamScreenOpen)return;
+  const team=match.teams[localTeam];
+  const frac=Math.min(1,match.halfTick/Math.max(1,match.config.halfTicks));
+  const minute=Math.min(45,Math.floor(frac*45));
+  teamScreenMetaEl.textContent=teamLabel(localTeam)+' · '+match.half+'T '+String(minute).padStart(2,'0')+"' · "+match.score[0]+'–'+match.score[1]+' · '+formationPreset(team.formationKey).label;
+  document.querySelectorAll('[data-team-tab]').forEach(b=>b.classList.toggle('active',b.dataset.teamTab===teamScreenTab));
+  document.querySelectorAll('.teamPane').forEach(p=>p.classList.remove('active'));
+  const pane=document.getElementById('teamPane'+teamScreenTab[0].toUpperCase()+teamScreenTab.slice(1));
+  pane?.classList.add('active');
+  if(teamScreenTab==='roster')renderRosterPane();
+  else if(teamScreenTab==='tactics')renderTacticsPane();
+  else renderSubsPane();
+
+  const online=!!transport?.online;
+  teamScreenOnlineNoteEl.textContent=online?'ONLINE: a partida continua enquanto esta tela está aberta.':'CONTRA CPU: partida pausada enquanto esta tela está aberta.';
+  teamScreenHintEl.textContent='ESC fecha · clique em um jogador para ver OVR, atributos e energia.';
+}
+
+function applyTeamScreenCommand(bits){
+  if(!bits)return;
+  devices.pulse(0,bits);
+  if(uiPaused&&matchActive&&!transport?.online){
+    const inputs=[0,0];
+    inputs[localTeam]=devices.mask(0);
+    step(match,inputs);
+    // Offline-only UI command: release the edge immediately so repeated clicks work
+    // without needing to advance a second gameplay tick while the pause screen is open.
+    match.teams[localTeam].prevMask&=~bits;
+    queueVisualEvents();
+  }
+  renderTeamScreen();
+}
+
+function openTeamScreen(tab='roster'){
+  if(presentation.active||!matchActive)return;
+  teamScreenOpen=true;
+  teamScreenTab=tab;
+  teamSelectedIdx=match.teams[localTeam]?.controlled??9;
+  uiPaused=!transport?.online;
+  if(uiPaused)acc=0;
+  teamScreenEl.classList.add('open');
+  teamScreenEl.setAttribute('aria-hidden','false');
+  showTouch(false);
+  renderTeamScreen();
+}
+
+function closeTeamScreen(){
+  if(!teamScreenOpen)return;
+  teamScreenOpen=false;
+  uiPaused=false;
+  teamScreenEl.classList.remove('open');
+  teamScreenEl.setAttribute('aria-hidden','true');
+  if(matchActive&&!presentation.active)showTouch(true);
+}
+
+openTeamScreenEl.addEventListener('click',()=>openTeamScreen('roster'));
+teamCloseEl.addEventListener('click',closeTeamScreen);
+document.querySelectorAll('[data-team-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+  teamScreenTab=btn.dataset.teamTab;
+  renderTeamScreen();
+}));
+squadRowsEl.addEventListener('click',e=>{
+  const row=e.target.closest('[data-squad-player]');if(!row)return;
+  teamSelectedIdx=Number(row.dataset.squadPlayer);renderTeamScreen();
+});
+formationDotsEl.addEventListener('click',e=>{
+  const dot=e.target.closest('[data-squad-player]');if(!dot)return;
+  teamSelectedIdx=Number(dot.dataset.squadPlayer);renderTeamScreen();
+});
+subPickListEl.addEventListener('click',e=>{
+  const row=e.target.closest('[data-sub-player]');if(!row||row.classList.contains('disabled'))return;
+  teamSelectedIdx=Number(row.dataset.subPlayer);renderTeamScreen();
+});
+mentalityChoicesEl.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-mentality]');if(!btn)return;
+  const v=Number(btn.dataset.mentality);
+  applyTeamScreenCommand(v<0?BTN.MENTALITY_DEF:v>0?BTN.MENTALITY_ATT:BTN.MENTALITY_BAL);
+});
+formationPrevEl.addEventListener('click',()=>applyTeamScreenCommand(BTN.FORMATION_PREV));
+formationNextEl.addEventListener('click',()=>applyTeamScreenCommand(BTN.FORMATION_NEXT));
+prepareSubEl.addEventListener('click',()=>{
+  if(teamSelectedIdx<=0||teamSelectedIdx>=SUB_TARGET_BITS.length)return;
+  applyTeamScreenCommand(SUB_TARGET_BITS[teamSelectedIdx]);
+});
 
 function showTouch(on){
   if(!touchDevice)return;
