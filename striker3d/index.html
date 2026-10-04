@@ -1284,6 +1284,20 @@ function processVisualEvents(){
         v.saveHigh=!!ev.high;
         if(ev.kind==='parry')playBallContactSound('save');
       }
+    }else if(ev.type==='penalty-dive'){
+      const v=visuals[ev.team]?.[ev.idx??0];
+      if(v){
+        const s=ev.side||0;
+        const clip=s<0
+          ?(v.actions.SaveLeft?'SaveLeft':(v.actions.Save?'Save':'Punch'))
+          :s>0
+            ?(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'))
+            :(v.actions.Save?'Save':(v.actions.Jump?'Jump':'Punch'));
+        playAction(v,'save',clip,.72,.38);
+        v.saveSide=s||1;
+        v.saveParry=true;
+        v.saveHigh=false;
+      }
     }else if(ev.type==='card'){
       const roster=PLAYER_ROSTERS[ev.team]?.[ev.idx];
       const red=ev.color==='red';
@@ -1314,6 +1328,78 @@ function processVisualEvents(){
     }
   }
 }
+function updateSetPieceGuide(nowSec){
+  const sp=match.setPiece;
+  setPieceTargetRing.visible=false;
+  setPieceAimRing.visible=false;
+
+  if(!sp || presentation.active || replay.active){
+    setPieceHelpEl.classList.remove('show');
+    return;
+  }
+
+  const names={
+    KICKOFF:'SAÍDA DE BOLA',
+    'THROW-IN':'LATERAL',
+    CORNER:'ESCANTEIO',
+    'GOAL KICK':'TIRO DE META',
+    'FREE KICK':'FALTA',
+    PENALTY:'PÊNALTI',
+    OFFSIDE:'IMPEDIMENTO · TIRO LIVRE'
+  };
+  const taker=PLAYER_ROSTERS[sp.team]?.[sp.taker];
+  const base=names[sp.kind]||sp.kind;
+  setPieceBannerEl.textContent=base+(taker?' · #'+taker.number+' '+taker.name:'');
+  setPieceBannerEl.classList.add('show');
+
+  let help='';
+  if(sp.team===localTeam){
+    const target=sp.targetIdx>=0?PLAYER_ROSTERS[sp.team]?.[sp.targetIdx]:null;
+    const targetLabel=target?' · ALVO: #'+target.number+' '+target.name:'';
+
+    if(sp.kind==='PENALTY'){
+      help='←/→ MIRA · ↑/↓ ALTURA · □ SEGURE E SOLTE PARA CHUTAR · TROCAR: COBRADOR';
+    }else if(sp.kind==='FREE KICK'||sp.kind==='OFFSIDE'){
+      help='←/→ MIRA · ↑/↓ ALTURA · □ CHUTE · △ TROCA ALVO · × PASSE · ○ CRUZAMENTO · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='CORNER'){
+      help='△ TROCA ALVO · × CURTO · ○ CRUZAMENTO · □ CRUZAMENTO FORTE · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='THROW-IN'){
+      help='△ TROCA COMPANHEIRO · × ARREMESSO · ○/□ ARREMESSO LONGO · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='GOAL KICK'){
+      help='△ TROCA ALVO · × SAÍDA CURTA · ○/□ LANÇAMENTO'+targetLabel;
+    }else if(sp.kind==='KICKOFF'){
+      help='× PASSE PARA COMEÇAR A PARTIDA';
+    }
+
+    if((sp.kind==='PENALTY'||sp.kind==='FREE KICK') && sp.team===localTeam){
+      const goalWorldX=match.teams[sp.team].attackDir<0?-FIELD_L/2:FIELD_L/2;
+      const targetSimX=FIELD.cx+(sp.aimX||0);
+      const wz=((targetSimX-FIELD.cx)/SIM_FIELD_W)*FIELD_W;
+      const maxLift=sp.kind==='PENALTY'?42:95;
+      const h=.55+Math.min(1,(sp.aimLift||0)/Math.max(1,maxLift))*1.55;
+      setPieceAimRing.position.set(goalWorldX-(goalWorldX>0?.05:-.05),h,wz);
+      setPieceAimRing.visible=true;
+      const pulse=1+Math.sin(nowSec*7)*.08;
+      setPieceAimRing.scale.setScalar(pulse);
+    }else if(sp.targetIdx>=0){
+      const tp=match.teams[sp.team]?.players?.[sp.targetIdx];
+      if(tp&&!tp.sentOff){
+        const w=simToWorld(tp.x,tp.y,0);
+        setPieceTargetRing.position.set(w.x,.06,w.z);
+        const pulse=1+Math.sin(nowSec*6)*.10;
+        setPieceTargetRing.scale.setScalar(pulse);
+        setPieceTargetRing.visible=true;
+      }
+    }
+  }else if(sp.kind==='PENALTY' && localTeam===1-sp.team){
+    const side=sp.keeperDive<0?'ESQUERDA':sp.keeperDive>0?'DIREITA':'CENTRO';
+    help='GOLEIRO: ←/→ ESCOLHE O CANTO · ↑/↓ VOLTA AO CENTRO · ATUAL: '+side;
+  }
+
+  setPieceHelpEl.textContent=help;
+  setPieceHelpEl.classList.toggle('show',!!help);
+}
+
 function setPieceCamera(nowSec,bw){
   const sp=match.setPiece;
   if(!sp || presentation.active || replay.active)return false;
@@ -1354,6 +1440,7 @@ function renderState(dt){
   processVisualEvents();
   const nowSec=performance.now()/1000;
   const replayFrame=replayFrameNow(nowSec);
+  updateSetPieceGuide(nowSec);
 
   for(let t=0;t<2;t++){
     for(let i=0;i<11;i++){
@@ -1497,8 +1584,11 @@ function renderState(dt){
     OFFSIDE:'IMPEDIMENTO · TIRO LIVRE'
   };
   const setPieceText=match.setPiece?setPieceNames[match.setPiece.kind]||match.setPiece.kind:'';
-  setPieceBannerEl.textContent=setPieceText;
-  setPieceBannerEl.classList.toggle('show',!!setPieceText && !presentation.active);
+  if(!match.setPiece){
+    setPieceBannerEl.textContent='';
+    setPieceBannerEl.classList.remove('show');
+    setPieceHelpEl.classList.remove('show');
+  }
   if(cardToastUntil && nowSec>cardToastUntil){
     cardToastUntil=0;
     cardToastEl.classList.remove('show');
