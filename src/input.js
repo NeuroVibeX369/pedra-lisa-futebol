@@ -216,7 +216,7 @@ export class InputDevices {
     }
     // The on-screen controls drive the first slot, which is the one every
     // single player and online match uses.
-    if (this.premiumManagement) {
+    if (this.premiumManagement && slot === 0) {
       if (this.down.has('KeyZ')) m |= BTN.TACTIC_DOWN;
       if (this.down.has('KeyX')) m |= BTN.TACTIC_UP;
       if (this.down.has('KeyC')) m |= BTN.SUB;
