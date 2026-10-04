@@ -240,7 +240,11 @@ export const BTN = {
   PASS: 64, SHOOT: 128, CROSS: 256, THROUGH: 512,
   // Premium-only team-management actions. Classic 2D never emits these bits.
   TACTIC_DOWN: 1024, TACTIC_UP: 2048, SUB: 4096,
+  MENTALITY_DEF: 8192, MENTALITY_BAL: 16384, MENTALITY_ATT: 32768,
+  FORMATION_PREV: 65536, FORMATION_NEXT: 131072,
 };
+
+export const SUB_TARGET_BITS = Array.from({ length: 11 }, (_, i) => 1 << (18 + i));
 
 export const TEAM_PRESETS = [
   { name: 'PEDRA LISA', shirt: '#178a3c', shorts: '#ffffff', trim: '#178a3c', skin: '#e8b98a', hair: '#3a2415' },
