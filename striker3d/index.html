@@ -1092,6 +1092,194 @@ function resetMatch(opts={}){
 
 function teamLabel(idx){return idx===0?'PEDRA LISA':'INDEPENDÊNCIA'}
 
+function clampRating(v){return Math.max(4,Math.min(10,v))}
+
+function matchRatingFor(record){
+  const s=record.matchStats||{};
+  let rating=6.0;
+  rating+=(s.goals||0)*1.25+(s.assists||0)*.72;
+  rating+=(s.shotsOnTarget||0)*.13;
+  rating+=Math.max(0,(s.shots||0)-(s.shotsOnTarget||0))*(-.045);
+  rating+=(s.tackles||0)*.11+(s.saves||0)*.18;
+  rating-=(s.fouls||0)*.07+(s.yellow||0)*.18+(s.red||0)*.70;
+  if((s.passes||0)>=5){
+    const acc=(s.passesCompleted||0)/Math.max(1,s.passes||0);
+    rating+=Math.max(-.28,Math.min(.34,(acc-.72)*1.25));
+    rating+=Math.min(.22,(s.passesCompleted||0)*.008);
+  }
+  const opp=1-record.team;
+  if(record.position==='GOL'&&match.score[opp]===0&&match.half>=1)rating+=.24;
+  return clampRating(rating);
+}
+
+function allMatchPlayers(){
+  const out=[];
+  for(let t=0;t<2;t++){
+    const team=match.teams[t];
+    for(const rec of team.subArchive||[]){
+      out.push({
+        team:t,
+        displayName:rec.displayName,
+        shirtNumber:rec.shirtNumber,
+        position:rec.position,
+        overall:rec.overall,
+        matchStats:rec.matchStats||{},
+        archived:true,
+      });
+    }
+    for(const p of team.players){
+      out.push({
+        team:t,
+        displayName:p.displayName,
+        shirtNumber:p.shirtNumber,
+        position:p.position||p.role.toUpperCase(),
+        overall:p.overall,
+        matchStats:p.matchStats||{},
+        archived:false,
+      });
+    }
+  }
+  return out;
+}
+
+function matchLeaders(){
+  const players=allMatchPlayers().map(p=>({...p,matchRating:matchRatingFor(p)}));
+  players.sort((a,b)=>
+    b.matchRating-a.matchRating ||
+    (b.matchStats.goals||0)-(a.matchStats.goals||0) ||
+    (b.matchStats.assists||0)-(a.matchStats.assists||0) ||
+    (b.matchStats.saves||0)-(a.matchStats.saves||0) ||
+    (b.matchStats.tackles||0)-(a.matchStats.tackles||0) ||
+    (b.overall||0)-(a.overall||0)
+  );
+  return players;
+}
+
+function statPercentPair(a,b){
+  const total=a+b;
+  if(total<=0)return [50,50];
+  return [a/total*100,b/total*100];
+}
+
+function statsRow(label,left,right,leftText=String(left),rightText=String(right)){
+  const [lp,rp]=statPercentPair(Number(left)||0,Number(right)||0);
+  return '<div class="matchStatRow">'+
+    '<div class="matchStatValue">'+leftText+'</div>'+
+    '<div class="matchStatBar"><i style="width:'+lp.toFixed(1)+'%"></i></div>'+
+    '<div class="matchStatLabel">'+label+'</div>'+
+    '<div class="matchStatBar away"><i style="width:'+rp.toFixed(1)+'%"></i></div>'+
+    '<div class="matchStatValue">'+rightText+'</div>'+
+  '</div>';
+}
+
+function renderStatsRows(target){
+  const a=match.matchStats.teams[0],b=match.matchStats.teams[1];
+  const possTotal=a.possessionTicks+b.possessionTicks;
+  const pa=possTotal?Math.round(a.possessionTicks/possTotal*100):50;
+  const pb=100-pa;
+  const accA=a.passes?Math.round(a.passesCompleted/a.passes*100):0;
+  const accB=b.passes?Math.round(b.passesCompleted/b.passes*100):0;
+  target.innerHTML=
+    statsRow('POSSE',pa,pb,pa+'%',pb+'%')+
+    statsRow('FINALIZAÇÕES',a.shots,b.shots)+
+    statsRow('NO GOL',a.shotsOnTarget,b.shotsOnTarget)+
+    statsRow('PASSES',a.passes,b.passes)+
+    statsRow('PRECISÃO',accA,accB,accA+'%',accB+'%')+
+    statsRow('FALTAS',a.fouls,b.fouls)+
+    statsRow('ESCANTEIOS',a.corners,b.corners)+
+    statsRow('IMPEDIMENTOS',a.offsides,b.offsides)+
+    statsRow('DEFESAS',a.saves,b.saves)+
+    statsRow('CARTÕES',a.yellow+a.red,b.yellow+b.red,(a.yellow+'A '+a.red+'V'),(b.yellow+'A '+b.red+'V'));
+}
+
+function renderRatings(target,limit=22){
+  const leaders=matchLeaders().slice(0,limit);
+  const motm=leaders[0];
+  target.innerHTML=leaders.map((p,n)=>{
+    const s=p.matchStats||{};
+    const meta=[];
+    if(s.goals)meta.push(s.goals+'G');
+    if(s.assists)meta.push(s.assists+'A');
+    if(s.saves)meta.push(s.saves+'DEF');
+    if(s.tackles)meta.push(s.tackles+'DES');
+    const passAcc=s.passes?Math.round((s.passesCompleted||0)/s.passes*100):0;
+    if(s.passes>=5)meta.push(passAcc+'% PAS');
+    return '<div class="ratingRow '+(motm===p?'motm':'')+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div>'+
+      '<div><div class="squadName">'+p.displayName+'</div><div class="ratingTeam">'+teamLabel(p.team)+' · '+p.position+(p.archived?' · SAIU':'')+'</div></div>'+
+      '<div class="ovrPill">'+(p.overall??'--')+'</div>'+
+      '<div class="squadMeta">'+(meta.join(' · ')||'—')+'</div>'+
+      '<div class="ratingScore">'+p.matchRating.toFixed(1)+'</div>'+
+    '</div>';
+  }).join('');
+  return motm;
+}
+
+function renderMatchStatsPane(){
+  renderStatsRows(teamStatsRowsEl);
+  renderRatings(teamRatingsTableEl,22);
+}
+
+let summaryOpen=false;
+let summaryKind='';
+
+function renderMatchSummary(){
+  summaryScoreEl.textContent=match.score[0]+' — '+match.score[1];
+  renderStatsRows(summaryStatsRowsEl);
+  const motm=renderRatings(summaryRatingsEl,12);
+  if(motm){
+    motmScoreEl.textContent=motm.matchRating.toFixed(1);
+    motmNameEl.textContent='#'+motm.shirtNumber+' '+motm.displayName;
+    const s=motm.matchStats||{};
+    const bits=[teamLabel(motm.team),motm.position,'OVR '+motm.overall];
+    if(s.goals)bits.push(s.goals+' gol'+(s.goals>1?'s':''));
+    if(s.assists)bits.push(s.assists+' assistência'+(s.assists>1?'s':''));
+    if(s.saves)bits.push(s.saves+' defesa'+(s.saves>1?'s':''));
+    motmMetaEl.textContent=bits.join(' · ');
+  }
+  summaryKickerEl.textContent=(summaryKind==='full'?'FIM DE JOGO':'INTERVALO')+' · FC MUKEKA PREMIUM';
+  summaryContinueEl.textContent=summaryKind==='full'?'VER CAMPO':'CONTINUAR 2º TEMPO';
+}
+
+function openMatchSummary(kind){
+  if(summaryOpen)return;
+  summaryOpen=true;
+  summaryKind=kind;
+  if(teamScreenOpen){
+    teamScreenOpen=false;
+    teamScreenEl.classList.remove('open');
+    teamScreenEl.setAttribute('aria-hidden','true');
+  }
+  if(!transport?.online&&kind!=='full')uiPaused=true;
+  matchSummaryEl.classList.add('open');
+  matchSummaryEl.setAttribute('aria-hidden','false');
+  showTouch(false);
+  renderMatchSummary();
+}
+
+function closeMatchSummary(){
+  if(!summaryOpen)return;
+  summaryOpen=false;
+  matchSummaryEl.classList.remove('open');
+  matchSummaryEl.setAttribute('aria-hidden','true');
+  if(summaryKind!=='full')uiPaused=false;
+  if(matchActive&&!presentation.active&&!teamScreenOpen)showTouch(true);
+}
+
+summaryContinueEl.addEventListener('click',closeMatchSummary);
+summaryTeamScreenEl.addEventListener('click',()=>{
+  closeMatchSummary();
+  if(match.phase!=='fulltime')openTeamScreen('stats');
+  else {
+    teamScreenOpen=true;
+    teamScreenTab='stats';
+    uiPaused=false;
+    teamScreenEl.classList.add('open');
+    teamScreenEl.setAttribute('aria-hidden','false');
+    renderTeamScreen();
+  }
+});
+
 function formationPreset(key){
   return FORMATION_PRESETS.find(p=>p.key===key)||FORMATION_PRESETS[0];
 }
