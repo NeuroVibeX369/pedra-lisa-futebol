@@ -137,7 +137,7 @@ function inOwnBox(state, teamIdx, p) {
 
 function canControl(state, team, p) {
   const b = state.ball;
-  if (p.down > 0 || p.slide > 0 || p.cooldown > 0) return false;
+  if (p.sentOff || p.down > 0 || p.slide > 0 || p.cooldown > 0) return false;
   // A restart that has not been taken, or a keeper with the ball: hands off.
   if (b.protectedFor !== null && b.protectedFor !== team.index) return false;
   const isKeeper = p.role === 'gk';
@@ -329,7 +329,7 @@ function updatePlayers(state, inputs, frozen) {
     const mask = team.human ? (inputs[t] | 0) : 0;
     for (let i = 0; i < team.players.length; i++) {
       const p = team.players[i];
-      if (frozen || p.down > 0) {
+      if (frozen || p.sentOff || p.down > 0) {
         intents[t][i] = NO_INTENT;
         continue;
       }
@@ -385,6 +385,11 @@ function updatePlayers(state, inputs, frozen) {
     const team = state.teams[t];
     for (let i = 0; i < team.players.length; i++) {
       const p = team.players[i];
+      if (p.sentOff) {
+        p.vx = 0;
+        p.vy = 0;
+        continue;
+      }
       if (p.down > 0) {
         p.down--;
         p.vx *= 0.86;
@@ -419,7 +424,7 @@ function updateControlledPlayer(state, t, forced = false) {
   // nobody's idea of a good time.
   const order = [];
   for (let i = 1; i < team.players.length; i++) {
-    if (team.players[i].down === 0) order.push(i);
+    if (!team.players[i].sentOff && team.players[i].down === 0) order.push(i);
   }
   if (!order.length) return;
   order.sort((a, c) => dist2(b.x, b.y, team.players[a].x, team.players[a].y)
@@ -688,7 +693,7 @@ function integratePlayer(p) {
 /** Players cannot walk through each other. */
 function separatePlayers(state) {
   const all = [];
-  for (const team of state.teams) for (const p of team.players) all.push(p);
+  for (const team of state.teams) for (const p of team.players) if (!p.sentOff) all.push(p);
 
   const minD = PLAYER_R * 2;
   for (let a = 0; a < all.length; a++) {
@@ -716,7 +721,7 @@ function resolveTackles(state) {
   const b = state.ball;
   for (let t = 0; t < 2; t++) {
     for (const p of state.teams[t].players) {
-      if (p.slide <= 0) continue;
+      if (p.sentOff || p.slide <= 0) continue;
 
       const ownerBefore = b.owner ? { team: b.owner.team, idx: b.owner.idx } : null;
       let wonBall = false;
@@ -753,7 +758,17 @@ function resolveTackles(state) {
             o.down = Math.max(o.down, Math.floor(DOWN_TICKS * 0.72));
             o.vx = p.vx * 0.32;
             o.vy = p.vy * 0.32;
-            state.events.push({ type: 'card', color: 'yellow', team: t, idx: p.idx });
+            p.yellowCards = (p.yellowCards || 0) + 1;
+            const sentOff = p.yellowCards >= 2;
+            if (sentOff) {
+              p.sentOff = true;
+              p.x = 8;
+              p.y = FIELD.cy;
+              p.vx = 0;
+              p.vy = 0;
+              p.slide = 0;
+            }
+            state.events.push({ type: 'card', color: sentOff ? 'red' : 'yellow', team: t, idx: p.idx, secondYellow: sentOff });
             awardFoul(state, opp.index, o.x, o.y, penalty);
             return true;
           }
