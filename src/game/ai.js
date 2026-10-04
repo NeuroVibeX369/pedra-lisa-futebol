@@ -337,12 +337,31 @@ function keeperMove(state, teamIdx) {
   const b = state.ball;
   const gy = ownGoalY(team);
   const inBox = Math.abs(b.y - gy) < PEN_D && Math.abs(b.x - FIELD.cx) < PEN_W / 2;
+  const setPieceDelivery = state.delivery
+    && state.delivery.team !== teamIdx
+    && (state.delivery.kind === 'CORNER' || state.delivery.kind === 'FREE KICK');
+  const deliveryZone = setPieceDelivery
+    && Math.abs(b.y - gy) < PEN_D + 72
+    && Math.abs(b.x - FIELD.cx) < PEN_W * 0.72;
 
   // The keeper plays the same at every difficulty. Holding him back measurably
   // made his team stronger rather than weaker, so he is no place for a handicap.
   let tx;
   let ty;
-  if (inBox && dist(k.x, k.y, b.x, b.y) < 90) {
+  if (deliveryZone && b.z > 5) {
+    // Read the flight of corners/free kicks and attack the expected meeting point.
+    const lead = 0.16;
+    const px = clamp(b.x + b.vx * lead, FIELD.cx - PEN_W * 0.43, FIELD.cx + PEN_W * 0.43);
+    const py = clamp(b.y + b.vy * lead, gy - 4, gy + team.attackDir * (PEN_D * 0.72));
+    const canClaim = dist(k.x, k.y, px, py) < 126;
+    if (canClaim) {
+      tx = px;
+      ty = py;
+    } else {
+      tx = FIELD.cx + clamp(px - FIELD.cx, -GOAL_W / 2 - 18, GOAL_W / 2 + 18) * 0.76;
+      ty = gy + team.attackDir * 18;
+    }
+  } else if (inBox && dist(k.x, k.y, b.x, b.y) < 90) {
     // Come out for the ball.
     tx = b.x;
     ty = b.y;
