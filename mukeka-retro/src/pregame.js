@@ -55,7 +55,7 @@ export function setupPregame({ match } = {}) {
     return groups.map(([label, clubs]) =>
       `<optgroup label="${label}">` +
       clubs.map((club) =>
-        `<option value="${club.id}" ${club.id === selectedId ? 'selected' : ''}>${club.name} · OVR ${club.strength}</option>`
+        `<option value="${club.id}" ${club.id === selectedId ? 'selected' : ''}>${club.name} · FORÇA ${club.strength}</option>`
       ).join('') +
       '</optgroup>'
     ).join('');
@@ -104,9 +104,9 @@ export function setupPregame({ match } = {}) {
       const a = CLUBS.find((c) => c.id === away.value);
       if (preview && h && a) {
         preview.innerHTML =
-          `<span style="border-color:${h.primary}"><b>${h.short}</b> OVR ${h.strength}</span>` +
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
           '<strong>×</strong>' +
-          `<span style="border-color:${a.primary}"><b>${a.short}</b> OVR ${a.strength}</span>`;
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
       }
     };
     home.addEventListener('change', () => sync(home));
@@ -170,9 +170,9 @@ export function setupPregame({ match } = {}) {
       const a = CLUBS.find((club) => club.id === away.value);
       if (preview && h && a) {
         preview.innerHTML =
-          `<span style="border-color:${h.primary}"><b>${h.short}</b> OVR ${h.strength}</span>` +
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
           '<strong>×</strong>' +
-          `<span style="border-color:${a.primary}"><b>${a.short}</b> OVR ${a.strength}</span>`;
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
       }
     };
     home.addEventListener('change', () => sync(home));
