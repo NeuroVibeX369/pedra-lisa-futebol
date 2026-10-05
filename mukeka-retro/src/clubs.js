@@ -277,6 +277,7 @@ export function careerPlayerToMatchLook(player, slot = -1) {
     careerId: player.id || null,
     name: player.name || 'JOGADOR',
     number: player.number || NUMBERS[Math.max(0, slot)] || (slot + 1),
+    position,
     overall,
     height: player.height || Math.round(
       (position === 'GOL' || position === 'ZAG' || position === 'ATA' ? 178 : 169) + random() * 10
