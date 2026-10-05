@@ -1609,33 +1609,13 @@ export class Match {
     if (this.state === 'fulltime' && this.stateTimer > M.fulltimePause) {
       const master = new URLSearchParams(location.search).get('mode') === 'master';
       if (!master) {
-        if (this.halftimeDone) {
-          for (const team of this.teams) team.side *= -1;
-        }
-        this.score = [0, 0];
-        this.clock = 0;
-        this.stoppage = 0;
-        this.half = 1;
-        this.halftimeDone = false;
-        this.shootout = null;
-        this.shootoutResult = null;
-        this.pendingFoul = null;
-        this.advantage = null;
-        this.offsideSnapshot = null;
-        this.cards.clear();
-        this.cardEvents.length = 0;
-        this.goalEvents.length = 0;
-        this.substitutionEvents.length = 0;
-        this.substitutionCount = [0, 0];
-        this.cpuSubStage = [0, 0];
-        this._possFrames = [0, 0];
-        this._markStats();
-        this.hud.flash.classList.remove('show');
-        if (this.hud.statsCard) this.hud.statsCard.classList.remove('show');
-        this.flashTimer = 0;
-        this.goals.reset();
-        this.kickoff(this.firstKickoffTeam);
-        this.startIntro();
+        // Volta ao menu recarregando a partida do zero. Isso também restaura
+        // banco, expulsos e titulares originais sem reciclar objetos já trocados.
+        const next = new URL(location.href);
+        for (const key of ['start','mode','home','away','side','masterMatch',
+          'masterStage','online','room']) next.searchParams.delete(key);
+        location.href = next.toString();
+        return;
       }
     }
 
