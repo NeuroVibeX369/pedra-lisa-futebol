@@ -11,6 +11,7 @@ export function setupPregame({ match } = {}) {
 
   const friendly = document.getElementById('pg-friendly');
   const online = document.getElementById('pg-online');
+  const master = document.getElementById('pg-master');
   const settings = document.getElementById('pg-settings');
   const back = document.getElementById('pg-back');
   const settingsPanel = document.getElementById('settings');
@@ -40,6 +41,13 @@ export function setupPregame({ match } = {}) {
     close();
     document.getElementById('key-online')?.click();
   });
+
+  master?.addEventListener('click', () => {
+    close();
+    document.dispatchEvent(new CustomEvent('mukeka:master-open'));
+  });
+
+  document.addEventListener('mukeka:master-close', () => openMenu());
 
   settings?.addEventListener('click', () => {
     document.body.classList.add('pregame-settings');
