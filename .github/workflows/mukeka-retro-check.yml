@@ -21,11 +21,13 @@ jobs:
           node --check mukeka-retro/src/netplay.js
           node --check mukeka-retro/src/online.js
           node --check mukeka-retro/src/pregame.js
+          node --check mukeka-retro/src/pause-menu.js
           node --check mukeka-retro/src/master-league.js
           node --check mukeka-retro/src/clubs.js
           node --check mukeka-retro/src/pack.js
           node --check mukeka-retro/src/roles.js
           node --check mukeka-retro/src/commentator.js
           node --check mukeka-retro/src/main.js
+          node --check mukeka-retro/src/crt.js
           node --check mukeka-retro/src/match.js
           node --check mukeka-retro/src/scene.js
