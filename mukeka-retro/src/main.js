@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { PACK } from './pack.js';
+import { PACK } from './pack.js?v=20261005b';
 import { buildStadium } from './scene.js';
 import { Ball } from './ball.js';
 import { Match } from './match.js';
@@ -17,7 +17,7 @@ import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
 import { setupRetroOnlineTest } from './online.js?v=20261005f';
 import { setupPregame } from './pregame.js?v=20261005c';
-import { setupMasterLeague } from './master-league.js?v=20261005b';
+import { setupMasterLeague } from './master-league.js?v=20261005c';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
@@ -791,7 +791,9 @@ function frame() {
   if (!masterResultCommitted && match?.state === 'fulltime' &&
       new URLSearchParams(location.search).get('mode') === 'master') {
     masterResultCommitted = true;
-    const result = masterLeague.completePlayedMatch?.(match.score);
+    const result = masterLeague.completePlayedMatch?.(match.score, {
+      goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
+    });
     if (result) showMasterResult(result);
   }
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
