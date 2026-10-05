@@ -15,7 +15,8 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
-import { setupRetroOnlineTest } from './online.js?v=20261005d';
+import { setupRetroOnlineTest } from './online.js?v=20261005e';
+import { setupPregame } from './pregame.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
@@ -464,6 +465,8 @@ if (commentarySelect) {
 const soundGate = document.getElementById('sound-gate');
 let gateOpen = !!soundGate;
 
+const pregame = setupPregame({ match });
+
 const retroOnline = setupRetroOnlineTest({
   match,
   ball,
@@ -475,6 +478,7 @@ const retroOnline = setupRetroOnlineTest({
     history.replaceState(null, '', next);
     console.info('[Mukeka Retro online]', role, code, localTeam === 1 ? 'Independência' : 'Pedra Lisa');
   },
+  onExitOnline: () => pregame.openMenu(),
 });
 
 function closeGate() {
@@ -730,7 +734,7 @@ function frame() {
   // уйдёт, пока читают вопрос (розыгрыш AI ждёт всего 1.6 с), а трибуна, дым
   // и кинескоп продолжают жить — ноль здесь работает как крайнее значение
   // темпа игры, а не как пауза всему кадру.
-  const gdt = (gateOpen || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
+  const gdt = (gateOpen || pregame.open || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
   // Часы ветра в футболках — ОДИН объект на весь матч. Все 22 материала
   // формы держат на него ссылку, поэтому это присваивание заменяет
   // двадцать два обновления юниформа.
