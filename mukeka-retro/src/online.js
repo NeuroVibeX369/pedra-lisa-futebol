@@ -9,7 +9,12 @@ export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
   const params = new URLSearchParams(location.search);
   if (params.get('online') !== '1') {
     gate.classList.add('hidden');
-    return { active: false, dispose() {} };
+    return {
+      active: false,
+      beforeSimulation() {},
+      afterSimulation() {},
+      dispose() {},
+    };
   }
 
   gate.classList.remove('hidden');
