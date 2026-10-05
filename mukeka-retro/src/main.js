@@ -18,6 +18,7 @@ import { forceAudio, denyAudio } from './audioctx.js';
 import { setupRetroOnlineTest } from './online.js?v=20261005f';
 import { setupPregame } from './pregame.js?v=20261005c';
 import { setupMasterLeague } from './master-league.js?v=20261005c';
+import { setupMukekaCup } from './cup.js?v=20261005a';
 import { setupPauseMenu } from './pause-menu.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
@@ -595,6 +596,7 @@ const soundGate = document.getElementById('sound-gate');
 let gateOpen = !!soundGate;
 
 const masterLeague = setupMasterLeague();
+const mukekaCup = setupMukekaCup();
 const pregame = setupPregame({ match });
 const pauseMenu = setupPauseMenu({ match, pack: PACK });
 
@@ -621,8 +623,20 @@ if (startupParams.get('masterHub') === '1') {
   clean.searchParams.delete('masterHub');
   history.replaceState(null, '', clean);
 }
+if (startupParams.get('cupHub') === '1') {
+  pregame.close();
+  mukekaCup.openHub();
+  const clean = new URL(location.href);
+  clean.searchParams.delete('cupHub');
+  history.replaceState(null, '', clean);
+}
+if (startupParams.get('mode') === 'penalties' && match) {
+  pregame.close();
+  match.startShootout();
+}
 
 let masterResultCommitted = false;
+let cupResultCommitted = false;
 function showMasterResult(result) {
   if (!result || document.getElementById('master-result-return')) return;
   const overlay = document.createElement('div');
@@ -946,7 +960,7 @@ function frame() {
   // темпа игры, а не как пауза всему кадру.
   pauseMenu.update?.();
   const settingsOpen = settingsPanel?.classList.contains('show');
-  const gdt = (gateOpen || pregame.open || masterLeague.open || pauseMenu.open ||
+  const gdt = (gateOpen || pregame.open || masterLeague.open || mukekaCup.open || pauseMenu.open ||
     settingsOpen || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
   // Часы ветра в футболках — ОДИН объект на весь матч. Все 22 материала
   // формы держат на него ссылку, поэтому это присваивание заменяет
@@ -979,6 +993,26 @@ function frame() {
       penalties: match.shootoutResult || null,
     });
     if (result) showMasterResult(result);
+  }
+
+  if (!cupResultCommitted && match?.state === 'fulltime' &&
+      new URLSearchParams(location.search).get('mode') === 'cup') {
+    cupResultCommitted = true;
+    const result = mukekaCup.completePlayedMatch?.(match.score, {
+      goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
+      substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
+      cards: Array.isArray(match.cardEvents) ? match.cardEvents : [],
+      penalties: match.shootoutResult || null,
+    });
+    if (result) {
+      const next = new URL(location.href);
+      for (const key of ['start','mode','home','away','side','cupRound','online','room']) {
+        next.searchParams.delete(key);
+      }
+      next.searchParams.set('cupHub', '1');
+      location.href = next.toString();
+      return;
+    }
   }
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
