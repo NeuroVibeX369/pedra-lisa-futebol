@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>WebSoccer</title>
+  <title>Pedra Lisa Futebol</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#12331d">
@@ -12,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="WebSoccer">
+  <meta name="apple-mobile-web-app-title" content="Pedra Lisa Futebol">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
 </head>
 <body>
@@ -20,49 +20,49 @@
     <canvas id="game" width="900" height="620" tabindex="0"></canvas>
 
     <div id="touch" class="hidden">
-      <button id="btnPause" type="button" aria-label="Pause">II</button>
+      <button id="btnPause" type="button" aria-label="Pausar">II</button>
       <div id="stick"><div id="knob"></div></div>
       <div id="touchButtons">
-        <button id="btnSwap" type="button">SWITCH</button>
-        <button id="btnKick" type="button">KICK</button>
+        <button id="btnSwap" type="button">TROCAR</button>
+        <button id="btnKick" type="button">CHUTAR</button>
       </div>
     </div>
 
-    <div id="rotate">Turn your phone sideways to play</div>
+    <div id="rotate">Vire o celular de lado para jogar</div>
 
     <div id="menu" class="overlay">
       <div class="panel">
-        <h1>WEB<span>SOCCER</span></h1>
-        <p class="tag">HTML / JavaScript &middot; local &amp; online</p>
+        <h1>PEDRA <span>LISA</span></h1>
+        <p class="tag">Futebol arcade &middot; local e online</p>
 
         <div class="row">
-          <label>Mode</label>
+          <label>Modo</label>
           <div class="btns">
-            <button data-mode="1" class="active">1 player</button>
-            <button data-mode="2">2 players</button>
+            <button data-mode="1" class="active">1 jogador</button>
+            <button data-mode="2">2 jogadores</button>
             <button data-mode="online">Online</button>
           </div>
         </div>
 
         <div class="row" id="difficultyRow">
-          <label>CPU skill</label>
+          <label>Dificuldade da CPU</label>
           <div class="btns">
-            <button data-difficulty="easy">Easy</button>
+            <button data-difficulty="easy">Fácil</button>
             <button data-difficulty="normal" class="active">Normal</button>
-            <button data-difficulty="hard">Hard</button>
+            <button data-difficulty="hard">Difícil</button>
           </div>
         </div>
 
         <div class="row">
-          <label>Sound</label>
+          <label>Som</label>
           <div class="btns">
-            <button data-music="on" class="active">On</button>
-            <button data-music="off">Off</button>
+            <button data-music="on" class="active">Ligado</button>
+            <button data-music="off">Desligado</button>
           </div>
         </div>
 
         <div class="row">
-          <label>Commentary</label>
+          <label>Narração</label>
           <div class="btns">
             <button data-commentary="on" class="active">On</button>
             <button data-commentary="off">Off</button>
@@ -70,7 +70,7 @@
         </div>
 
         <div class="row">
-          <label>Offside</label>
+          <label>Impedimento</label>
           <div class="btns">
             <button data-offside="on" class="active">On</button>
             <button data-offside="off">Off</button>
@@ -78,39 +78,39 @@
         </div>
 
         <div class="row">
-          <label for="duration">Match length</label>
+          <label for="duration">Duração da partida</label>
           <select id="duration">
-            <option value="60">Short (2 &times; 1 min)</option>
+            <option value="60">Curta (2 &times; 1 min)</option>
             <option value="120" selected>Normal (2 &times; 2 min)</option>
-            <option value="240">Long (2 &times; 4 min)</option>
+            <option value="240">Longa (2 &times; 4 min)</option>
           </select>
         </div>
 
         <details id="controlsBox">
-        <summary>Controls</summary>
+        <summary>Controles</summary>
         <table class="keys" id="keysTable">
           <thead>
-            <tr><th></th><th>Player 1 (blue)</th><th id="p2head">Player 2 (red)</th></tr>
+            <tr><th></th><th>Jogador 1 (Pedra Lisa)</th><th id="p2head">Jogador 2 (Independência)</th></tr>
           </thead>
           <tbody id="keysBody"></tbody>
           <tfoot>
             <tr>
-              <td>Presets</td>
+              <td>Predefinições</td>
               <td><select data-preset="0" class="preset"></select></td>
               <td><select data-preset="1" class="preset"></select></td>
             </tr>
           </tfoot>
         </table>
-        <p id="bindHint" class="status">Click a key to change it.</p>
+        <p id="bindHint" class="status">Clique em uma tecla para alterá-la.</p>
         </details>
 
         <details id="lineupBox">
-          <summary>Line-up <span id="lineupShape" class="shape">4-3-3</span></summary>
+          <summary>Formação <span id="lineupShape" class="shape">4-3-3</span></summary>
           <div class="row" id="lineupTeamRow">
-            <label>Team</label>
+            <label>Time</label>
             <div class="btns">
-              <button data-lineupteam="0" class="active">Blue</button>
-              <button data-lineupteam="1">Red</button>
+              <button data-lineupteam="0" class="active">Pedra Lisa</button>
+              <button data-lineupteam="1">Independência</button>
             </div>
           </div>
           <div class="btns wrap" id="lineupPresets"></div>
@@ -119,14 +119,14 @@
           </div>
           <p id="lineupNote" class="status"></p>
           <p class="fineprint">
-            Drag anyone but the keeper. How far up the pitch you put a player is
-            what decides how he plays: push a midfielder forward and he stops
-            tracking back and starts hanging off the strikers.
+            Arraste qualquer jogador, menos o goleiro. A posição no campo define
+            como ele joga: ao adiantar um meio-campista, ele passa a recuar menos
+            e a se aproximar mais dos atacantes.
           </p>
         </details>
 
         <details id="scoresBox">
-          <summary>High scores <span id="scoresLevel" class="shape"></span></summary>
+          <summary>Melhores resultados <span id="scoresLevel" class="shape"></span></summary>
           <table class="scores">
             <tbody id="scoresBody"></tbody>
           </table>
@@ -138,14 +138,14 @@
         <div id="localSetup">
 
           <details>
-          <summary>How it plays</summary>
+          <summary>Como jogar</summary>
           <ul class="hints">
-            <li><b>Tap</b> for a pass along the ground, <b>hold</b> for a harder or lofted ball.</li>
-            <li><b>Aftertouch:</b> keep steering after the shot to bend the ball; forwards lifts it, backwards makes it dip.</li>
-            <li>The button <b>without the ball</b> is a slide tackle.</li>
-            <li>You automatically control whoever is nearest the ball.</li>
-            <li>Gamepads work too (controller 1 &rarr; blue, controller 2 &rarr; red).</li>
-            <li><b>Esc</b> pauses.</li>
+            <li><b>Toque</b> para passe rasteiro; <b>segure</b> para uma bola mais forte ou levantada.</li>
+            <li><b>Efeito:</b> continue direcionando após o chute para curvar a bola; para frente levanta, para trás faz a bola cair.</li>
+            <li>O botão <b>sem a bola</b> executa um carrinho.</li>
+            <li>Você controla automaticamente o jogador mais próximo da bola.</li>
+            <li>Controles também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
+            <li><b>Esc</b> pausa o jogo.</li>
           </ul>
           </details>
 
@@ -153,34 +153,34 @@
 
         <div id="onlineSetup" class="hidden">
           <p class="explain">
-            One player opens a match and passes on the code; the other enters it.
-            Whoever opens the match plays <b>blue</b>, the second player <b>red</b>.
-            You control your own team with either set of keys from the table above.
+            Um jogador abre a partida e envia o código; o outro digita esse código.
+            Quem abre a partida joga com o <b>Pedra Lisa</b>; o segundo, com o <b>Independência</b>.
+            Cada jogador controla seu próprio time com um dos conjuntos de teclas acima.
           </p>
 
           <div id="roomCode" class="code hidden"></div>
           <p id="onlineStatus" class="status"></p>
 
           <div class="joinrow">
-            <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
-            <button id="join">JOIN</button>
+            <input id="joinCode" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+            <button id="join">ENTRAR</button>
           </div>
 
           <p class="fineprint">
-            Works between two browser tabs, between computers on the same network,
-            and across the internet once you host <code>server/relay.js</code> somewhere.
+            Funciona entre duas abas do navegador, entre computadores na mesma rede
+            e pela internet quando o servidor <code>server/relay.js</code> estiver hospedado.
           </p>
         </div>
         <div class="panelFooter">
-          <button id="start" class="primary">KICK OFF</button>
-          <button id="host" class="primary hidden">OPEN A NEW MATCH</button>
+          <button id="start" class="primary">INICIAR PARTIDA</button>
+          <button id="host" class="primary hidden">ABRIR NOVA PARTIDA</button>
         </div>
       </div>
     </div>
 
     <div id="hiscore" class="overlay hidden">
       <div class="panel small">
-        <h2>HIGH SCORE</h2>
+        <h2>NOVO RECORDE</h2>
         <p id="hiscoreLine" class="status"></p>
         <div class="picker">
           <div id="hiscoreUp" class="letterRow"></div>
@@ -189,25 +189,25 @@
         </div>
         <button id="hiscoreOk" class="primary">OK</button>
         <p class="fineprint">
-          Tap the arrows, or use the stick: up and down for the letter, left
-          and right to move along, kick to confirm. Typing works too.
+          Toque nas setas ou use o direcional: para cima e para baixo troca a letra;
+          esquerda e direita muda a posição; chute confirma. Também é possível digitar.
         </p>
       </div>
     </div>
 
     <div id="pause" class="overlay hidden">
       <div class="panel small">
-        <h2>PAUSED</h2>
-        <button id="resume" class="primary">Resume</button>
-        <button id="quit">Back to menu</button>
+        <h2>PAUSADO</h2>
+        <button id="resume" class="primary">Continuar</button>
+        <button id="quit">Voltar ao menu</button>
       </div>
     </div>
 
     <div id="netend" class="overlay hidden">
       <div class="panel small">
-        <h2 id="netendTitle">CONNECTION LOST</h2>
+        <h2 id="netendTitle">CONEXÃO PERDIDA</h2>
         <p id="netendText" class="status"></p>
-        <button id="netendQuit" class="primary">Back to menu</button>
+        <button id="netendQuit" class="primary">Voltar ao menu</button>
       </div>
     </div>
   </div>
