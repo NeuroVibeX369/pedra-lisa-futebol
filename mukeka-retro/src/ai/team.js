@@ -51,6 +51,9 @@ export class Team {
     this.supporter = null;    // кто открывается впереди под пас
     this.defLineX = -side * (CONFIG.field.length / 2 - 25); // линия защиты (мир)
     this._coachTimer = 0;
+    // Anti-cera: se o humano para com a bola, o primeiro defensor deixa
+    // o jockey passivo e encurta a marcação depois de um curto aviso.
+    this._stallPressureT = 0;
 
     // Забегание за спину (ресёрч 10): один активный раннер на команду
     this.runner = null;
@@ -194,6 +197,17 @@ export class Team {
 
   update(dt, ball) {
     const AI = CONFIG.ai;
+
+    const human = this.match?.humanTeam;
+    const owner = this.match?.toucher;
+    const humanHolding = !!human && human !== this && owner?.team === human && !owner.isKeeper;
+    if (humanHolding) {
+      const speed = Math.hypot(owner.vel?.x || 0, owner.vel?.z || 0);
+      if (speed < 0.75) this._stallPressureT = Math.min(4, this._stallPressureT + dt);
+      else this._stallPressureT = Math.max(0, this._stallPressureT - dt * 3);
+    } else {
+      this._stallPressureT = 0;
+    }
 
     this.updateSequence(dt, ball);
 
