@@ -687,7 +687,7 @@
       font-size: clamp(10px, 1.3vw, 13px); letter-spacing: 3px;
     }
   
-    /* Sala online de teste: aparece apenas com ?online=1. */
+    /* Sala online 1x1: pode ser aberta pelo botão ONLINE ou por um link-convite. */
     #retro-online-test {
       position: fixed;
       inset: 0;
@@ -749,6 +749,15 @@
       border: 1px dashed #4d704f;
     }
     #retro-online-room.hidden { display: none; }
+    #retro-online-invite {
+      display: none;
+      margin-top: -6px;
+      word-break: break-all;
+      font-size: 11px;
+      color: #a9c7ae;
+      text-align: center;
+    }
+    #retro-online-invite.show { display: block; }
     #retro-online-status { min-height: 44px; }
     #retro-online-test .rot-note {
       margin-top: 16px;
@@ -901,18 +910,23 @@
   <div id="retro-online-test" class="hidden">
     <div class="rot-card">
       <h2>MUKEKA RETRO · ONLINE</h2>
-      <p>Beta 1×1: crie uma sala em um aparelho e entre pelo outro. Pedra Lisa e Independência são definidos automaticamente e os comandos já são enviados pela internet.</p>
+      <p>Jogue 1×1 com um amigo pela internet. Quem cria a sala joga com o Pedra Lisa; quem entra joga com o Independência.</p>
       <div class="rot-actions">
         <button id="retro-online-host" type="button">CRIAR SALA</button>
         <button id="retro-online-solo" type="button">VOLTAR AO SOLO</button>
       </div>
       <div id="retro-online-room" class="hidden"></div>
+      <div id="retro-online-invite"></div>
+      <div class="rot-actions">
+        <button id="retro-online-copy" class="hidden" type="button">COPIAR CONVITE</button>
+        <button id="retro-online-share" class="hidden" type="button">COMPARTILHAR</button>
+      </div>
       <div class="rot-actions">
         <input id="retro-online-code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
         <button id="retro-online-join" type="button">ENTRAR NA SALA</button>
       </div>
-      <p id="retro-online-status">Escolha criar uma sala ou informe o código recebido.</p>
-      <p class="rot-note">BETA: o anfitrião é a autoridade da partida e envia correções de bola, jogadores, placar e relógio. Ainda vamos refinar latência, bolas paradas e reconexão.</p>
+      <p id="retro-online-status">Crie uma sala ou digite o código enviado pelo seu amigo.</p>
+      <p class="rot-note">A partida fica pausada enquanto a sala aguarda o segundo jogador. O anfitrião mantém o estado oficial do jogo e o convidado recebe correções para evitar divergência.</p>
     </div>
   </div>
 
@@ -940,6 +954,7 @@
   <button class="tv-key" id="key-sharp">NITIDEZ<b>—</b></button>
   <button class="tv-key" id="key-pitch">GRAMADO<b>—</b></button>
   <button class="tv-key" id="key-full">TELA<b>CHEIA</b></button>
+  <button class="tv-key" id="key-online">ONLINE<b>AMIGO</b></button>
   <button class="tv-key" id="key-menu">CONFIGURAÇÕES</button>
   <div id="tv-grille"></div>
   <div id="tv-led"></div>
