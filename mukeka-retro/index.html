@@ -360,6 +360,61 @@
     }
     #goal-flash.show { opacity: 1; }
 
+    /* Arbitragem: faixa própria para falta/impedimento/pênalti. Ela não usa
+       o mesmo bloco gigante do gol, então a partida continua limpa. */
+    #ref-banner {
+      position: fixed; top: 18%; left: 50%;
+      transform: translateX(-50%) translateY(-10px) skewX(var(--tv-skew));
+      display: flex; align-items: center; gap: 10px;
+      min-width: min(430px, 72vw);
+      justify-content: center;
+      padding: 7px 18px 6px;
+      font-family: var(--tv-font);
+      font-size: clamp(15px, 2.2vw, 27px);
+      font-weight: 700; letter-spacing: 3px;
+      color: #fff; background: rgba(6,8,16,.82);
+      border-left: 6px solid #d7e45d;
+      opacity: 0; pointer-events: none; z-index: 12;
+      transition: opacity .18s ease, transform .18s ease;
+      text-shadow: 1px 1px 0 rgba(0,0,0,.65);
+    }
+    #ref-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) skewX(var(--tv-skew));
+    }
+    #ref-banner.penalty { border-left-color: #f2c739; }
+    #ref-banner.offside { border-left-color: #8fc8ff; }
+    #ref-banner.advantage { border-left-color: #7fe06a; }
+
+    /* Cartão do árbitro: pequeno, legível e com cara de transmissão, sem
+       cobrir o campo inteiro. */
+    #ref-card {
+      position: fixed; top: 27%; left: 50%;
+      transform: translateX(-50%) translateY(12px) skewX(var(--tv-skew));
+      display: grid;
+      grid-template-columns: 22px auto auto;
+      align-items: stretch;
+      font-family: var(--tv-font);
+      background: rgba(6,8,16,.86);
+      color: #fff; font-size: clamp(12px, 1.7vw, 18px);
+      font-weight: 700; letter-spacing: 2px;
+      opacity: 0; pointer-events: none; z-index: 12;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    #ref-card.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) skewX(var(--tv-skew));
+    }
+    #ref-card .rc-color { background: #f4dc37; min-height: 34px; }
+    #ref-card.red .rc-color { background: #e23b32; }
+    #ref-card .rc-name { padding: 7px 13px 6px; }
+    #ref-card .rc-min {
+      padding: 7px 10px 6px;
+      color: var(--tv-gold);
+      background: rgba(0,0,0,.30);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* Титр автора гола: тот же плоский скошенный блок */
     #goal-card {
       position: fixed; top: 34%; left: 50%;
@@ -1652,6 +1707,8 @@
   <div id="channel-logo" aria-label="Mukeka TV">MUKEKA TV</div>
   <div id="scoreboard"><span class="sb-mark" id="sb-home-mark"></span><span class="sb-team" id="sb-home">PDL</span><span id="sb-score">0:0</span><span class="sb-team" id="sb-away">IND</span><span class="sb-mark" id="sb-away-mark"></span><span id="sb-time">0'</span></div>
   <div id="goal-flash">GOL!</div>
+  <div id="ref-banner"></div>
+  <div id="ref-card"><span class="rc-color"></span><span class="rc-name" id="rc-name"></span><span class="rc-min" id="rc-min"></span></div>
   <div id="goal-card"><span class="gc-mark" id="gc-mark"></span><span class="gc-team" id="gc-team"></span><span class="gc-min" id="gc-min"></span></div>
   <div id="replay-tag">REPLAY</div>
   <div id="matchcard">
