@@ -43,7 +43,7 @@
        внутрь стекла — переписывать полтора десятка правил не пришлось. */
     #tv {
       position: fixed; inset: 0; display: flex;
-      gap: clamp(5px, 0.9vmin, 13px);
+      gap: 0;
       padding: clamp(5px, 1.1vmin, 16px);
       box-sizing: border-box;
       /* Тёмный «графитовый» пластик: у телевизоров эпохи он не однотонный,
@@ -79,7 +79,8 @@
 
     /* ---- Панель управления ---- */
     #tv-panel {
-      flex: 0 0 clamp(78px, 11.5vw, 148px);
+      display: none !important;
+      flex: 0 0 0;
       display: flex; flex-direction: column; align-items: center;
       gap: clamp(3px, 0.7vh, 9px);
       padding: clamp(4px, 1vh, 12px) 4px;
@@ -915,6 +916,93 @@
       #retro-online-test .rot-actions { grid-template-columns: 1fr; }
     }
 
+    /* ================= MENU START / PAUSA ================= */
+    #pause-start {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 90000;
+      min-width: 56px;
+      min-height: 30px;
+      padding: 4px 9px;
+      border: 1px solid rgba(255,255,255,.4);
+      border-radius: 5px;
+      background: rgba(5,12,8,.68);
+      color: #e9f4eb;
+      font: 700 10px var(--tv-font);
+      letter-spacing: 2px;
+      opacity: .78;
+      cursor: pointer;
+    }
+    #pause-menu {
+      position: fixed; inset: 0; z-index: 100000;
+      display: grid; place-items: center;
+      padding: 16px;
+      background: rgba(2,7,4,.84);
+      font-family: var(--tv-font);
+    }
+    #pause-menu.hidden { display: none; }
+    .pause-card {
+      width: min(480px, 94%);
+      padding: 20px;
+      color: #eef7ef;
+      background: #0b1710;
+      border: 1px solid #55715d;
+      box-shadow: 0 24px 70px rgba(0,0,0,.58);
+    }
+    .pause-card h2 {
+      margin: 0 0 4px;
+      color: #b8ff52;
+      letter-spacing: 4px;
+      font-size: 22px;
+    }
+    .pause-card .pause-sub {
+      margin-bottom: 14px;
+      color: #84998a;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+    .pause-actions {
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+      gap: 8px;
+    }
+    .pause-actions button {
+      min-height: 48px;
+      padding: 9px 10px;
+      color: #eaf5ec;
+      background: #102119;
+      border: 1px solid #355840;
+      font: 700 11px var(--tv-font);
+      letter-spacing: 1.5px;
+      cursor: pointer;
+    }
+    .pause-actions button.primary {
+      color: #071109;
+      background: #b8ff52;
+      border-color: #b8ff52;
+    }
+    .pause-actions button.danger {
+      color: #ffcece;
+      border-color: #7c4141;
+    }
+    #pause-formation-view {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      background: #0d1c12;
+      border: 1px solid #294632;
+      color: #b8c8bb;
+      font-size: 10px;
+      line-height: 1.55;
+    }
+    #pause-formation-view.show { display: block; }
+    #pause-formation-view b { color: #b8ff52; }
+    @media (max-width: 520px) {
+      .pause-actions { grid-template-columns: 1fr; }
+      #pause-start { top: 6px; right: 6px; }
+    }
+
     /* ================= MASTER LIGA ================= */
     #master-league {
       position: fixed; inset: 0; z-index: 115000;
@@ -1095,6 +1183,23 @@
   <canvas id="radar"></canvas>
   <div id="stats-card"><span id="stats-title"></span><div id="stats-body"></div></div>
 
+  <button id="pause-start" type="button" aria-label="Abrir menu de pausa">START</button>
+  <div id="pause-menu" class="hidden">
+    <div class="pause-card">
+      <h2>PAUSA</h2>
+      <div class="pause-sub">START / ESC para continuar</div>
+      <div class="pause-actions">
+        <button id="pause-resume" class="primary" type="button">CONTINUAR</button>
+        <button id="pause-camera" type="button">CÂMERA</button>
+        <button id="pause-formation" type="button">FORMAÇÃO / ESCALAÇÃO</button>
+        <button id="pause-settings" type="button">CONFIGURAÇÕES</button>
+        <button id="pause-fullscreen" type="button">TELA CHEIA</button>
+        <button id="pause-exit" class="danger" type="button">SAIR DA PARTIDA</button>
+      </div>
+      <div id="pause-formation-view"></div>
+    </div>
+  </div>
+
   <div id="settings">
     <button id="settings-close" aria-label="Fechar">✕</button>
     <button id="settings-fold">RECOLHER TUDO</button>
@@ -1105,9 +1210,32 @@
       <label for="set-tv-preset">Estilo da transmissão:</label>
       <select id="set-tv-preset" aria-label="Estilo da transmissão"></select>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">
-      Brilho, contraste, cor, nitidez e gramado continuam no painel do televisor.
-      O estilo da transmissão fica aqui para não parecer uma troca de canal.
+    <div class="row">
+      Brilho:
+      <input id="set-gain" type="range" min="70" max="135" step="1" style="vertical-align:middle;width:180px">
+      <span id="set-gain-val">0</span>
+    </div>
+    <div class="row">
+      Contraste:
+      <input id="set-contrast" type="range" min="72" max="132" step="1" style="vertical-align:middle;width:180px">
+      <span id="set-contrast-val">0</span>
+    </div>
+    <div class="row">
+      Cor:
+      <input id="set-color" type="range" min="0" max="170" step="2" style="vertical-align:middle;width:180px">
+      <span id="set-color-val">0</span>
+    </div>
+    <div class="row">
+      <label for="set-render-height">Nitidez:</label>
+      <select id="set-render-height" aria-label="Nitidez"></select>
+      <span id="set-render-note" style="color:rgba(255,255,255,0.5)"></span>
+    </div>
+    <div class="row">
+      <label for="set-pitch-wear">Estado do gramado:</label>
+      <select id="set-pitch-wear" aria-label="Estado do gramado"></select>
+    </div>
+    <div class="row">
+      <button id="set-fullscreen" type="button" class="settings-action">TELA CHEIA</button>
     </div>
 
     <h3 data-open="1">JOGABILIDADE</h3>
@@ -1360,7 +1488,7 @@
     } }
   </script>
   <script type="module" src="./src/main.js"></script>
-<button id="back-to-hub" type="button" style="position:fixed;left:10px;bottom:10px;z-index:99999;padding:6px 9px;background:rgba(11,27,16,.72);color:#dff5e3;border:1px solid #4b7757;font:700 9px system-ui;border-radius:7px;opacity:.78">← MUKEKA GAMES</button>
+<button id="back-to-hub" type="button" style="display:none">← MUKEKA GAMES</button>
 <script>
   (() => {
     const btn = document.getElementById('back-to-hub');
