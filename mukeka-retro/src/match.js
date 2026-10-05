@@ -228,6 +228,7 @@ export class Match {
       lineupsText: document.getElementById('lineups-text'),
     };
     this._plateKey = '';
+    this._plateUntil = 0;
 
     // Текст строки собираем ОДИН раз: состав за матч не меняется, а сборка
     // на каждом розыгрыше дёргала бы вёрстку. Имена и номера — из пака,
@@ -2304,27 +2305,36 @@ export class Match {
     card.classList.add('show');
   }
 
-  // Плашка внизу кадра: чей сейчас мяч. Имя и номер приходят из состава
-  // (data/teams/*.json → squad), метка — цвет формы команды. Никого с мячом —
-  // подписываем управляемого игрока, чтобы курсор всегда был назван.
-  // В заставке, повторе и празднике плашки нет: там своя графика.
+  // Nome do jogador controlado aparece apenas por ~2 segundos quando
+  // o controle muda de atleta. Antes a placa ficava permanente e ocupava
+  // espaço demais na transmissão.
   updatePlate() {
     const h = this.hud;
     if (!h.plate) return;
-    const quiet = this.state === 'intro' || this.state === 'replay' || this.state === 'celebration';
-    const p = quiet ? null : (this.toucher || this.controlled);
-    // Ключ-кэш: трогаем DOM только когда игрок реально сменился
+    const quiet = this.state === 'intro' || this.state === 'replay' ||
+      this.state === 'celebration' || this.state === 'fulltime';
+    const p = quiet ? null : this.controlled;
     const key = p ? `${p.name}|${p.number}|${this.teams.indexOf(p.team)}` : '';
-    if (key === this._plateKey) return;
-    this._plateKey = key;
-    if (!p || !p.name) {
-      h.plate.classList.remove('show');
+    const now = performance.now();
+
+    if (key !== this._plateKey) {
+      this._plateKey = key;
+      if (!p || !p.name) {
+        this._plateUntil = 0;
+        h.plate.classList.remove('show');
+        return;
+      }
+      h.plateMark.style.background = this._teamColors[Math.max(0, this.teams.indexOf(p.team))];
+      h.plateNum.textContent = p.number != null ? String(p.number) : '';
+      h.plateName.textContent = p.name;
+      this._plateUntil = now + 2000;
+      h.plate.classList.add('show');
       return;
     }
-    h.plateMark.style.background = this._teamColors[Math.max(0, this.teams.indexOf(p.team))];
-    h.plateNum.textContent = p.number != null ? String(p.number) : '';
-    h.plateName.textContent = p.name;
-    h.plate.classList.add('show');
+
+    if (h.plate.classList.contains('show') && now >= this._plateUntil) {
+      h.plate.classList.remove('show');
+    }
   }
 
   updateHUD() {
