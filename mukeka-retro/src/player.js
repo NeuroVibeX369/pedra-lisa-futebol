@@ -238,6 +238,7 @@ export class Player {
     this.shadow.position.y = 0.02;
 
     this.vel = new THREE.Vector3();
+    this.dismissed = false;   // expulso: permanece no elenco, mas sai da partida
     this.rot = 0;            // угол поворота (0 = смотрит в +Z)
     this.hasBall = false;
     this.controlling = false; // гистерезис дриблинга: подобрал вплотную — ведёт до keepRadius
@@ -5556,6 +5557,14 @@ export class Player {
           // а вот трибуна реагирует уже сейчас: свист и улюлюканье
           o.startFall(TK.victimDown);
           this.tackleFoul = true;
+          // O árbitro decide vantagem, cartão e tipo de cobrança fora da
+          // física do carrinho. Assim a colisão continua simples e o Match
+          // concentra todas as regras.
+          m.reportFoul?.(this, o, {
+            fromBehind,
+            speed: this.tackleSpeed || Math.hypot(this.vel.x, this.vel.z),
+            kind: 'tackle',
+          });
           crowdJeer();
         }
         break;
