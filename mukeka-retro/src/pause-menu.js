@@ -71,7 +71,8 @@ export function setupPauseMenu({ match, pack } = {}) {
     }));
     const bench = info?.bench || [];
     const remaining = info?.remaining ?? 0;
-    const online = new URLSearchParams(location.search).get('mode') === 'online';
+    const qs = new URLSearchParams(location.search);
+    const online = qs.get('mode') === 'online' || qs.get('online') === '1';
 
     const starters = active.map((p) =>
       `<div class="pause-lineup-player"><span>${p.number || '—'}</span><b>${p.name}</b><small>${p.position || ''}${p.overall ? ` · FORÇA ${p.overall}` : ''}</small></div>`
