@@ -341,13 +341,38 @@ export function updateFieldPlayer(p, dt, ball) {
       move = arrive(pos.x, pos.z, t.x, t.z, 2);
       sprint = Math.hypot(t.x - pos.x, t.z - pos.z) > 3;
     } else if (team.coverer === p && !team.attacking && match.toucher && match.toucher.team !== team) {
-      // Второй защитник (cover): за спиной прессингующего, под углом
-      // к центру — ловит обыгрыш и закрывает прострел (ресёрч 09 + PES sweeper)
+      // Второй защитник (cover): normalmente страхует. Se o adversário está
+      // fazendo cera, ele fecha a segunda linha de passe e cria uma pressão
+      // 2×1, sem correr para o mesmo ponto do primeiro defensor.
       const D = team.defence;
       const gx = team.ownGoalX;
       const F = CONFIG.field;
       let tx;
       let tz;
+      const stallCfg = D.stall || {};
+      const secondAfter = team._stallLateLeading
+        ? (stallCfg.lateSecondAfter ?? 1.25)
+        : (stallCfg.secondAfter ?? 2.0);
+      const stalling = (team._stallPressureT || 0) >= secondAfter;
+      if (stalling) {
+        const owner = match.toucher;
+        const op = owner.group.position;
+        const dgx = gx - op.x;
+        const dgz = -op.z;
+        const dgl = Math.hypot(dgx, dgz) || 1;
+        const sideX = -dgz / dgl;
+        const sideZ = dgx / dgl;
+        const first = team.chaser?.group?.position;
+        const sign = first
+          ? (sideX * (first.x - op.x) + sideZ * (first.z - op.z) >= 0 ? -1 : 1)
+          : (op.z >= 0 ? -1 : 1);
+        const d2 = stallCfg.secondDist ?? 3.2;
+        tx = op.x + (dgx / dgl) * d2 + sideX * sign * 1.7;
+        tz = op.z + (dgz / dgl) * d2 + sideZ * sign * 1.7;
+        move = arrive(pos.x, pos.z, tx, tz, 1.5);
+        sprint = Math.hypot(tx - pos.x, tz - pos.z) > 2.5;
+        face = Math.atan2(op.x - pos.x, op.z - pos.z);
+      } else {
       // ЭКРАН ПЕРЕД ВОРОТАМИ. Обычная точка страхующего считается ОТ МЯЧА и
       // вместе с ним уезжает в глубину фланга — зона 11 метров пустела ровно
       // тогда, когда туда идёт прострел (а прострел даёт 6.4 гола на 100
@@ -364,9 +389,10 @@ export function updateFieldPlayer(p, dt, ball) {
         tx = bp.x + (dgx / dgl) * D.coverDist;
         tz = bp.z + (dgz / dgl) * D.coverDist - Math.sign(bp.z || 1) * D.coverSide;
       }
-      move = arrive(pos.x, pos.z, tx, tz, 2.5);
-      sprint = Math.hypot(tx - pos.x, tz - pos.z) > 8;
-      face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+        move = arrive(pos.x, pos.z, tx, tz, 2.5);
+        sprint = Math.hypot(tx - pos.x, tz - pos.z) > 8;
+        face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+      }
     } else if (team.marks.get(p)) {
       // Персональный разбор в своей трети: встать goal-side — между
       // подопечным и воротами, чуть в сторону мяча (успеть на прострел)
@@ -513,8 +539,14 @@ function pressBall(p, dt, ball, match) {
       (aim.x / dl) * owner.facing.x + (aim.z / dl) * owner.facing.z > P.tackle.backCos;
     // Ближе к своим воротам решаются злее — там цена потери выше
     const ownDepth = Math.hypot(pos.x - team.ownGoalX, pos.z);
+    const stallCfg = D.stall || {};
+    const pressAfter = team._stallLateLeading
+      ? (stallCfg.latePressAfter ?? 0.45)
+      : (stallCfg.pressAfter ?? 0.75);
+    const antiStallNow = (team._stallPressureT || 0) >= pressAfter;
     const rate = (badTouch ? TKA.ratePerSec : TKA.rateNormal) *
-      (ownDepth < TKA.desperateDepth ? TKA.desperateK : 1) * p.mods.gPress;
+      (ownDepth < TKA.desperateDepth ? TKA.desperateK : 1) *
+      (antiStallNow ? (stallCfg.tackleK ?? 1.9) : 1) * p.mods.gPress;
     if (!behind && Math.random() < rate * dt) {
       p.startTackle(aim.x, aim.z);
       return { move: { x: 0, z: 0 }, sprint: false, face: null, speedCap: null };
@@ -539,10 +571,29 @@ function pressBall(p, dt, ball, match) {
   // D.pressLine ровно 0, и умножать там нечего. Плюс личный press защитника:
   // стоппер лезет в отбор глубже в своей половине, страхующий отходит раньше
   const pressLine = D.pressLine + team.style.pressLine + p.mods.bPress;
-  // Se o humano ficar parado segurando a bola, não existe "zona segura" para
-  // gastar o relógio: depois de ~1,2 s o primeiro defensor fecha de verdade.
-  const antiStall = (team._stallPressureT || 0) >= 1.2;
+  const stallCfg = D.stall || {};
+  const pressAfter = team._stallLateLeading
+    ? (stallCfg.latePressAfter ?? 0.45)
+    : (stallCfg.pressAfter ?? 0.75);
+  const antiStall = (team._stallPressureT || 0) >= pressAfter;
   const inOurHalf = team.side * bp.x < -pressLine && !antiStall;
+
+  if (antiStall) {
+    // Anti-cera: não perseguimos a projeção do drible, porque quem está parado
+    // pode ficar eternamente atrás de uma "zona de jockey". O defensor mira a
+    // bola/quase o corpo, acelera e força uma decisão do portador.
+    const ospd = Math.hypot(owner.vel.x, owner.vel.z);
+    const lead = stallCfg.directLead ?? 0.30;
+    const tx = ospd > 0.9 ? op.x + owner.vel.x / ospd * lead : bp.x;
+    const tz = ospd > 0.9 ? op.z + owner.vel.z / ospd * lead : bp.z;
+    return {
+      move: seek(pos.x, pos.z, tx, tz),
+      sprint: true,
+      face: Math.atan2(op.x - pos.x, op.z - pos.z),
+      speedCap: null,
+    };
+  }
+
   if (!inOurHalf) {
     // Высокий прессинг: на владельца с упреждением по его курсу (soccer.py)
     const ospd = Math.hypot(owner.vel.x, owner.vel.z);
