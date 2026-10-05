@@ -616,6 +616,9 @@ function showMasterResult(result) {
   const substitutions = (result.substitutions || []).map((x) =>
     `<div class="mrr-sub"><span>${x.minute || '—'}'</span><b>${x.outName}</b><i>↓</i><b>${x.inName}</b><i>↑</i></div>`
   ).join('');
+  const cards = (result.cards || []).map((x) =>
+    `<div class="mrr-card-event"><span>${x.minute || '—'}'</span><b>${x.name}</b><small>${x.card === 'red' ? 'VERMELHO' : 'AMARELO'}</small></div>`
+  ).join('');
 
   overlay.innerHTML = `
     <div class="mrr-card">
@@ -626,6 +629,7 @@ function showMasterResult(result) {
         <h3>GOLS</h3>
         ${goals || '<div class="mrr-empty">SEM GOLS</div>'}
         ${substitutions ? `<h3>SUBSTITUIÇÕES</h3>${substitutions}` : ''}
+        ${cards ? `<h3>CARTÕES</h3>${cards}` : ''}
       </div>
       <button type="button">VOLTAR À MASTER LIGA</button>
     </div>
@@ -946,6 +950,7 @@ function frame() {
     const result = masterLeague.completePlayedMatch?.(match.score, {
       goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
       substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
+      cards: Array.isArray(match.cardEvents) ? match.cardEvents : [],
     });
     if (result) showMasterResult(result);
   }
