@@ -18,6 +18,7 @@ import { forceAudio, denyAudio } from './audioctx.js';
 import { setupRetroOnlineTest } from './online.js?v=20261005f';
 import { setupPregame } from './pregame.js?v=20261005c';
 import { setupMasterLeague } from './master-league.js?v=20261005c';
+import { setupPauseMenu } from './pause-menu.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
@@ -99,20 +100,46 @@ const remember = (key, value) => {
 // Строчность кинескопа и зерно к разрешению НЕ привязаны
 // (CONFIG.render.scanLines / grainRes), поэтому 720p не съедает ретро-дух.
 const keySharp = document.getElementById('key-sharp');
+const qualitySelect = document.getElementById('set-render-height');
+const qualityNote = document.getElementById('set-render-note');
 const HEIGHTS = CONFIG.render.heights;
+const PHONE_SAFE = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches &&
+  Math.min(globalThis.innerWidth || 9999, globalThis.innerHeight || 9999) <= 700;
+const MAX_PHONE_HEIGHT = 720;
+const SAFE_HEIGHTS = PHONE_SAFE ? HEIGHTS.filter(([h]) => h <= MAX_PHONE_HEIGHT) : HEIGHTS;
 let qualityIdx = 0;
 
+if (qualitySelect) {
+  qualitySelect.innerHTML = '';
+  for (const [h, label] of SAFE_HEIGHTS) {
+    const option = document.createElement('option');
+    option.value = String(h);
+    option.textContent = label;
+    qualitySelect.appendChild(option);
+  }
+  if (qualityNote) {
+    qualityNote.textContent = PHONE_SAFE
+      ? 'Modo seguro no celular: HDR desativado e máximo 720p para evitar blocos pretos.'
+      : '';
+  }
+}
+
 function applyQuality(height, save = false) {
-  const i = HEIGHTS.findIndex(([h]) => h === height);
-  qualityIdx = i >= 0 ? i : HEIGHTS.findIndex(([h]) => h === CONFIG.render.targetHeight);
+  let requested = Number(height) || CONFIG.render.targetHeight;
+  if (PHONE_SAFE) requested = Math.min(requested, MAX_PHONE_HEIGHT);
+  const available = SAFE_HEIGHTS.length ? SAFE_HEIGHTS : HEIGHTS;
+  let i = available.findIndex(([h]) => h === requested);
+  if (i < 0) {
+    i = available.reduce((best, item, idx) =>
+      Math.abs(item[0] - requested) < Math.abs(available[best][0] - requested) ? idx : best, 0);
+  }
+  const h = available[i][0];
+  qualityIdx = HEIGHTS.findIndex(([x]) => x === h);
   if (qualityIdx < 0) qualityIdx = 0;
-  const h = HEIGHTS[qualityIdx][0];
-  keySharp.querySelector('b').textContent = `${h}p`;
+  keySharp?.querySelector('b') && (keySharp.querySelector('b').textContent = `${h}p`);
+  if (qualitySelect) qualitySelect.value = String(h);
   crt.setHeight(h);
-  // Вспышки меряют себя в метрах, а рисуются в пикселях буфера — им нужно
-  // знать новую высоту, иначе на 720p они станут вдвое крупнее.
   if (scene.userData.flashes) scene.userData.flashes.setRenderHeight(h);
-  // Мошкара меряется в метрах ровно так же, как вспышки
   if (scene.userData.midges) scene.userData.midges.setRenderHeight(h);
   if (save) remember('f98.renderHeight', h);
 }
@@ -120,16 +147,30 @@ function applyQuality(height, save = false) {
 const savedQuality = Number(localStorage.getItem('f98.renderHeight'));
 applyQuality(Number.isFinite(savedQuality) && savedQuality > 0
   ? savedQuality : CONFIG.render.targetHeight);
-keySharp.addEventListener('click', () => {
-  applyQuality(HEIGHTS[(qualityIdx + 1) % HEIGHTS.length][0], true);
+keySharp?.addEventListener('click', () => {
+  const available = SAFE_HEIGHTS.length ? SAFE_HEIGHTS : HEIGHTS;
+  const current = available.findIndex(([h]) => h === CONFIG.render.targetHeight);
+  applyQuality(available[(Math.max(0, current) + 1) % available.length][0], true);
+});
+qualitySelect?.addEventListener('change', () => {
+  applyQuality(Number(qualitySelect.value), true);
 });
 
 // --- Клавиша ГАЗОН: износ поля пятью ступенями ---
 // Плавный ползунок никуда не делся по сути — три карты по-прежнему
 // смешиваются в CanvasTexture, просто щёлкаем по круглым значениям.
 const keyPitch = document.getElementById('key-pitch');
+const pitchWearSelect = document.getElementById('set-pitch-wear');
 const WEARS = [0, 25, 50, 75, 100];
 let wearIdx = 2;
+if (pitchWearSelect) {
+  for (const v of WEARS) {
+    const option = document.createElement('option');
+    option.value = String(v);
+    option.textContent = `${v}% · ${v === 50 ? 'médio' : v <= 15 ? 'bem cuidado' : v <= 35 ? 'leve' : v <= 65 ? 'moderado' : v <= 85 ? 'desgastado' : 'muito gasto'}`;
+    pitchWearSelect.appendChild(option);
+  }
+}
 
 function wearLabel(v) {
   if (v === 50) return 'médio';
@@ -143,7 +184,8 @@ function wearLabel(v) {
 function applyPitchWear(value, save = false) {
   const v = WEARS.reduce((a, b) => (Math.abs(b - value) < Math.abs(a - value) ? b : a), WEARS[2]);
   wearIdx = WEARS.indexOf(v);
-  keyPitch.querySelector('b').textContent = `${v}% ${wearLabel(v)}`;
+  keyPitch?.querySelector('b') && (keyPitch.querySelector('b').textContent = `${v}% ${wearLabel(v)}`);
+  if (pitchWearSelect) pitchWearSelect.value = String(v);
   scene.userData.setPitchWear(v / 100);
   if (save) remember('f98.pitchWear', v);
 }
@@ -155,8 +197,11 @@ const savedWear = Number(savedWearRaw);
 applyPitchWear(savedWearRaw !== null && Number.isFinite(savedWear) &&
   savedWear >= 0 && savedWear <= 100
   ? savedWear : CONFIG.atmosphere.pitchWear.default * 100);
-keyPitch.addEventListener('click', () => {
+keyPitch?.addEventListener('click', () => {
   applyPitchWear(WEARS[(wearIdx + 1) % WEARS.length], true);
+});
+pitchWearSelect?.addEventListener('change', () => {
+  applyPitchWear(Number(pitchWearSelect.value), true);
 });
 
 // --- Рисунок покоса: отдельная настройка, не связанная с износом ---
@@ -242,6 +287,28 @@ for (const [key, id, min, max] of KNOBS) {
 }
 crt.setKnobs({ gain: knobs.gain.value, contrast: knobs.contrast.value, color: knobs.color.value });
 
+const SETTING_KNOBS = [
+  ['gain', 'set-gain', 'set-gain-val'],
+  ['contrast', 'set-contrast', 'set-contrast-val'],
+  ['color', 'set-color', 'set-color-val'],
+];
+for (const [key, sliderId, valId] of SETTING_KNOBS) {
+  const slider = document.getElementById(sliderId);
+  const val = document.getElementById(valId);
+  if (!slider || !knobs[key]) continue;
+  const sync = () => {
+    slider.value = String(Math.round(knobs[key].value * 100));
+    const n = Math.round((knobs[key].value - 1) * 20);
+    if (val) val.textContent = n === 0 ? '0' : (n > 0 ? `+${n}` : String(n));
+  };
+  sync();
+  slider.addEventListener('input', () => {
+    knobs[key].set(Number(slider.value) / 100);
+    sync();
+  });
+}
+
+
 // --- Estilo da transmissão ---
 // O efeito visual saiu da antiga ручка "CANAL": Antena/VHS/RGB são estilos
 // de imagem, não canais de TV. A marca MUKEKA TV permanece fixa.
@@ -302,10 +369,15 @@ function toggleFullscreen() {
   else if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
 
-document.getElementById('key-full').addEventListener('click', (e) => {
+document.getElementById('key-full')?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleFullscreen();
 });
+document.getElementById('set-fullscreen')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleFullscreen();
+});
+document.addEventListener('mukeka:fullscreen-toggle', () => toggleFullscreen());
 // Кнопка живёт на стекле, а слушатели управления — на window: без остановки
 // всплытия тап по ней заодно взводил бы игровой жест (та же грабля, что с ручками)
 fsExit.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -334,6 +406,18 @@ document.getElementById('key-menu').addEventListener('click', (e) => {
 document.getElementById('settings-close').addEventListener('click', (e) => {
   e.stopPropagation();
   settingsPanel.classList.remove('show');
+});
+
+document.addEventListener('mukeka:settings-open', (e) => {
+  settingsPanel.classList.add('show');
+  const wanted = String(e.detail?.section || '').trim().toUpperCase();
+  if (!wanted) return;
+  const head = [...settingsPanel.querySelectorAll('h3')]
+    .find((h) => h.textContent.trim().toUpperCase() === wanted);
+  if (!head) return;
+  head.classList.remove('folded');
+  try { localStorage.setItem(`f98.fold.${head.textContent.trim()}`, '1'); } catch {}
+  requestAnimationFrame(() => head.scrollIntoView({ block: 'start', behavior: 'smooth' }));
 });
 
 // --- Складные разделы меню ---
@@ -468,6 +552,7 @@ let gateOpen = !!soundGate;
 
 const masterLeague = setupMasterLeague();
 const pregame = setupPregame({ match });
+const pauseMenu = setupPauseMenu({ match, pack: PACK });
 
 const retroOnline = setupRetroOnlineTest({
   match,
@@ -772,7 +857,10 @@ function frame() {
   // уйдёт, пока читают вопрос (розыгрыш AI ждёт всего 1.6 с), а трибуна, дым
   // и кинескоп продолжают жить — ноль здесь работает как крайнее значение
   // темпа игры, а не как пауза всему кадру.
-  const gdt = (gateOpen || pregame.open || masterLeague.open || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
+  pauseMenu.update?.();
+  const settingsOpen = settingsPanel?.classList.contains('show');
+  const gdt = (gateOpen || pregame.open || masterLeague.open || pauseMenu.open ||
+    settingsOpen || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
   // Часы ветра в футболках — ОДИН объект на весь матч. Все 22 материала
   // формы держат на него ссылку, поэтому это присваивание заменяет
   // двадцать два обновления юниформа.
