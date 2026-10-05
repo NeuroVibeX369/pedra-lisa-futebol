@@ -499,6 +499,7 @@
       touch-action: manipulation;
     }
     #hint {
+      display: none !important;
       position: fixed; bottom: 16px; left: 16px;
       color: rgba(255,255,255,0.65); font-size: 13px;
       pointer-events: none;
@@ -1386,6 +1387,14 @@
     </div>
 
     <h3 data-open="1">CÂMERA</h3>
+    <div class="row">
+      <label for="set-camera-mode">Distância da câmera:</label>
+      <select id="set-camera-mode" aria-label="Distância da câmera">
+        <option value="tv">TV · NORMAL</option>
+        <option value="close">PRÓXIMA</option>
+        <option value="closer">BEM PRÓXIMA</option>
+      </select>
+    </div>
     <div class="row">
       Aproximação na lateral distante:
       <input id="set-far" type="range" min="0" max="30" step="1" style="vertical-align:middle;width:180px">
