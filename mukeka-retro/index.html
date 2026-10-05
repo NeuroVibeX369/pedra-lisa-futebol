@@ -660,7 +660,79 @@
       margin-top: 16px; color: rgba(255,255,255,0.5);
       font-size: clamp(10px, 1.3vw, 13px); letter-spacing: 3px;
     }
-  </style>
+  
+    /* Sala online de teste: aparece apenas com ?online=1. */
+    #retro-online-test {
+      position: fixed;
+      inset: 0;
+      z-index: 120000;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(2, 8, 5, .92);
+      font-family: Arial, sans-serif;
+    }
+    #retro-online-test.hidden { display: none; }
+    #retro-online-test .rot-card {
+      width: min(520px, 100%);
+      padding: 24px;
+      border: 2px solid #6e9e72;
+      background: #0b1710;
+      box-shadow: 0 24px 70px rgba(0,0,0,.55);
+      color: #eef7ef;
+    }
+    #retro-online-test h2 {
+      margin: 0 0 8px;
+      color: #b8ff52;
+      letter-spacing: 2px;
+    }
+    #retro-online-test p { color: #9fb1a3; line-height: 1.5; }
+    #retro-online-test .rot-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    #retro-online-test button,
+    #retro-online-test input {
+      min-height: 44px;
+      border: 1px solid #45634b;
+      border-radius: 8px;
+      background: #112318;
+      color: #fff;
+      font: 700 12px Arial, sans-serif;
+    }
+    #retro-online-test button { cursor: pointer; }
+    #retro-online-test button:hover { border-color: #b8ff52; }
+    #retro-online-test input {
+      width: 100%;
+      padding: 0 12px;
+      text-align: center;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      outline: none;
+    }
+    #retro-online-room {
+      margin: 14px 0;
+      padding: 12px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 8px;
+      color: #ffe14d;
+      border: 1px dashed #4d704f;
+    }
+    #retro-online-room.hidden { display: none; }
+    #retro-online-status { min-height: 44px; }
+    #retro-online-test .rot-note {
+      margin-top: 16px;
+      font-size: 11px;
+      color: #77887a;
+    }
+    @media (max-width: 520px) {
+      #retro-online-test .rot-actions { grid-template-columns: 1fr; }
+    }
+</style>
 </head>
 <body>
 <div id="tv">
@@ -789,6 +861,24 @@
        жест, без которого браузер (особенно Safari на iPad) не отдаёт звук.
        Пока плашка висит, игровое время стоит: заставка не проскочит, пока
        читают вопрос. Механика — src/main.js. -->
+  <div id="retro-online-test" class="hidden">
+    <div class="rot-card">
+      <h2>MUKEKA RETRO · ONLINE</h2>
+      <p>Teste da conexão 1×1. Nesta etapa já conseguimos criar a sala, entrar pelo segundo aparelho e definir Pedra Lisa/Independência automaticamente.</p>
+      <div class="rot-actions">
+        <button id="retro-online-host" type="button">CRIAR SALA</button>
+        <button id="retro-online-solo" type="button">VOLTAR AO SOLO</button>
+      </div>
+      <div id="retro-online-room" class="hidden"></div>
+      <div class="rot-actions">
+        <input id="retro-online-code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+        <button id="retro-online-join" type="button">ENTRAR NA SALA</button>
+      </div>
+      <p id="retro-online-status">Escolha criar uma sala ou informe o código recebido.</p>
+      <p class="rot-note">A troca de comandos entre os dois jogadores será a próxima etapa; esta tela não anuncia a partida como pronta antes da sincronização real.</p>
+    </div>
+  </div>
+
   <div id="sound-gate">
     <div class="sg-card">
       <div class="sg-title">ATIVAR O SOM?</div>
