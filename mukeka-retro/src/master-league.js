@@ -51,6 +51,41 @@ const PEDRA_LISA = [
   ['DAVI', 'PD', 72],
 ]
 
+const CLASSIC_FIRST = [
+  'Ademir', 'Beto', 'Célio', 'Dênis', 'Elias', 'Fagner', 'Giba', 'Hugo', 'Ítalo',
+  'Jorge', 'Leandro', 'Márcio', 'Nando', 'Otávio', 'Régis', 'Sandro', 'Tadeu', 'Válter',
+];
+const CLASSIC_LAST = [
+  'Azevedo', 'Borges', 'Coelho', 'Duarte', 'Esteves', 'Ferraz', 'Goulart', 'Lopes',
+  'Mendes', 'Neves', 'Pinto', 'Ramos', 'Siqueira', 'Tavares', 'Viana', 'Xavier',
+];
+
+function classicWeakSquad(teamId) {
+  const random = rng('master-classic-' + teamId);
+  return POSITIONS.map((position, i) => {
+    // Elenco-base propositalmente humilde: titulares/reservas entre 65 e 70,
+    // média próxima de 68. O mercado passa a ser a principal forma de evolução.
+    const overall = 65 + Math.floor(random() * 6);
+    const first = CLASSIC_FIRST[Math.floor(random() * CLASSIC_FIRST.length)];
+    const last = CLASSIC_LAST[Math.floor(random() * CLASSIC_LAST.length)];
+    return {
+      id: `${teamId}-classic-${i}`,
+      name: `${first} ${last}`.toUpperCase(),
+      position,
+      overall,
+      teamId,
+      goals: 0,
+      mvp: 0,
+      appearances: 0,
+    };
+  });
+}
+
+function squadAverage(squad = []) {
+  if (!squad.length) return 0;
+  return squad.reduce((sum, p) => sum + (Number(p.overall) || 0), 0) / squad.length;
+}
+
 function hash(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -171,22 +206,34 @@ function createMarket() {
   });
 }
 
-function newState() {
+function newState({ clubId = 'pedra-lisa', rosterMode = 'real' } = {}) {
+  const selected = LOCAL_TEAMS.find((t) => t.id === clubId) || LOCAL_TEAMS[0];
+  clubId = selected?.id || 'pedra-lisa';
+
   const squads = {};
   squads['pedra-lisa'] = pedraLisaSquad();
   for (const team of [...LOCAL_TEAMS, ...REGIONAL_TEAMS, FINAL_BOSS]) {
     if (!squads[team.id]) squads[team.id] = generatedSquad(team);
   }
+
+  // "Clássico" imita a Master Liga antiga: você mantém o escudo/uniforme do
+  // clube escolhido, mas recebe um elenco fictício fraco para reconstruir.
+  if (rosterMode === 'classic') {
+    squads[clubId] = classicWeakSquad(clubId);
+  }
+
   const ids = LOCAL_TEAMS.map((t) => t.id);
+  const userSquad = squads[clubId] || [];
   return {
     version: 1,
-    clubId: 'pedra-lisa',
+    clubId,
+    rosterMode: rosterMode === 'classic' ? 'classic' : 'real',
     season: 1,
     stage: 'local',
     localRound: 1,
     money: 80000,
     squads,
-    lineup: defaultLineupIds(squads['pedra-lisa']),
+    lineup: defaultLineupIds(userSquad),
     market: createMarket(),
     fixtures: roundRobin(ids),
     table: emptyTable(ids),
@@ -199,7 +246,9 @@ function newState() {
     titles: { local: 0, regional: 0, champions: 0 },
     history: [],
     matchHistory: [],
-    notice: 'A Master Liga começou. O objetivo inicial é terminar entre os 2 primeiros.',
+    notice: rosterMode === 'classic'
+      ? 'A Master Liga começou com um elenco fictício de base. Reforce o time no mercado e construa sua história.'
+      : 'A Master Liga começou com o elenco atual do clube. O objetivo inicial é terminar entre os 2 primeiros.',
   };
 }
 
@@ -236,6 +285,7 @@ function ensureLineup(state) {
 
 function syncPedraLisaBase(state) {
   if (!state?.squads?.['pedra-lisa']) return state;
+  if (state.clubId === 'pedra-lisa' && state.rosterMode === 'classic') return state;
   const squad = state.squads['pedra-lisa'];
   const market = Array.isArray(state.market) ? state.market : [];
   const base = pedraLisaSquad();
@@ -262,7 +312,7 @@ function syncPedraLisaBase(state) {
 function syncOpponentBalance(state) {
   if (!state?.squads) return state;
   for (const team of [...LOCAL_TEAMS, ...REGIONAL_TEAMS, FINAL_BOSS]) {
-    if (team.id === 'pedra-lisa') continue;
+    if (team.id === 'pedra-lisa' || team.id === state.clubId) continue;
     const fresh = generatedSquad(team);
     const current = state.squads[team.id] || [];
     state.squads[team.id] = fresh.map((base) => {
@@ -285,6 +335,7 @@ function loadState() {
     if (!raw) return null;
     const state = JSON.parse(raw);
     if (!state || state.version !== 1) return null;
+    if (!state.rosterMode) state.rosterMode = 'real';
     syncPedraLisaBase(state);
     syncOpponentBalance(state);
     ensureLineup(state);
@@ -956,6 +1007,10 @@ export function setupMasterLeague() {
   let state = loadState();
   let tab = 'overview';
   let simulationResult = null;
+  let entryMode = 'entry';
+  let setupClubId = state?.clubId || 'pedra-lisa';
+  let setupRosterMode = 'real';
+  let overwriteArmed = false;
 
   const body = document.getElementById('ml-body');
   const title = document.getElementById('ml-title');
@@ -963,6 +1018,98 @@ export function setupMasterLeague() {
   const closeBtn = document.getElementById('ml-close');
 
   const persist = () => state && saveState(state);
+
+  function renderEntry() {
+    const saved = !!state;
+    if (!saved) {
+      return `
+        <div class="ml-start-screen">
+          <div class="ml-start-emblem">MASTER LIGA</div>
+          <h2>COMECE SUA HISTÓRIA</h2>
+          <p>Escolha um clube, monte sua base e leve a equipe da Liga de Independência até o topo.</p>
+          <button id="ml-start-new" class="ml-main" type="button">INICIAR MASTER LIGA</button>
+        </div>`;
+    }
+
+    const avg = Math.round(teamStrength(state, state.clubId));
+    const mode = state.rosterMode === 'classic' ? 'ELENCO FICTÍCIO' : 'ELENCO ATUAL';
+    return `
+      <div class="ml-start-screen">
+        <div class="ml-start-emblem">MASTER LIGA</div>
+        <h2>${teamName(state.clubId)}</h2>
+        <div class="ml-save-summary">
+          <span><small>TEMPORADA</small><b>${state.season}</b></span>
+          <span><small>FORÇA</small><b>${avg}</b></span>
+          <span><small>CAIXA</small><b>${money(state.money)}</b></span>
+          <span><small>ELENCO</small><b>${mode}</b></span>
+        </div>
+        <div class="ml-start-actions">
+          <button id="ml-continue" class="ml-main" type="button">CONTINUAR</button>
+          <button id="ml-start-new" class="ml-main ml-secondary" type="button">NOVA MASTER LIGA</button>
+        </div>
+        <p class="ml-note">Continuar mantém sua carreira atual. Uma nova Master Liga substitui este save.</p>
+      </div>`;
+  }
+
+  function renderNewSetup() {
+    const teamOptions = LOCAL_TEAMS.map((t) =>
+      `<option value="${t.id}" ${t.id === setupClubId ? 'selected' : ''}>${t.name}</option>`
+    ).join('');
+
+    const real = setupRosterMode === 'real';
+    const previewSquad = real
+      ? (setupClubId === 'pedra-lisa' ? pedraLisaSquad() : generatedSquad(TEAM_BY_ID.get(setupClubId)))
+      : classicWeakSquad(setupClubId);
+    const avg = Math.round(squadAverage(previewSquad));
+    const best = [...previewSquad].sort((a, b) => b.overall - a.overall).slice(0, 3);
+
+    return `
+      <div class="ml-new-setup">
+        <div class="ml-setup-head">
+          <button id="ml-setup-back" type="button">← VOLTAR</button>
+          <div><small>NOVA MASTER LIGA</small><h2>ESCOLHA COMO COMEÇAR</h2></div>
+        </div>
+
+        <div class="ml-setup-card">
+          <h3>1 · CLUBE</h3>
+          <p>Você assume um dos clubes da Liga de Independência.</p>
+          <select id="ml-new-club">${teamOptions}</select>
+        </div>
+
+        <div class="ml-roster-choice">
+          <button class="${real ? 'active' : ''}" data-roster="real" type="button">
+            <strong>ELENCO ATUAL</strong>
+            <span>Comece com os jogadores que já pertencem ao clube no universo do jogo.</span>
+          </button>
+          <button class="${!real ? 'active' : ''}" data-roster="classic" type="button">
+            <strong>ELENCO FICTÍCIO CLÁSSICO</strong>
+            <span>O escudo e o uniforme permanecem, mas todos os jogadores começam fictícios e fracos.</span>
+          </button>
+        </div>
+
+        <div class="ml-setup-preview">
+          <div><small>CLUBE</small><b>${teamName(setupClubId)}</b></div>
+          <div><small>FORÇA INICIAL</small><b>${avg}</b></div>
+          <div><small>CAIXA</small><b>${money(80000)}</b></div>
+          <div><small>OBJETIVO</small><b>${real ? 'COMPETIR' : 'RECONSTRUIR'}</b></div>
+        </div>
+
+        <div class="ml-setup-squad">
+          <small>${real ? 'DESTAQUES DO ELENCO' : 'BASE FICTÍCIA · MÉDIA 65–70'}</small>
+          <div>${best.map((p) => `<span>${p.name} · ${p.position} · <b>${p.overall}</b></span>`).join('')}</div>
+        </div>
+
+        ${state ? `
+          <div class="ml-overwrite-warning">
+            <b>ATENÇÃO</b>
+            <span>Ao confirmar, a Master Liga atual será substituída. Não haverá um segundo arquivo de save.</span>
+          </div>` : ''}
+
+        <button id="ml-confirm-new" class="ml-main" type="button">
+          ${state && !overwriteArmed ? 'INICIAR NOVA MASTER LIGA' : state ? 'CONFIRMAR E SUBSTITUIR SAVE' : 'COMEÇAR MASTER LIGA'}
+        </button>
+      </div>`;
+  }
 
   function renderOverview() {
     const fixture = nextUserFixture(state);
@@ -1181,24 +1328,76 @@ export function setupMasterLeague() {
   }
 
   function render() {
-    if (!state) {
+    if (entryMode === 'entry') {
       title.textContent = 'MASTER LIGA';
-      meta.textContent = 'Crie uma carreira para o Pedra Lisa.';
-      body.innerHTML = `
-        <div class="ml-empty">
-          <h2>COMEÇAR UMA NOVA HISTÓRIA</h2>
-          <p>8 times na Liga de Independência, Regional em grupos + mata-mata e Desafio dos Campeões.</p>
-          <button id="ml-new" class="ml-main" type="button">NOVA MASTER LIGA</button>
-        </div>`;
-      document.getElementById('ml-new')?.addEventListener('click', () => {
-        state = newState();
-        persist();
+      meta.textContent = state ? 'CARREIRA SALVA' : 'NOVA CARREIRA';
+      body.innerHTML = renderEntry();
+
+      document.getElementById('ml-continue')?.addEventListener('click', () => {
+        entryMode = 'career';
+        tab = 'overview';
+        render();
+      });
+      document.getElementById('ml-start-new')?.addEventListener('click', () => {
+        setupClubId = state?.clubId || 'pedra-lisa';
+        setupRosterMode = 'real';
+        overwriteArmed = false;
+        entryMode = 'setup';
         render();
       });
       return;
     }
 
-    title.textContent = 'MASTER LIGA · PEDRA LISA';
+    if (entryMode === 'setup') {
+      title.textContent = 'MASTER LIGA · NOVA CARREIRA';
+      meta.textContent = 'ESCOLHA CLUBE E ELENCO';
+      body.innerHTML = renderNewSetup();
+
+      document.getElementById('ml-setup-back')?.addEventListener('click', () => {
+        overwriteArmed = false;
+        entryMode = 'entry';
+        render();
+      });
+
+      document.getElementById('ml-new-club')?.addEventListener('change', (e) => {
+        setupClubId = e.target.value;
+        overwriteArmed = false;
+        render();
+      });
+
+      body.querySelectorAll('[data-roster]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setupRosterMode = btn.dataset.roster === 'classic' ? 'classic' : 'real';
+          overwriteArmed = false;
+          render();
+        });
+      });
+
+      document.getElementById('ml-confirm-new')?.addEventListener('click', () => {
+        if (state && !overwriteArmed) {
+          overwriteArmed = true;
+          render();
+          return;
+        }
+        clearPendingMatch();
+        state = newState({ clubId: setupClubId, rosterMode: setupRosterMode });
+        saveState(state);
+        simulationResult = null;
+        tab = 'overview';
+        entryMode = 'career';
+        overwriteArmed = false;
+        render();
+      });
+      return;
+    }
+
+    if (!state) {
+      entryMode = 'entry';
+      render();
+      return;
+    }
+
+    title.textContent = `MASTER LIGA · ${teamName(state.clubId)}`;
     meta.textContent = `${currentStageLabel(state)} · ${money(state.money)}`;
 
     if (simulationResult) {
@@ -1343,6 +1542,9 @@ export function setupMasterLeague() {
 
   function openHub() {
     open = true;
+    state = loadState() || state;
+    entryMode = 'entry';
+    overwriteArmed = false;
     gate.classList.remove('hidden');
     render();
   }
