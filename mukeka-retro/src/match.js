@@ -24,6 +24,8 @@ import { Celebration } from './celebration.js';
 
 // Куда встаёт мяч, пока он в руках вбрасывающего — без аллокаций в кадре
 const _ballHands = new THREE.Vector3();
+const _handLeft = new THREE.Vector3();
+const _handRight = new THREE.Vector3();
 
 // Плавная кривая 0..1 (smoothstep): кино-движение камеры интро без рывков
 function smooth01(t) {
@@ -160,6 +162,7 @@ export class Match {
     this.cards = new Map();
     this.cardEvents = [];
     this.offsideSnapshot = null;
+    this._lastHandballSeq = -1;
     this.shootout = null;
     this.shootoutResult = null;
 
@@ -262,6 +265,10 @@ export class Match {
       score: document.getElementById('sb-score'),
       time: document.getElementById('sb-time'),
       flash: document.getElementById('goal-flash'),
+      refBanner: document.getElementById('ref-banner'),
+      refCard: document.getElementById('ref-card'),
+      refCardName: document.getElementById('rc-name'),
+      refCardMin: document.getElementById('rc-min'),
       statsCard: document.getElementById('stats-card'),
       statsBody: document.getElementById('stats-body'),
       hint: document.getElementById('hint'),
@@ -312,6 +319,8 @@ export class Match {
     if (mcVenue) mcVenue.textContent = PACK.venue || CONFIG.match.venue;
     this._teamNames = teamsData.map((t) => t.name);
     this.goalCardTimer = 0;
+    this.refTimer = 0;
+    this.refCardTimer = 0;
     this._hintHTML = this.hud.hint ? this.hud.hint.innerHTML : '';
     this._keeperHintShown = false;
     this._gkOrderHintShown = false;  // подсказка про выход вратаря — один раз за матч
