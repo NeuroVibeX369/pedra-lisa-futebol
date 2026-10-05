@@ -159,6 +159,7 @@ export class Match {
     // Arbitragem real de partida.
     this.pendingFoul = null;
     this.advantage = null;
+    this._foulCooldown = new WeakMap();
     this.cards = new Map();
     this.cardEvents = [];
     this.offsideSnapshot = null;
@@ -696,8 +697,12 @@ export class Match {
   reportFoul(offender, victim, meta = {}) {
     if (!offender || !victim || offender.dismissed || victim.dismissed) return;
     if (this.state !== 'play' && this.state !== 'kickoff') return;
-    // Uma colisão pode ser detectada em mais de um frame; só vale a primeira.
+    // Uma mesma entrada pode tocar o corpo por vários frames. Sem esta
+    // janela, o árbitro podia apitar duas vezes o mesmo carrinho.
     if (this.pendingFoul || this.advantage) return;
+    const last = this._foulCooldown.get(offender);
+    if (Number.isFinite(last) && this.clock - last < 1.25) return;
+    this._foulCooldown.set(offender, this.clock);
     const vp = victim.group.position;
     const offenderIdx = this.teams.indexOf(offender.team);
     if (offenderIdx >= 0) this.stats.foul[offenderIdx] += 1;
@@ -963,6 +968,15 @@ export class Match {
       const z = r.z + uz * 9.15 + pz * spread;
       p.reset(x, z, Math.atan2(r.x - x, r.z - z));
     });
+  }
+
+  _jumpFreeKickWall(r) {
+    if (!r || r.type !== 'freekick' || r.indirect || !Array.isArray(r.wall)) return;
+    for (const p of r.wall) {
+      if (!p || p.dismissed || p.jumpT > 0 || p.downT > 0) continue;
+      const height = 0.32 + Math.random() * 0.12;
+      p.startJump(0.12 + Math.random() * 0.04, height);
+    }
   }
 
   _arrangePenalty(r) {
@@ -2704,6 +2718,7 @@ export class Match {
         if (r.indirect) this.executeRestartPass(r, 'pass', Math.min(1.2, swipe.power || 0.7), swipe.dir);
         else {
           this._captureOffsideSnapshot(r.taker);
+          this._jumpFreeKickWall(r);
           r.taker.swipeShot(swipe, this.input, this.ball);
           this._finishRestart();
         }
@@ -2711,6 +2726,7 @@ export class Match {
         if (r.indirect) this.executeRestartPass(r, 'pass', Math.max(0.55, shot), aim);
         else {
           this._captureOffsideSnapshot(r.taker);
+          this._jumpFreeKickWall(r);
           r.taker.shoot(Math.max(0.35, shot), this.input, this.ball);
           this._finishRestart();
         }
@@ -2862,6 +2878,7 @@ export class Match {
       const bp = this.ball.mesh.position;
       const goalDist = Math.hypot(goalX - bp.x, bp.z);
       if (!r.indirect && goalDist <= 31) {
+        this._jumpFreeKickWall(r);
         const targetZ = Math.max(-CONFIG.goal.width * 0.35,
           Math.min(CONFIG.goal.width * 0.35, -bp.z * 0.12));
         const dx = goalX - bp.x;
