@@ -201,12 +201,25 @@ export class Team {
     const human = this.match?.humanTeam;
     const owner = this.match?.toucher;
     const humanHolding = !!human && human !== this && owner?.team === human && !owner.isKeeper;
+    const stallCfg = this.defence.stall || {};
     if (humanHolding) {
       const speed = Math.hypot(owner.vel?.x || 0, owner.vel?.z || 0);
-      if (speed < 0.75) this._stallPressureT = Math.min(4, this._stallPressureT + dt);
-      else this._stallPressureT = Math.max(0, this._stallPressureT - dt * 3);
+      const maxSpeed = stallCfg.moveSpeedMax ?? 0.85;
+      if (speed < maxSpeed) {
+        this._stallPressureT = Math.min(stallCfg.maxTimer ?? 6, this._stallPressureT + dt);
+      } else {
+        this._stallPressureT = Math.max(0, this._stallPressureT - dt * 4);
+      }
+
+      const hi = this.match.teams.indexOf(human);
+      const ai = this.match.teams.indexOf(this);
+      const late = this.match.clock >= 70 * 60;
+      const humanLeading = hi >= 0 && ai >= 0 &&
+        (this.match.score?.[hi] || 0) > (this.match.score?.[ai] || 0);
+      this._stallLateLeading = late && humanLeading;
     } else {
       this._stallPressureT = 0;
+      this._stallLateLeading = false;
     }
 
     this.updateSequence(dt, ball);
@@ -1527,13 +1540,21 @@ export class Team {
       -F.length / 2 + 4,
       Math.min(F.length / 2 - 4, bp.x + this.side * AI.supportDist),
     );
-    // Сторона держится, пока мяч не ушёл ЗАМЕТНО за ось: прежняя запись
-    // переключала цель с −8 на +12 (двадцать метров) каждый раз, как мяч
-    // пересекал |z| = 8, а мяч там и живёт большую часть эпизода
-    if (Math.abs(bp.z) > 8) this._supportSide = -Math.sign(bp.z);
-    else if (Math.abs(bp.z) < 4) this._supportSide = Math.sign(bp.z || 1) * -1;
-    const side = this._supportSide || 1;
-    const z = side * (Math.abs(bp.z) > 8 ? 8 : 12);
+
+    // Apoio em triângulo: com a bola aberta, o parceiro entra no meio-espaço
+    // em vez de atravessar o campo inteiro. No centro, alterna o lado para dar
+    // sempre uma linha diagonal de passe de 8–12 m.
+    let z;
+    if (Math.abs(bp.z) > 12) {
+      const sign = Math.sign(bp.z);
+      z = bp.z - sign * 9.5;
+      this._supportSide = sign;
+    } else {
+      if (Math.abs(bp.z) > 5) this._supportSide = -Math.sign(bp.z);
+      else if (!this._supportSide) this._supportSide = bp.z >= 0 ? -1 : 1;
+      z = (this._supportSide || 1) * 9.5;
+    }
+    z = Math.max(-F.width / 2 + 5, Math.min(F.width / 2 - 5, z));
     return { x, z };
   }
 
