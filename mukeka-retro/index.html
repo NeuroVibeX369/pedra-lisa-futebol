@@ -857,6 +857,96 @@
     @media (max-width: 520px) {
       #retro-online-test .rot-actions { grid-template-columns: 1fr; }
     }
+
+    /* ================= MASTER LIGA ================= */
+    #master-league {
+      position: fixed; inset: 0; z-index: 115000;
+      display: grid; place-items: center;
+      padding: clamp(10px, 2.5vw, 24px);
+      background: rgba(2,8,5,.96);
+      font-family: var(--tv-font);
+    }
+    #master-league.hidden { display: none; }
+    .ml-shell {
+      width: min(980px, 96%);
+      max-height: 94%;
+      overflow-y: auto;
+      color: #eef7ef;
+      background: #08140d;
+      border: 1px solid #43664b;
+      box-shadow: 0 20px 70px rgba(0,0,0,.55);
+    }
+    .ml-top {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; justify-content: space-between; gap: 14px;
+      padding: 14px 16px;
+      background: #0c1e12;
+      border-bottom: 1px solid #31543a;
+    }
+    .ml-top h2 { margin: 0; font-size: clamp(16px,2.4vw,24px); letter-spacing: 3px; }
+    #ml-meta { margin-top: 4px; color: #91ad97; font-size: 11px; letter-spacing: 1px; }
+    #ml-close {
+      min-width: 44px; min-height: 44px;
+      color: #fff; background: #12271a; border: 1px solid #42664b;
+      cursor: pointer;
+    }
+    #ml-body { padding: 14px; }
+    .ml-tabs {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+    }
+    .ml-tabs button {
+      min-height: 38px; padding: 7px 10px;
+      color: #cfe2d2; background: #102119;
+      border: 1px solid #355840; font: 700 10px var(--tv-font);
+      letter-spacing: 1px; cursor: pointer;
+    }
+    .ml-tabs button.active { color: #071109; background: #8fe05a; border-color: #8fe05a; }
+    .ml-content { min-width: 0; }
+    .ml-kpis {
+      display: grid; grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .ml-kpis div, .ml-card {
+      padding: 12px; background: #0d1c12; border: 1px solid #294632;
+    }
+    .ml-kpis b { display:block; font-size: clamp(16px,2.2vw,24px); color:#fff; }
+    .ml-kpis small, .ml-card small, .ml-note { color:#809988; }
+    .ml-card { margin-bottom: 10px; }
+    .ml-card h3 { margin:0 0 8px; color:#b8ff52; letter-spacing:2px; font-size:13px; }
+    .ml-card p { margin: 6px 0; line-height:1.45; }
+    .ml-main {
+      margin-top: 12px; min-height: 44px; padding: 9px 14px;
+      color:#071109; background:#b8ff52; border:0;
+      font:700 12px var(--tv-font); letter-spacing:2px; cursor:pointer;
+    }
+    .ml-titles { display:flex; flex-wrap:wrap; gap:10px; }
+    .ml-titles span { padding:7px 9px; background:#12271a; border:1px solid #31543a; }
+    .ml-titles b { margin-left:8px; color:#f2c73d; }
+    .ml-row {
+      display:grid; grid-template-columns:minmax(150px,2.2fr) .65fr .65fr 1fr;
+      gap:8px; align-items:center;
+      padding:8px 9px; border-bottom:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.018);
+      font-size:12px;
+    }
+    .ml-row span { min-width:0; overflow-wrap:anywhere; }
+    .ml-row b { color:#b8ff52; }
+    .ml-row small { display:block; color:#7f9685; }
+    .ml-head { color:#91ad97; background:#12271a; font-size:10px; letter-spacing:1px; }
+    .ml-buy, .ml-sell {
+      margin-left:6px; padding:4px 6px;
+      color:#eaf5ec; background:#193422; border:1px solid #476f51;
+      font:700 9px var(--tv-font); cursor:pointer;
+    }
+    .ml-empty { text-align:center; padding: clamp(28px,7vw,80px) 14px; }
+    .ml-empty h2 { letter-spacing:3px; }
+    .ml-empty p { color:#91ad97; }
+    .ml-notice { border-color:#587a38; color:#e9f6dc; }
+    @media (max-width: 640px) {
+      .ml-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .ml-row { grid-template-columns:minmax(120px,2fr) .55fr .55fr 1fr; font-size:10px; }
+      .ml-tabs button { flex:1 1 30%; }
+    }
 </style>
 </head>
 <body>
@@ -1013,10 +1103,10 @@
           <strong>ONLINE 1×1</strong>
           <small>Crie uma sala e enfrente um amigo em outro aparelho.</small>
         </button>
-        <button class="pg-mode" type="button" disabled>
+        <button id="pg-master" class="pg-mode primary" type="button">
           <strong>MASTER LIGA</strong>
-          <small>Temporadas, elenco, evolução, tabela e mercado.</small>
-          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+          <small>Liga de Independência, Regional, mercado, rankings e temporadas infinitas.</small>
+          <span class="pg-tag">BASE JOGÁVEL</span>
         </button>
         <button class="pg-mode" type="button" disabled>
           <strong>COPA MUKEKA</strong>
@@ -1046,6 +1136,19 @@
         <span>MUKEKA TV</span>
         <span>Mais modos serão liberados sem iniciar partida automaticamente.</span>
       </div>
+    </div>
+  </div>
+
+  <div id="master-league" class="hidden">
+    <div class="ml-shell">
+      <div class="ml-top">
+        <div>
+          <h2 id="ml-title">MASTER LIGA</h2>
+          <div id="ml-meta"></div>
+        </div>
+        <button id="ml-close" type="button" aria-label="Voltar ao menu principal">✕</button>
+      </div>
+      <div id="ml-body"></div>
     </div>
   </div>
 
