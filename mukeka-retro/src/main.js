@@ -1034,6 +1034,21 @@ function frame() {
     C.distance - C.farApproach * far01 - C.attackApproach * atk01,
   );
   camLookTarget.set(fx * 0.8, C.lookHeight, fz * C.followZ);
+
+  // Pênalti: câmera atrás do cobrador, como nos futsims clássicos. Ela vale
+  // tanto na cobrança normal quanto na disputa e permanece alguns instantes
+  // após o chute para o voo da bola não sofrer um corte seco.
+  const pr = match?.restart?.type === 'penalty' ? match.restart : null;
+  const pv = pr
+    ? { side: pr.team.side, x: pr.x, goalX: pr.team.attackGoalX }
+    : (match?.penaltyViewT > 0 ? match.penaltyView : null);
+  if (pv) {
+    const side = pv.side || 1;
+    const spotX = pv.x;
+    camPos.set(spotX - side * 8.6, 4.15, 0);
+    camLookTarget.set(pv.goalX - side * 0.8, 1.15, 0);
+  }
+
   // Приоритет камер: повтор → празднование → ТВ-заставка → живая ТВ-камера.
   // У повтора и празднования камеры свои и уже плавные, поэтому обычное
   // сглаживание тут только смазало бы кадр.
