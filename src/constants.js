@@ -234,8 +234,8 @@ export const AI_LEVELS = {
 export const BTN = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, FIRE: 16, SWITCH: 32 };
 
 export const TEAM_PRESETS = [
-  { name: 'BLUE', shirt: '#2f6fd0', shorts: '#1b3f7a', trim: '#ffffff', skin: '#e8b98a', hair: '#3a2415' },
-  { name: 'RED', shirt: '#d33b3b', shorts: '#7a1b1b', trim: '#ffffff', skin: '#8d5524', hair: '#221109' },
+  { name: 'PEDRA LISA', shirt: '#2f6fd0', shorts: '#1b3f7a', trim: '#ffffff', skin: '#e8b98a', hair: '#3a2415' },
+  { name: 'INDEPENDÊNCIA', shirt: '#d33b3b', shorts: '#7a1b1b', trim: '#ffffff', skin: '#8d5524', hair: '#221109' },
 ];
 
 export const KEEPER_KIT = [
