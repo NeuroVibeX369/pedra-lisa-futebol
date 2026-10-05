@@ -119,7 +119,7 @@ check(host.socket.last()?.t === 'peer' && guest.socket.last()?.t === 'peer',
   'both players are told the opponent has arrived, whatever case the code was typed in');
 
 arena.receive(stranger, JSON.stringify({ t: 'join', code: opened.code }));
-check(stranger.socket.last()?.t === 'error' && /full/i.test(stranger.socket.last().msg),
+check(stranger.socket.last()?.t === 'error' && /cheia/i.test(stranger.socket.last().msg),
   'a third player cannot walk into a full room');
 
 // Everything else is passed through untouched - that is the whole job.
@@ -175,7 +175,7 @@ const embed = posted[1]?.embeds?.[0];
 check(/BBB/.test(embed?.description || '') && /6-1/.test(embed.description)
   && /top of the table/.test(embed.description),
   `the message says who, what and where: ${JSON.stringify(embed?.description)}`);
-check(posted[1]?.username === 'WebSoccer' && /WebSoccer/.test(embed?.title || ''),
+check(posted[1]?.username === 'Pedra Lisa Futebol' && /Pedra Lisa Futebol/.test(embed?.title || ''),
   'the post says which game it came from');
 check(/^https?:\/\/\S+$/.test(embed?.url || '') && /Play at/.test(embed?.footer?.text || ''),
   `the title links to the game (${embed?.url})`);
