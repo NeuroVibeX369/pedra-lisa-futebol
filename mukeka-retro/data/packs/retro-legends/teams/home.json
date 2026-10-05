@@ -21,7 +21,13 @@
       "skin": "#b98a63",
       "hair": "thin",
       "hairColor": "#2a1c14",
-      "overall": 66
+      "overall": 83,
+      "gk": {
+        "reflexes": 0.82,
+        "handling": 0.8,
+        "positioning": 0.81,
+        "vision": 0.77
+      }
     },
     {
       "name": "NETO",
@@ -37,7 +43,7 @@
       "touch": 0.6,
       "work": 0.8,
       "crossBias": 0.8,
-      "overall": 61
+      "overall": 80
     },
     {
       "name": "DJHA",
@@ -50,7 +56,7 @@
       "role": "cover",
       "vision": 0.65,
       "composure": 0.75,
-      "overall": 64
+      "overall": 82
     },
     {
       "name": "BASTIAOZÃO REI",
@@ -62,7 +68,7 @@
       "hairColor": "#160f0c",
       "role": "stopper",
       "composure": 0.35,
-      "overall": 67
+      "overall": 84
     },
     {
       "name": "BRUNO",
@@ -76,7 +82,7 @@
       "crossBias": 1.25,
       "work": 0.9,
       "shoot": 0.75,
-      "overall": 62
+      "overall": 81
     },
     {
       "name": "LUCIANO",
@@ -92,7 +98,7 @@
       "touch": 0.9,
       "vision": 0.75,
       "risk": 0.75,
-      "overall": 69
+      "overall": 90
     },
     {
       "name": "MANOEL",
@@ -107,7 +113,7 @@
       "risk": 0.2,
       "composure": 0.85,
       "work": 0.85,
-      "overall": 65
+      "overall": 82
     },
     {
       "name": "RONILTON",
@@ -121,7 +127,7 @@
       "width": -0.75,
       "runBox": 0.75,
       "work": 0.9,
-      "overall": 65
+      "overall": 83
     },
     {
       "name": "HÉLIO",
@@ -135,8 +141,8 @@
       "width": -0.55,
       "trackBack": 0.8,
       "vision": 0.8,
-      "touch": 0.8,
-      "overall": 67
+      "touch": 1,
+      "overall": 85
     },
     {
       "name": "BASTIAOZINHO",
@@ -152,7 +158,7 @@
       "touch": 0.95,
       "shoot": 1.2,
       "risk": 0.7,
-      "overall": 71
+      "overall": 92
     },
     {
       "name": "RICARDO",
@@ -166,7 +172,7 @@
       "depth": 2,
       "runShort": 0.7,
       "touch": 0.8,
-      "overall": 66
+      "overall": 84
     }
   ],
   "style": "brazil98",
