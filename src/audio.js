@@ -291,12 +291,12 @@ export class Chiptune {
 /** The least time between two lines of commentary, in seconds. */
 const LINE_GAP = 6;
 
-/** "throw in for red", and so on. The restart names whose it is. */
+/** Narra o tipo de recomeço e o time beneficiado. */
 function restartLine(e) {
-  const side = e.team === 0 ? 'blue' : 'red';
-  if (e.kind === 'THROW-IN') return `throw in for ${side}`;
-  if (e.kind === 'GOAL KICK') return `goal kick for ${side}`;
-  if (e.kind === 'CORNER') return `corner for ${side}`;
+  const side = e.team === 0 ? 'pedra lisa' : 'independencia';
+  if (e.kind === 'THROW-IN') return `lateral para ${side}`;
+  if (e.kind === 'GOAL KICK') return `tiro de meta para ${side}`;
+  if (e.kind === 'CORNER') return `escanteio para ${side}`;
   return '';
 }
 
@@ -434,7 +434,7 @@ export class Sfx {
         else if (e.reason === 'goal') this.commentary(scoreWords(e.score), { text: true, force: true });
       } else if (e.type === 'fulltime') {
         const score = scoreWords(e.score);
-        this.commentary(score ? `full time ${score}` : 'thats full time', { text: true, force: true });
+        this.commentary(score ? `fim de jogo ${score}` : 'fim de jogo', { text: true, force: true });
       }
       else if (e.type === 'whistle') this.whistle(e.kind);
       else if (e.type === 'slide') this.slide();
