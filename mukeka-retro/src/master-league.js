@@ -1549,6 +1549,16 @@ export function setupMasterLeague() {
     render();
   }
 
+  function openCareer() {
+    open = true;
+    state = loadState() || state;
+    entryMode = state ? 'career' : 'entry';
+    overwriteArmed = false;
+    tab = 'overview';
+    gate.classList.remove('hidden');
+    render();
+  }
+
   function closeHub() {
     open = false;
     gate.classList.add('hidden');
@@ -1561,6 +1571,7 @@ export function setupMasterLeague() {
   return {
     get open() { return open; },
     openHub,
+    openCareer,
     closeHub,
     get state() { return state; },
     completePlayedMatch(score, report = null) {
