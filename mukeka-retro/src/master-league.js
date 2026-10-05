@@ -869,6 +869,7 @@ function completePlayedMatch(state, score, report = null) {
   payForUserMatch(state, fixture.home, fixture.away, hg, ag, state.stage);
 
   const goals = Array.isArray(report?.goals) ? report.goals : [];
+  const substitutions = Array.isArray(report?.substitutions) ? report.substitutions : [];
   state.matchHistory = Array.isArray(state.matchHistory) ? state.matchHistory : [];
   state.matchHistory.unshift({
     season: state.season,
@@ -882,6 +883,14 @@ function completePlayedMatch(state, score, report = null) {
       careerId: g.careerId || null,
       name: g.name || 'GOL',
       minute: Number(g.minute) || null,
+    })),
+    substitutions: substitutions.map((x) => ({
+      teamIndex: Number(x.teamIndex) || 0,
+      minute: Number(x.minute) || null,
+      outCareerId: x.outCareerId || null,
+      outName: x.outName || 'JOGADOR',
+      inCareerId: x.inCareerId || null,
+      inName: x.inName || 'JOGADOR',
     })),
   });
   state.matchHistory = state.matchHistory.slice(0, 40);
@@ -904,6 +913,7 @@ function completePlayedMatch(state, score, report = null) {
     homeGoals: hg,
     awayGoals: ag,
     goals,
+    substitutions,
   };
 }
 
@@ -1119,9 +1129,11 @@ export function setupMasterLeague() {
       `<div class="ml-goal-event"><span>${g.minute || '—'}'</span><b>${g.name || 'GOL'}</b><small>${Number(g.teamIndex) === 0 ? focus.homeName : focus.awayName}</small></div>`
     ).join('');
 
-    const other = (result.results || []).map((g) =>
-      `<div class="ml-result-row"><span>${g.homeName}</span><b>${g.homeGoals} × ${g.awayGoals}${g.penalties ? ` <small>(pên. ${g.penalties})</small>` : ''}</b><span>${g.awayName}</span></div>`
-    ).join('');
+    const other = (result.results || [])
+      .filter((g) => g.id !== focus.id)
+      .map((g) =>
+        `<div class="ml-result-row"><span>${g.homeName}</span><b>${g.homeGoals} × ${g.awayGoals}${g.penalties ? ` <small>(pên. ${g.penalties})</small>` : ''}</b><span>${g.awayName}</span></div>`
+      ).join('');
 
     return `
       <div class="ml-result-screen">
