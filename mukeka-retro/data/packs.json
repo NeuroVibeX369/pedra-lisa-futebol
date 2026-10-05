@@ -1,6 +1,9 @@
 {
-  "active": "wc98-real",
-  "packs": ["wc98-real", "retro-legends"],
+  "active": "retro-legends",
+  "packs": [
+    "retro-legends"
+  ],
   "_комментарий": "Какой пак атрибутики грузит игра. Смена релизного билда = смена одной строки active. Проверить другой пак не трогая файл: ?pack=retro-legends в адресе.",
-  "_правило": "Перед публичным релизом active = retro-legends, а папка packs/wc98-real в раздачу не попадает. Подробности — База-знаний/Исследования/17-Юридика-после-релиза-и-YouTube.md"
+  "_правило": "Перед публичным релизом active = retro-legends, а папка packs/wc98-real в раздачу не попадает. Подробности — База-знаний/Исследования/17-Юридика-после-релиза-и-YouTube.md",
+  "_comentario_mukeka": "Mukeka Retro carrega apenas o pacote personalizado Pedra Lisa x Independência."
 }
