@@ -625,6 +625,7 @@ function showMasterResult(result) {
       <h2>FIM DE JOGO</h2>
       <div class="mrr-clubs">${result.homeName} × ${result.awayName}</div>
       <div class="mrr-score">${result.homeGoals} × ${result.awayGoals}</div>
+      ${result.penalties ? `<div class="mrr-penalties">PÊNALTIS · ${result.penalties.home} × ${result.penalties.away}</div>` : ''}
       <div class="mrr-events">
         <h3>GOLS</h3>
         ${goals || '<div class="mrr-empty">SEM GOLS</div>'}
@@ -638,7 +639,7 @@ function showMasterResult(result) {
   overlay.querySelector('button')?.addEventListener('click', (e) => {
     e.stopPropagation();
     const next = new URL(location.href);
-    for (const key of ['start', 'mode', 'home', 'away', 'side', 'masterMatch', 'online', 'room']) {
+    for (const key of ['start', 'mode', 'home', 'away', 'side', 'masterMatch', 'masterStage', 'online', 'room']) {
       next.searchParams.delete(key);
     }
     next.searchParams.set('masterHub', '1');
@@ -951,6 +952,7 @@ function frame() {
       goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
       substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
       cards: Array.isArray(match.cardEvents) ? match.cardEvents : [],
+      penalties: match.shootoutResult || null,
     });
     if (result) showMasterResult(result);
   }
