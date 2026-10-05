@@ -422,6 +422,9 @@ document.addEventListener('fullscreenchange', () => {
 // Настоящий полноэкранный режим браузера при загрузке не попросишь — он
 // требует жеста пользователя, поэтому восстанавливаем только спрятанный корпус.
 if (localStorage.getItem('f98.fullscreen') === '1') setFullscreen(true, false);
+// No celular a moldura some desde o primeiro quadro. O fullscreen REAL ainda
+// depende de gesto e é solicitado na tela de som logo antes da partida.
+if (globalThis.matchMedia?.('(pointer: coarse)')?.matches) setFullscreen(true, false);
 
 // --- Клавиша НАСТРОЙКИ: меню на стекле ---
 const settingsPanel = document.getElementById('settings');
@@ -939,8 +942,14 @@ function frame() {
   input.update(gdt);
   // O convidado envia os comandos antes da simulação; no host eles alimentam
   // o segundo jogador humano sem substituir a IA dos outros dez atletas.
-  retroOnline.beforeSimulation?.(performance.now());
-  if (match) match.update(gdt); // 22 jogadores: humano(s) + IA
+  const netNow = performance.now();
+  retroOnline.beforeSimulation?.(netNow);
+  // Em celular convidado a renderização continua fluida, mas física/IA rodam
+  // a 30 Hz. Isso corta quase pela metade o custo que antes podia congelar o
+  // aparelho quando chegavam snapshots ao mesmo tempo que a simulação local.
+  const simDt = retroOnline.simulationDt?.(gdt) ?? gdt;
+  const runSim = simDt !== null;
+  if (match && runSim) match.update(simDt); // 22 jogadores: humano(s) + IA
 
   // Em partidas iniciadas pela Master Liga, o placar final volta para a
   // carreira uma única vez. A rodada/tabela/receita são atualizadas pelo
@@ -959,11 +968,11 @@ function frame() {
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
   const replaying = !!(match && (match.state === 'replay' || match.state === 'celebration'));
-  const event = replaying ? null : ball.update(gdt);
+  const event = (replaying || !runSim) ? null : ball.update(simDt);
   // Сетка знает и про мяч, и про ТЕЛА: игроки её тянут, она их держит.
   // Игроки уже сходили свой шаг в match.update, поэтому барьер правит
   // конечную позицию кадра — до отрисовки и до постановки теней.
-  if (!replaying) goals.update(gdt, match ? match.allPlayers : null);
+  if (!replaying && runSim) goals.update(simDt, match ? match.allPlayers : null);
   // Атмосфера: веер теней ставится ПОСЛЕ движения игроков, вспышки живут сами
   if (scene.userData.shadows) scene.userData.shadows.update();
   if (scene.userData.flashes) scene.userData.flashes.update(dt);
@@ -982,7 +991,7 @@ function frame() {
   if (event === 'goal' && match) match.onGoal();
   // O host publica o estado autoritativo depois de física/gol. No convidado,
   // o snapshot corrige a previsão local e limita divergências causadas pela IA.
-  retroOnline.afterSimulation?.(performance.now());
+  retroOnline.afterSimulation?.(netNow);
   commentator.update(match);
   radar.draw(match, dt); // mini-mapa: 23 pontos em canvas 2D
 
