@@ -40,11 +40,15 @@ function ordinal(n) {
   return `posição ${n}`;
 }
 
+function levelLabel(level) {
+  return ({ easy: 'FÁCIL', normal: 'NORMAL', hard: 'DIFÍCIL' })[level] || String(level).toUpperCase();
+}
+
 function line({ entry, level, place }) {
   const result = `${entry.scored}-${entry.conceded}`;
   const beat = entry.scored === entry.conceded
-    ? `empatou no **${level.toUpperCase()}** por ${result}`
-    : `venceu no **${level.toUpperCase()}** por ${result}`;
+    ? `empatou no **${levelLabel(level)}** por ${result}`
+    : `venceu no **${levelLabel(level)}** por ${result}`;
   return `🏆 **${entry.name}** ${beat} — ${ordinal(place)}`;
 }
 
