@@ -609,11 +609,24 @@ function showMasterResult(result) {
   if (!result || document.getElementById('master-result-return')) return;
   const overlay = document.createElement('div');
   overlay.id = 'master-result-return';
+
+  const goals = (result.goals || []).map((g) =>
+    `<div class="mrr-event"><span>${g.minute || '—'}'</span><b>${g.name || 'GOL'}</b><small>${Number(g.teamIndex) === 0 ? result.homeName : result.awayName}</small></div>`
+  ).join('');
+  const substitutions = (result.substitutions || []).map((x) =>
+    `<div class="mrr-sub"><span>${x.minute || '—'}'</span><b>${x.outName}</b><i>↓</i><b>${x.inName}</b><i>↑</i></div>`
+  ).join('');
+
   overlay.innerHTML = `
     <div class="mrr-card">
-      <h2>MASTER LIGA · RESULTADO REGISTRADO</h2>
-      <div>${result.homeName} × ${result.awayName}</div>
+      <h2>FIM DE JOGO</h2>
+      <div class="mrr-clubs">${result.homeName} × ${result.awayName}</div>
       <div class="mrr-score">${result.homeGoals} × ${result.awayGoals}</div>
+      <div class="mrr-events">
+        <h3>GOLS</h3>
+        ${goals || '<div class="mrr-empty">SEM GOLS</div>'}
+        ${substitutions ? `<h3>SUBSTITUIÇÕES</h3>${substitutions}` : ''}
+      </div>
       <button type="button">VOLTAR À MASTER LIGA</button>
     </div>
   `;
@@ -932,6 +945,7 @@ function frame() {
     masterResultCommitted = true;
     const result = masterLeague.completePlayedMatch?.(match.score, {
       goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
+      substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
     });
     if (result) showMasterResult(result);
   }
