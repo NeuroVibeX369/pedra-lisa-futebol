@@ -618,7 +618,7 @@ const retroOnline = setupRetroOnlineTest({
 const startupParams = new URLSearchParams(location.search);
 if (startupParams.get('masterHub') === '1') {
   pregame.close();
-  masterLeague.openHub();
+  masterLeague.openCareer?.();
   const clean = new URL(location.href);
   clean.searchParams.delete('masterHub');
   history.replaceState(null, '', clean);
