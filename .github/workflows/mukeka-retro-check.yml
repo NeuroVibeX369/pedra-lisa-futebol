@@ -23,3 +23,4 @@ jobs:
           node --check mukeka-retro/src/commentator.js
           node --check mukeka-retro/src/main.js
           node --check mukeka-retro/src/match.js
+          node --check mukeka-retro/src/scene.js
