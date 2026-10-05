@@ -114,7 +114,7 @@ export function setupRetroOnlineTest({ onRole, onExitOnline, match, ball, input 
     gate.classList.remove('hidden');
     gate.classList.remove('connected');
     setOnlineUrl(true);
-    say('Conectando ao servidor...');
+    say('Entrando na sala...');
     signal = new Signal(relayFor(location));
     netplay = null;
     peerReady = false;
@@ -146,7 +146,7 @@ export function setupRetroOnlineTest({ onRole, onExitOnline, match, ball, input 
     });
 
     signal.on('error', (m) => {
-      say(m?.msg || 'Não foi possível conectar ao servidor.');
+      say(m?.msg || 'Não foi possível entrar na sala.');
     });
 
     signal.on('close', () => {
