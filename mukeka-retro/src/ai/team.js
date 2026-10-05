@@ -163,7 +163,7 @@ export class Team {
   }
 
   get fieldPlayers() {
-    return this.players.slice(1).filter((p) => !p.dismissed && !p.dismissed);
+    return this.players.slice(1).filter((p) => !p.dismissed);
   }
 
   get opponents() {
