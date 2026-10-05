@@ -25,6 +25,12 @@ export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
   const shareBtn = document.getElementById('retro-online-share');
   const openBtn = document.getElementById('key-online');
 
+  // O lobby fica sobre o campo. Impedimos cliques/teclas usados para
+  // criar ou entrar em sala de chegarem aos listeners de jogabilidade.
+  for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'keydown', 'keyup']) {
+    gate.addEventListener(type, (e) => e.stopPropagation());
+  }
+
   const params = new URLSearchParams(location.search);
   const invitedRoom = String(params.get('room') || '').trim().toUpperCase();
   let panelOpen = params.get('online') === '1' || /^[A-Z2-9]{4}$/.test(invitedRoom);
