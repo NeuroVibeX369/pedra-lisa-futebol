@@ -268,11 +268,12 @@
        бы геометрию поля) и без плашки телеграфики. Внизу по центру, как в
        PES; на таче стик слева и кнопки справа его не задевают. */
     #radar {
-      position: fixed; left: 50%; bottom: 10px;
+      position: fixed; left: 50%; bottom: 6px;
       transform: translateX(-50%);
-      width: clamp(150px, 23%, 290px);
+      width: clamp(88px, 11%, 132px);
       aspect-ratio: 105 / 68;
       display: none;
+      opacity: 0.72;
       pointer-events: none; z-index: 9;
     }
     #radar.show { display: block; }
@@ -290,21 +291,21 @@
        textures.channelLogo): у своей сборки реальный УТ-1, у публичной
        вымышленный УГ-1. Пак без логотипа — блок просто не показывается. */
     #channel-logo {
-      position: fixed; top: 36px; left: 28px;
+      position: fixed; top: 20px; left: 20px;
       display: block;
-      padding: 3px 9px 2px;
+      padding: 2px 6px 1px;
       font-family: var(--tv-font);
-      font-size: clamp(16px, 2.1vw, 28px);
+      font-size: clamp(10px, 1.15vw, 15px);
       font-weight: 700;
       font-style: italic;
-      letter-spacing: 2px;
-      color: #ffffff;
-      background: rgba(7, 24, 13, 0.68);
-      border-left: 6px solid #178a3b;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.90);
+      background: rgba(7, 24, 13, 0.48);
+      border-left: 3px solid #178a3b;
       transform: skewX(-10deg);
-      opacity: 0.9;
+      opacity: 0.78;
       pointer-events: none;
-      text-shadow: 2px 2px 0 rgba(0,0,0,0.65);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.65);
       z-index: 10;
     }
 
@@ -512,31 +513,37 @@
       border-radius: 50%; background: rgba(255,255,255,0.45);
     }
 
-    /* Тач-кнопки: видны только на устройствах с пальцем */
+    /* Controles de toque: quatro botões principais em losango, inspirados
+       na lógica clássica de futebol. Os símbolos são apenas formas geométricas
+       e a função continua sendo a mesma do motor do Mukeka Retro. */
     .tbtn {
-      position: fixed; width: 86px; height: 86px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.45); background: rgba(0,0,0,0.35);
-      color: #fff; font-family: inherit; font-size: 15px; letter-spacing: 1px;
-      display: none; align-items: center; justify-content: center;
+      position: fixed; width: 62px; height: 62px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.42); background: rgba(0,0,0,0.34);
+      color: #fff; font-family: var(--tv-font); letter-spacing: .5px;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
       user-select: none; -webkit-user-select: none; z-index: 5;
+      touch-action: manipulation;
     }
-    .tbtn:active { background: rgba(255,255,255,0.25); }
-    .tbtn { touch-action: manipulation; } /* убирает double-tap-зум по кнопке */
-    #btn-pass   { right: 124px; bottom: 26px; }
-    #btn-switch { right: 226px; bottom: 32px; width: 64px; height: 64px; font-size: 24px; }
-    #btn-shoot  {
-      right: 22px; bottom: 118px; width: 108px; height: 108px;
-      border-style: dashed; background: rgba(255,255,255,0.04);
-    }
+    .tbtn:active { background: rgba(255,255,255,0.23); transform: scale(.96); }
+    .face-symbol { font: 700 27px/24px Arial, sans-serif; pointer-events: none; }
+    .face-label { margin-top: 3px; font-size: 8px; line-height: 9px; letter-spacing: .7px; pointer-events: none; }
+
+    /* Losango: △ em cima, □ à esquerda, ○ à direita, × embaixo. */
+    #btn-through { right: 76px; bottom: 148px; }
+    #btn-shoot   { right: 140px; bottom: 86px; }
+    #btn-cross   { right: 12px; bottom: 86px; }
+    #btn-pass    { right: 76px; bottom: 24px; }
+
     #btn-shoot.gesture-active {
       border-color: rgba(232,212,77,0.85);
       background: rgba(232,212,77,0.12);
-      box-shadow: 0 0 18px rgba(232,212,77,0.22);
+      box-shadow: 0 0 13px rgba(232,212,77,0.20);
     }
-    #btn-sprint { right: 22px; bottom: 236px; width: 72px; height: 72px; font-size: 22px; }
-    /* ФИНТ — пара спринту и по смыслу, и по месту: спринт разгоняет мяч
-       вперёд, финт прячет его от защитника. Стоит прямо над ⚡ */
-    #btn-feint { right: 22px; bottom: 318px; width: 72px; height: 72px; font-size: 13px; }
+
+    /* Funções auxiliares menores, para não esconder o campo. */
+    #btn-switch { right: 216px; bottom: 30px; width: 46px; height: 46px; font-size: 10px; }
+    #btn-sprint { right: 216px; bottom: 84px; width: 46px; height: 46px; font-size: 10px; }
+    #btn-feint  { right: 216px; bottom: 138px; width: 46px; height: 46px; font-size: 10px; }
     #btn-feint:active, #btn-feint.on {
       border-color: rgba(232,212,77,0.85);
       background: rgba(232,212,77,0.16);
@@ -581,7 +588,9 @@
       position: fixed; inset: 0; pointer-events: none; z-index: 4; display: none;
     }
     @media (pointer: coarse) {
-      #cross-zone { display: flex; }
+      /* O círculo virou um botão real; a grande marca pontilhada não precisa
+         mais ocupar o campo. O gesto avançado continua funcionando na área direita. */
+      #cross-zone { display: none; }
       #gesture-viz { display: block; }
     }
 
@@ -860,9 +869,9 @@
     <div class="row"><span class="key">L2/LT</span> — drible e controle técnico.</div>
 
     <h3 data-open="0">CONTROLES — CELULAR/TABLET</h3>
-    <div class="row">Use o direcional virtual à esquerda e os botões de ação à direita.</div>
-    <div class="row"><span class="key">PASSE</span> e <span class="key">CHUTE</span> mudam de função conforme ataque ou defesa.</div>
-    <div class="row">O gesto na área de cruzamento define direção, força e curva da bola.</div>
+    <div class="row">Use o direcional virtual à esquerda e o losango de ações à direita.</div>
+    <div class="row"><span class="key">×</span> passe · <span class="key">□</span> chute · <span class="key">○</span> cruzamento/carrinho · <span class="key">△</span> passe em profundidade.</div>
+    <div class="row">L1 troca o jogador, R2 corre e L2 executa drible/controle técnico. Deslizar na área direita continua permitindo cruzamento ou chute com direção e efeito.</div>
 
     <h3 data-open="0">DICAS DE PARTIDA</h3>
     <div class="row">Laterais, escanteios e tiros de meta são cobrados automaticamente ou pelos mesmos botões de passe/cruzamento.</div>
@@ -874,11 +883,13 @@
   <div id="stick-base"><div id="stick-knob"></div></div>
   <div id="cross-zone"><span class="lbl-atk">CRUZAR</span><span class="lbl-def">CARRINHO</span></div>
   <canvas id="gesture-viz"></canvas>
-  <div id="btn-switch" class="tbtn">⇄</div>
-  <div id="btn-pass" class="tbtn"><span class="lbl-atk">PASSE</span><span class="lbl-def">CORPO</span></div>
-  <div id="btn-shoot" class="tbtn"><span class="lbl-atk">CHUTE</span><span class="lbl-def">AFASTAR</span></div>
-  <div id="btn-sprint" class="tbtn">⚡</div>
-  <div id="btn-feint" class="tbtn">DRIBLE</div>
+  <div id="btn-switch" class="tbtn"><span>L1</span><span class="face-label">TROCAR</span></div>
+  <div id="btn-through" class="tbtn"><span class="face-symbol">△</span><span class="face-label lbl-atk">PROF.</span><span class="face-label lbl-def">GOLEIRO</span></div>
+  <div id="btn-shoot" class="tbtn"><span class="face-symbol">□</span><span class="face-label lbl-atk">CHUTE</span><span class="face-label lbl-def">AFASTAR</span></div>
+  <div id="btn-cross" class="tbtn"><span class="face-symbol">○</span><span class="face-label lbl-atk">CRUZAR</span><span class="face-label lbl-def">CARRINHO</span></div>
+  <div id="btn-pass" class="tbtn"><span class="face-symbol">×</span><span class="face-label lbl-atk">PASSE</span><span class="face-label lbl-def">MARCAR</span></div>
+  <div id="btn-sprint" class="tbtn"><span>R2</span><span class="face-label">CORRER</span></div>
+  <div id="btn-feint" class="tbtn"><span>L2</span><span class="face-label">DRIBLE</span></div>
   <div id="power"><div id="power-fill"></div></div>
   <div id="lineups"><div id="lineups-text"></div></div>
   <button id="fs-exit" title="Sair da tela cheia (Esc)" aria-label="Sair da tela cheia">⤡</button>
@@ -962,6 +973,33 @@
     } }
   </script>
   <script type="module" src="./src/main.js"></script>
-<a href="/" style="position:fixed;left:14px;bottom:14px;z-index:99999;padding:9px 12px;background:#0b1b10;color:#dff5e3;border:1px solid #4b7757;text-decoration:none;font:700 11px system-ui;border-radius:8px">← MUKEKA GAMES</a>
+<button id="back-to-hub" type="button" style="position:fixed;left:10px;bottom:10px;z-index:99999;padding:6px 9px;background:rgba(11,27,16,.72);color:#dff5e3;border:1px solid #4b7757;font:700 9px system-ui;border-radius:7px;opacity:.78">← MUKEKA GAMES</button>
+<script>
+  (() => {
+    const btn = document.getElementById('back-to-hub');
+    if (!btn) return;
+    let armed = false;
+    let timer = null;
+    const reset = () => {
+      armed = false;
+      btn.textContent = '← MUKEKA GAMES';
+      btn.style.opacity = '.78';
+    };
+    btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!armed) {
+        armed = true;
+        btn.textContent = 'TOQUE DE NOVO PARA SAIR';
+        btn.style.opacity = '1';
+        clearTimeout(timer);
+        timer = setTimeout(reset, 2600);
+        return;
+      }
+      location.href = '/';
+    });
+  })();
+</script>
 </body>
 </html>
