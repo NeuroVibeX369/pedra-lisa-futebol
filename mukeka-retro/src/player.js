@@ -2758,8 +2758,21 @@ export class Player {
         bpEarly.y > P.kickMaxBallY && closingClaim && dClaim < claimReach);
     const brake = aiming && !this.chargeRun && !aerialIntent;
 
-    // --- Бег: плавный разгон к желаемой скорости (спринт — быстрее) ---
-    let sprinting = input.sprint && !brake;
+    // --- Corrida: no celular o sprint pode ser automático.
+    // Sem a bola, analógico virtual quase no limite = correr. Com a bola,
+    // só aceleramos automaticamente quando há espaço, evitando transformar
+    // toda condução curta em um toque longo de sprint.
+    let autoSprint = !!input.touchAutoSprint;
+    if (autoSprint && (this.hasBall || this.isToucher || this.controlling)) {
+      let nearestOpp = Infinity;
+      const opponents = this.team?.opponents || [];
+      for (const o of opponents) {
+        const op = o.group.position;
+        nearestOpp = Math.min(nearestOpp, Math.hypot(op.x - pos.x, op.z - pos.z));
+      }
+      autoSprint = nearestOpp > 4.2;
+    }
+    let sprinting = (input.sprint || autoSprint) && !brake;
     let approachMove = null;
     let strikeMove = null;
     let approachIntentAtContact = null;
