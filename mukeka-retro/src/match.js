@@ -1034,10 +1034,14 @@ export class Match {
     if (!s) return -1;
     const [a, b] = s.scores;
     const [ka, kb] = s.kicks;
-    const remA = Math.max(0, 5 - ka);
-    const remB = Math.max(0, 5 - kb);
-    if (a > b + remB) return 0;
-    if (b > a + remA) return 1;
+    if (ka <= 5 && kb <= 5) {
+      const remA = Math.max(0, 5 - ka);
+      const remB = Math.max(0, 5 - kb);
+      if (a > b + remB) return 0;
+      if (b > a + remA) return 1;
+    }
+    // Depois de cinco cobranças de cada lado, só existe vencedor quando
+    // ambos tiverem batido a mesma quantidade: morte súbita de verdade.
     if (ka >= 5 && kb >= 5 && ka === kb && a !== b) return a > b ? 0 : 1;
     return -1;
   }
@@ -1599,20 +1603,40 @@ export class Match {
       this.celebration.start(this._scorerPlayer, this.teams[this._scorerIdx],
         this.teams[1 - this._scorerIdx]);
     }
-    // Финальный свисток: пауза и новый матч
+    // Fim de jogo. Na Master Liga o resultado fica parado até o jogador
+    // voltar ao hub; no amistoso, o próximo jogo reinicia corretamente como
+    // uma nova partida, inclusive voltando ao primeiro tempo e aos lados iniciais.
     if (this.state === 'fulltime' && this.stateTimer > M.fulltimePause) {
-      this.score = [0, 0];
-      this.clock = 0;
-      this.stoppage = 0;
-      this._possFrames = [0, 0];
-      this._markStats(); // stats копятся сквозь матчи (их читает sim.js) —
-                         // плашка следующего матча покажет разность от метки
-      this.hud.flash.classList.remove('show');
-      if (this.hud.statsCard) this.hud.statsCard.classList.remove('show');
-      this.flashTimer = 0;
-      this.goals.reset();
-      this.kickoff(1 - this.kickoffTeam);
-      this.startIntro(); // новый матч — снова ТВ-заставка
+      const master = new URLSearchParams(location.search).get('mode') === 'master';
+      if (!master) {
+        if (this.halftimeDone) {
+          for (const team of this.teams) team.side *= -1;
+        }
+        this.score = [0, 0];
+        this.clock = 0;
+        this.stoppage = 0;
+        this.half = 1;
+        this.halftimeDone = false;
+        this.shootout = null;
+        this.shootoutResult = null;
+        this.pendingFoul = null;
+        this.advantage = null;
+        this.offsideSnapshot = null;
+        this.cards.clear();
+        this.cardEvents.length = 0;
+        this.goalEvents.length = 0;
+        this.substitutionEvents.length = 0;
+        this.substitutionCount = [0, 0];
+        this.cpuSubStage = [0, 0];
+        this._possFrames = [0, 0];
+        this._markStats();
+        this.hud.flash.classList.remove('show');
+        if (this.hud.statsCard) this.hud.statsCard.classList.remove('show');
+        this.flashTimer = 0;
+        this.goals.reset();
+        this.kickoff(this.firstKickoffTeam);
+        this.startIntro();
+      }
     }
 
     // Розыгрыш AI с центра: выдержал паузу — отдал пас
