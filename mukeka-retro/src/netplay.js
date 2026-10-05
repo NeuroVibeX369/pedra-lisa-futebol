@@ -327,10 +327,6 @@ export class RetroNetplay {
     this.latestSnapshot = null;
     this.lastAppliedSnapshot = -1;
 
-    if (this.role === 'host' && this.match && this.remoteInput) {
-      this.match.setRemoteController?.(1, this.remoteInput);
-    }
-
     signal.on('retro-input', (m) => {
       if (this.role !== 'host' || !this.remoteInput) return;
       this.remoteInput.applyPacket(m);
@@ -345,6 +341,10 @@ export class RetroNetplay {
 
   setConnected(value) {
     this.connected = !!value;
+    if (this.role === 'host' && this.match && this.remoteInput) {
+      if (this.connected) this.match.setRemoteController?.(1, this.remoteInput);
+      else this.match.setRemoteController?.(-1, null);
+    }
   }
 
   beforeSimulation(now = performance.now()) {
