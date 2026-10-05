@@ -60,7 +60,12 @@ const crt = new CRTPipeline(renderer);
 // Пак уже загружен к этому моменту — модуль ждёт его на верхнем уровне.
 let match = null;
 if (PACK.teams) {
-  match = new Match(scene, ball, goals, input, PACK.teams);
+  // Fundamento do multiplayer: cada navegador pode assumir um lado diferente.
+  // ?side=home controla o Pedra Lisa; ?side=away controla o Independência.
+  // O padrão continua sendo Pedra Lisa para não mudar o modo atual.
+  const sideParam = new URLSearchParams(location.search).get('side');
+  const humanTeamIndex = sideParam === 'away' ? 1 : 0;
+  match = new Match(scene, ball, goals, input, PACK.teams, humanTeamIndex);
 } else {
   console.error('Пак без составов: матч не запущен.');
 }
