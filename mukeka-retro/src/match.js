@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 import { PACK } from './pack.js';
 import { Player, setLookTarget } from './player.js';
 import { Team } from './ai/team.js';
+import { buildMods } from './roles.js';
 import { updateFieldPlayer } from './ai/fieldplayer.js';
 import { updateKeeper } from './ai/goalkeeper.js';
 import { distToBall, freeSpace, passPower, passStrikeKind, passTime } from './ai/steering.js';
@@ -127,6 +128,14 @@ export class Match {
     this.remoteSwitchCd = 0;
 
     this._all = [...this.teams[0].players, ...this.teams[1].players];
+
+    // Banco de reservas e trocas em partida. O elenco completo vem do mesmo
+    // catálogo usado por Amistoso e Master Liga, mas só 11 ficam ativos.
+    this.benches = teamsData.map((data) =>
+      Array.isArray(data?.bench) ? data.bench.map((p) => ({ ...p })) : []);
+    this.maxSubstitutions = 3;
+    this.substitutionCount = [0, 0];
+    this.substitutionEvents = [];
 
     this.controlled = null;   // игрок под управлением человека
     this.possession = this.teams[0];
@@ -631,6 +640,133 @@ export class Match {
     const op = owner.group.position;
     const ownerGap = Math.hypot(bp.x - op.x, bp.z - op.z);
     if (ownerGap <= CONFIG.ai.defence.badTouchDist) p.cancelBallApproach();
+  }
+
+  getSubstitutionState(teamIndex = this.humanTeamIndex) {
+    const idx = teamIndex === 1 ? 1 : 0;
+    const team = this.teams[idx];
+    return {
+      teamIndex: idx,
+      teamName: team?.data?.name || `TIME ${idx + 1}`,
+      active: (team?.players || []).map((p, slot) => ({
+        slot,
+        name: p.name || `JOGADOR ${slot + 1}`,
+        number: p.number || slot + 1,
+        position: p.look?.position || (slot === 0 ? 'GOL' : ''),
+        overall: Number.isFinite(p.overall) ? p.overall : (p.look?.overall || null),
+        careerId: p.careerId || p.look?.careerId || null,
+      })),
+      bench: (this.benches[idx] || []).map((p, benchIndex) => ({
+        benchIndex,
+        name: p.name || 'JOGADOR',
+        number: p.number || '—',
+        position: p.position || '',
+        overall: Number.isFinite(p.overall) ? p.overall : null,
+        careerId: p.careerId || null,
+      })),
+      used: this.substitutionCount[idx] || 0,
+      remaining: Math.max(0, this.maxSubstitutions - (this.substitutionCount[idx] || 0)),
+      max: this.maxSubstitutions,
+    };
+  }
+
+  substitutePlayer(teamIndex, outgoingIndex, benchIndex) {
+    const idx = teamIndex === 1 ? 1 : 0;
+    if (this.state !== 'play' && this.state !== 'kickoff') {
+      return { ok: false, reason: 'Aguarde a bola voltar ao jogo.' };
+    }
+    if ((this.substitutionCount[idx] || 0) >= this.maxSubstitutions) {
+      return { ok: false, reason: 'As três substituições já foram usadas.' };
+    }
+
+    const team = this.teams[idx];
+    const bench = this.benches[idx] || [];
+    const outgoing = team?.players?.[outgoingIndex];
+    const look = bench[benchIndex];
+    if (!team || !outgoing || !look) {
+      return { ok: false, reason: 'Escolha um titular e um reserva válidos.' };
+    }
+
+    const data = team.data || {};
+    const incoming = new Player(this.scene, {
+      kitColor: outgoingIndex === 0 ? data.colors?.gk : data.colors?.primary,
+      kitTexture: outgoingIndex === 0 ? data.kits?.goalkeeper : data.kits?.home,
+      look,
+    });
+
+    incoming.name = look.name || 'JOGADOR';
+    incoming.number = look.number || outgoing.number;
+    incoming.careerId = look.careerId || null;
+    incoming.overall = Number.isFinite(look.overall) ? look.overall : null;
+    incoming.team = team;
+    incoming.homeIdx = outgoingIndex;
+    incoming.role = CONFIG.formation.roles[outgoingIndex]?.id || outgoing.role;
+    incoming.isKeeper = outgoingIndex === 0;
+    incoming.mods = incoming.isKeeper
+      ? outgoing.mods
+      : buildMods(incoming, incoming.role, team.style);
+
+    // A troca acontece exatamente no lugar do jogador que sai para não criar
+    // teleporte no reinício da partida.
+    incoming.group.position.copy(outgoing.group.position);
+    incoming.group.rotation.copy(outgoing.group.rotation);
+    incoming.rot = outgoing.rot;
+    if (incoming.vel && outgoing.vel) incoming.vel.copy(outgoing.vel);
+    incoming.hasBall = outgoing.hasBall;
+    incoming.controlling = outgoing.controlling;
+
+    const wasControlled = this.controlled === outgoing;
+    const wasRemote = this.remoteControlled === outgoing;
+    const wasToucher = this.toucher === outgoing;
+    const wasLastTouch = this.lastTouch === outgoing;
+
+    team.players[outgoingIndex] = incoming;
+    bench.splice(benchIndex, 1);
+    this._all = [...this.teams[0].players, ...this.teams[1].players];
+
+    if (wasControlled) {
+      this.controlled = null;
+      this.setControlled(incoming, 0);
+    }
+    if (wasRemote) this.remoteControlled = incoming;
+    if (wasToucher) this.toucher = incoming;
+    if (wasLastTouch) this.lastTouch = incoming;
+    if (this.restart?.taker === outgoing) this.restart.taker = incoming;
+
+    // Referências táticas antigas não podem continuar apontando para quem já
+    // saiu. O treinador recompõe tudo no próximo ciclo.
+    for (const t of this.teams) {
+      for (const key of [
+        'chaser','coverer','receiver','supporter','runner','overlapper',
+        'shortRunner','thirdMan','decoy',
+      ]) {
+        if (t[key] === outgoing) t[key] = incoming;
+      }
+      t.marks?.clear?.();
+      t.boxRuns?.clear?.();
+      t.airGuards?.clear?.();
+    }
+
+    this.scene.remove(outgoing.group);
+    if (outgoing.shadow) this.scene.remove(outgoing.shadow);
+
+    this.substitutionCount[idx] = (this.substitutionCount[idx] || 0) + 1;
+    const minute = Math.max(1, Math.min(120, Math.floor(this.clock / 60) || 1));
+    const event = {
+      teamIndex: idx,
+      minute,
+      outCareerId: outgoing.careerId || outgoing.look?.careerId || null,
+      outName: outgoing.name || 'JOGADOR',
+      inCareerId: incoming.careerId || incoming.look?.careerId || null,
+      inName: incoming.name || 'JOGADOR',
+    };
+    this.substitutionEvents.push(event);
+
+    return {
+      ok: true,
+      event,
+      remaining: Math.max(0, this.maxSubstitutions - this.substitutionCount[idx]),
+    };
   }
 
   setHumanTeamIndex(index) {
