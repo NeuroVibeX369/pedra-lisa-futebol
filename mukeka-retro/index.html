@@ -1781,6 +1781,224 @@
       .cup-next > div button { flex:1 1 100%; }
     }
 
+
+    /* ================= MASTER LIGA · INÍCIO CLÁSSICO ================= */
+    .ml-start-screen,
+    .ml-new-setup {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: clamp(18px,3vw,34px);
+      background:
+        radial-gradient(circle at 50% -20%, rgba(219,239,103,.10), transparent 42%),
+        linear-gradient(180deg, rgba(18,44,27,.98), rgba(7,20,12,.99));
+      border: 1px solid rgba(102,155,112,.74);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 20px 54px rgba(0,0,0,.28);
+    }
+    .ml-start-screen { text-align:center; }
+    .ml-start-emblem {
+      display:inline-block;
+      margin-bottom:15px;
+      padding:7px 13px 6px;
+      color:#101707;
+      background:linear-gradient(180deg,#eef57d,#b8dd55);
+      font-weight:900;
+      letter-spacing:4px;
+      transform:skewX(var(--tv-skew));
+      box-shadow:0 8px 24px rgba(188,221,84,.12);
+    }
+    .ml-start-screen h2,
+    .ml-new-setup h2 {
+      margin:4px 0 10px;
+      color:#fff;
+      font-size:clamp(24px,4vw,42px);
+      letter-spacing:3px;
+    }
+    .ml-start-screen > p {
+      max-width:720px;
+      margin:0 auto 18px;
+      color:#b8c9bb;
+      line-height:1.55;
+    }
+    .ml-save-summary,
+    .ml-setup-preview {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px;
+      margin:18px 0;
+    }
+    .ml-save-summary span,
+    .ml-setup-preview > div {
+      display:flex;
+      min-height:76px;
+      flex-direction:column;
+      justify-content:center;
+      padding:11px;
+      background:linear-gradient(180deg,#173722,#102719);
+      border:1px solid rgba(91,139,99,.7);
+    }
+    .ml-save-summary small,
+    .ml-setup-preview small {
+      color:#96aa9a;
+      font-size:9px;
+      letter-spacing:1.7px;
+    }
+    .ml-save-summary b,
+    .ml-setup-preview b {
+      margin-top:5px;
+      color:#f2f7ef;
+      font-size:clamp(13px,2vw,20px);
+      letter-spacing:.7px;
+    }
+    .ml-start-actions {
+      display:flex;
+      justify-content:center;
+      gap:9px;
+      flex-wrap:wrap;
+      margin-top:15px;
+    }
+    .ml-secondary {
+      color:#eaf2eb !important;
+      background:linear-gradient(180deg,#24462f,#173622) !important;
+      border-color:#5f8b68 !important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.05) !important;
+    }
+    .ml-setup-head {
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:17px;
+      padding-bottom:13px;
+      border-bottom:1px solid rgba(114,158,121,.25);
+    }
+    .ml-setup-head button {
+      min-width:92px;
+      min-height:39px;
+      color:#dbe6dd;
+      background:#122b1b;
+      border:1px solid #56725d;
+      font:700 10px var(--tv-font);
+      letter-spacing:1px;
+      cursor:pointer;
+    }
+    .ml-setup-head small {
+      color:#dcea70;
+      letter-spacing:2px;
+    }
+    .ml-setup-head h2 {
+      margin:2px 0 0;
+      font-size:clamp(18px,3vw,30px);
+    }
+    .ml-setup-card {
+      margin-bottom:12px;
+      padding:15px;
+      background:linear-gradient(145deg,#173722,#0e2517);
+      border:1px solid rgba(81,129,90,.74);
+    }
+    .ml-setup-card h3 {
+      margin:0 0 7px;
+      color:#e7f46e;
+      letter-spacing:2px;
+    }
+    .ml-setup-card p {
+      margin:0 0 11px;
+      color:#aebfb1;
+    }
+    #ml-new-club {
+      width:100%;
+      min-height:46px;
+      padding:8px 11px;
+      color:#fff;
+      background:#07150d;
+      border:1px solid #5d8365;
+      font:700 12px var(--tv-font);
+      letter-spacing:1px;
+    }
+    .ml-roster-choice {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      margin:12px 0;
+    }
+    .ml-roster-choice button {
+      min-height:126px;
+      padding:17px;
+      text-align:left;
+      color:#d7e3d9;
+      background:linear-gradient(145deg,#122d1c,#0a1c11);
+      border:1px solid rgba(78,122,86,.72);
+      cursor:pointer;
+      transition:transform .12s ease,border-color .12s ease,background .12s ease;
+    }
+    .ml-roster-choice button:hover {
+      transform:translateY(-1px);
+      border-color:#9fc45f;
+    }
+    .ml-roster-choice button.active {
+      color:#fff;
+      background:
+        radial-gradient(circle at 20% 0%,rgba(220,239,104,.11),transparent 45%),
+        linear-gradient(145deg,#1f482e,#11301d);
+      border-color:#dbea68;
+      box-shadow:inset 0 0 0 1px rgba(219,234,104,.12);
+    }
+    .ml-roster-choice strong {
+      display:block;
+      margin-bottom:8px;
+      color:#e8f470;
+      font-size:14px;
+      letter-spacing:1.5px;
+    }
+    .ml-roster-choice span {
+      display:block;
+      color:#aabdad;
+      line-height:1.55;
+    }
+    .ml-setup-squad {
+      margin:12px 0;
+      padding:13px 15px;
+      background:#08170e;
+      border:1px solid rgba(71,111,78,.65);
+    }
+    .ml-setup-squad > small {
+      display:block;
+      margin-bottom:8px;
+      color:#a5b7a8;
+      letter-spacing:1.6px;
+    }
+    .ml-setup-squad > div {
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+    }
+    .ml-setup-squad span {
+      padding:6px 8px;
+      color:#dce6de;
+      background:#132b1b;
+      border:1px solid rgba(77,118,84,.58);
+    }
+    .ml-setup-squad b { color:#e7f46e; }
+    .ml-overwrite-warning {
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      margin:13px 0;
+      padding:11px 13px;
+      color:#f3e8cf;
+      background:rgba(124,74,34,.18);
+      border-left:4px solid #d49a4b;
+    }
+    .ml-overwrite-warning b {
+      color:#efb65d;
+      letter-spacing:1px;
+    }
+    @media (max-width:680px) {
+      .ml-save-summary,
+      .ml-setup-preview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .ml-roster-choice { grid-template-columns:1fr; }
+      .ml-start-actions > button,
+      #ml-confirm-new { width:100%; }
+    }
+
 </style>
 </head>
 <body>
