@@ -160,6 +160,8 @@ export class Match {
     this.cards = new Map();
     this.cardEvents = [];
     this.offsideSnapshot = null;
+    this.shootout = null;
+    this.shootoutResult = null;
 
     // Dois tempos de 45 minutos com troca de lado.
     this.half = 1;
@@ -949,6 +951,197 @@ export class Match {
     this.kickoff(1 - this.firstKickoffTeam);
   }
 
+  _isMasterKnockout() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('mode') !== 'master') return false;
+    const stage = p.get('masterStage') || '';
+    return stage.startsWith('knockout-') || stage === 'champions';
+  }
+
+  startShootout() {
+    this.state = 'shootout';
+    this.stateTimer = 0;
+    this.restart = null;
+    this.pendingFoul = null;
+    this.advantage = null;
+    this.offsideSnapshot = null;
+    this._releaseKeeperHolds();
+    this.shootout = {
+      scores: [0, 0],
+      kicks: [0, 0],
+      turn: 0,
+      phase: 'between',
+      timer: 0,
+      teamIndex: 0,
+      taker: null,
+      keeper: null,
+    };
+    this._showRefereeNotice('DISPUTA DE PÊNALTIS', 2.2);
+    this._prepareShootoutKick();
+  }
+
+  _prepareShootoutKick() {
+    const s = this.shootout;
+    if (!s) return;
+    const teamIndex = s.turn % 2;
+    const team = this.teams[teamIndex];
+    const defending = this.teams[1 - teamIndex];
+    const shooters = team.fieldPlayers.slice().sort((a, b) =>
+      (b.overall || b.look?.overall || 0) - (a.overall || a.look?.overall || 0));
+    const taker = shooters[s.kicks[teamIndex] % Math.max(1, shooters.length)] || team.keeper;
+    const x = team.side * (CONFIG.field.length / 2 - 11);
+    const r = { type: 'penalty', team, x, z: 0, taker, phase: 'ready', t: 0, shootout: true };
+    this.restart = r;
+    this.ball.reset();
+    this.ball.mesh.position.set(x, CONFIG.ball.radius, 0);
+    this.goals.reset();
+    this._arrangePenalty(r);
+    s.teamIndex = teamIndex;
+    s.taker = taker;
+    s.keeper = defending.keeper;
+    s.phase = 'ready';
+    s.timer = 0;
+    if (team === this.humanTeam) this.setControlled(taker, 0);
+    this._showRefereeNotice(
+      `PÊNALTIS · ${this._teamNames?.[0] || 'CASA'} ${s.scores[0]}–${s.scores[1]} ${this._teamNames?.[1] || 'FORA'}`,
+      1.2,
+    );
+  }
+
+  _shootoutAIPenalty() {
+    const s = this.shootout;
+    if (!s?.taker) return;
+    const team = this.teams[s.teamIndex];
+    const bp = this.ball.mesh.position;
+    const goalX = team.attackGoalX;
+    const targetZ = (Math.random() < 0.5 ? -1 : 1) *
+      (CONFIG.goal.width * (0.18 + Math.random() * 0.26));
+    const targetY = 0.45 + Math.random() * 1.35;
+    const dx = goalX - bp.x;
+    const dz = targetZ - bp.z;
+    const dist = Math.hypot(dx, dz) || 1;
+    const power = 22 + Math.random() * 6;
+    const flight = dist / (power * 0.82);
+    const lift = Math.max(0.5, Math.min(9,
+      (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * CONFIG.ball.gravity * flight));
+    s.taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'shot');
+    s.phase = 'flight';
+    s.timer = 0;
+  }
+
+  _shootoutWinner() {
+    const s = this.shootout;
+    if (!s) return -1;
+    const [a, b] = s.scores;
+    const [ka, kb] = s.kicks;
+    const remA = Math.max(0, 5 - ka);
+    const remB = Math.max(0, 5 - kb);
+    if (a > b + remB) return 0;
+    if (b > a + remA) return 1;
+    if (ka >= 5 && kb >= 5 && ka === kb && a !== b) return a > b ? 0 : 1;
+    return -1;
+  }
+
+  _resolveShootoutKick(goal) {
+    const s = this.shootout;
+    if (!s || s.phase !== 'flight') return;
+    const idx = s.teamIndex;
+    s.kicks[idx] += 1;
+    if (goal) s.scores[idx] += 1;
+    const resultText = goal ? 'GOL' : 'PERDEU';
+    this._showRefereeNotice(
+      `${resultText} · PÊNALTIS ${s.scores[0]}–${s.scores[1]}`,
+      1.1,
+    );
+    const winner = this._shootoutWinner();
+    if (winner >= 0) {
+      this.shootoutResult = {
+        home: s.scores[0],
+        away: s.scores[1],
+        winnerTeamIndex: winner,
+      };
+      this.state = 'fulltime';
+      this.stateTimer = 0;
+      this.restart = null;
+      playWhistle(1.6);
+      crowdApplause(1);
+      this.hud.flash.textContent =
+        `FIM · PÊNALTIS ${s.scores[0]}:${s.scores[1]}`;
+      this.hud.flash.classList.add('show');
+      this.flashTimer = CONFIG.match.fulltimePause;
+      this.showStatsCard();
+      return;
+    }
+    s.turn += 1;
+    s.phase = 'between';
+    s.timer = 0;
+    this.restart = null;
+  }
+
+  updateShootout(dt) {
+    const s = this.shootout;
+    if (!s) return;
+    s.timer += dt;
+
+    if (s.phase === 'between') {
+      for (const p of this._all) {
+        if (!p.dismissed) p.aiUpdate(dt, { x: 0, z: 0 }, {});
+      }
+      if (s.timer >= 1.15) this._prepareShootoutKick();
+      return;
+    }
+
+    const r = this.restart;
+    if (!r) return;
+    const taker = s.taker;
+    const keeper = s.keeper;
+
+    if (s.phase === 'ready') {
+      for (const p of this._all) {
+        if (p.dismissed || p === taker) continue;
+        p.aiUpdate(dt, { x: 0, z: 0 }, {});
+      }
+      this.updateTaker(taker, dt);
+      this.ball.mesh.position.set(r.x, CONFIG.ball.radius, 0);
+      this.ball.vel.set(0, 0, 0);
+
+      if (r.team === this.humanTeam) {
+        const shot = this.input.shot.consume();
+        const cross = this.input.consumeCross();
+        const swipe = this.input.consumeSwipe();
+        if (swipe) {
+          taker.swipeShot({ ...swipe, kind: 'shot' }, this.input, this.ball);
+          s.phase = 'flight';
+          s.timer = 0;
+        } else if (shot !== null || cross) {
+          const charge = shot !== null ? shot : cross.charge;
+          taker.shoot(Math.max(0.35, Math.min(1.15, charge)), this.input, this.ball);
+          s.phase = 'flight';
+          s.timer = 0;
+        }
+      } else if (s.timer >= 1.05) {
+        this._shootoutAIPenalty();
+      }
+      return;
+    }
+
+    if (s.phase === 'flight') {
+      for (const p of this._all) {
+        if (p.dismissed || p === keeper) continue;
+        p.aiUpdate(dt, { x: 0, z: 0 }, {});
+      }
+      if (keeper && !keeper.dismissed) updateKeeper(keeper, dt, this.ball);
+
+      const bp = this.ball.mesh.position;
+      const speed = this.ball.vel.length();
+      const outside = Math.abs(bp.x) > CONFIG.field.length / 2 + 2 ||
+        Math.abs(bp.z) > CONFIG.field.width / 2 + 3;
+      if (s.timer > 0.55 && (outside || speed < 0.35 || s.timer > 4.5)) {
+        this._resolveShootoutKick(false);
+      }
+    }
+  }
+
   getSubstitutionState(teamIndex = this.humanTeamIndex) {
     const idx = teamIndex === 1 ? 1 : 0;
     const team = this.teams[idx];
@@ -1368,6 +1561,12 @@ export class Match {
 
     if (this.state === 'halftime') {
       if (this.stateTimer >= 2.6) this.startSecondHalf();
+      this.updateHUD();
+      return;
+    }
+
+    if (this.state === 'shootout') {
+      this.updateShootout(dt);
       this.updateHUD();
       return;
     }
@@ -2206,6 +2405,7 @@ export class Match {
     b.spin = 0;
     b.afterTouch = 0;
     b.goalScored = false;
+    b.inGoalNet = 0;
     b.netContact = null;
     if (b.mark) b.mark.visible = false;
   }
@@ -2898,6 +3098,10 @@ export class Match {
 
   // Гол: определяем сторону по позиции мяча, счёт, пауза, потом розыгрыш
   onGoal() {
+    if (this.state === 'shootout') {
+      this._resolveShootoutKick(true);
+      return;
+    }
     if (this.state !== 'play' && this.state !== 'kickoff') return;
     const side = this.ball.mesh.position.x > 0 ? 1 : -1; // в чьи ворота влетело
     const scorerIdx = this.teams.findIndex((t) => t.side === side);
@@ -2985,6 +3189,10 @@ export class Match {
   }
 
   fullTime() {
+    if (this.score[0] === this.score[1] && this._isMasterKnockout() && !this.shootoutResult) {
+      this.startShootout();
+      return;
+    }
     this.state = 'fulltime';
     this.stateTimer = 0;
     this.restart = null; // свисток мог застать стандарт — бросаем его
@@ -3082,6 +3290,17 @@ export class Match {
     if (phase !== this._phase) {
       this._phase = phase;
       document.body.dataset.phase = phase;
+    }
+
+    if (this.state === 'shootout' && this.shootout) {
+      const scoreText = `${this.shootout.scores[0]}:${this.shootout.scores[1]}`;
+      const key = `PENS|${scoreText}`;
+      if (key !== this._hudCache) {
+        this._hudCache = key;
+        this.hud.score.textContent = scoreText;
+        this.hud.time.textContent = 'PÊNALTIS';
+      }
+      return;
     }
 
     const rawMin = Math.floor(this.clock / 60);
