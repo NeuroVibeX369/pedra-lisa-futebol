@@ -148,7 +148,7 @@ const FULLBACK = new Set(['LB', 'RB']);
 // нельзя: «покрутил, а эффекта нет» — самая дорогая ошибка в таких таблицах,
 // и в проекте она уже стоила дня на мёртвых полях конфига
 const LOOK_KEYS = new Set(['name', 'number', 'height', 'build', 'skin', 'hair',
-  'hairColor', 'beard', 'gloves', 'glovesCuff', 'gk', 'role', 'head']);
+  'hairColor', 'beard', 'gloves', 'glovesCuff', 'gk', 'role', 'head', 'overall']);
 
 // Вес рывка (0…1) → МЕТРОВАЯ фора в конкурсе исполнителей. Метры выбраны
 // нарочно: рядом уже живут метровые гистерезисы (stickBonus 5 м, chaseHold
@@ -179,6 +179,20 @@ export function buildMods(player, slotId, style) {
       console.warn(`[роли] в составе есть поле "${key}" (${look.name || '?'}), ` +
         'которого нет ни во внешности, ни в ролевых числах — оно НЕ РАБОТАЕТ');
     }
+  }
+
+  // O OVR do catálogo não é apenas visual: ele desloca levemente técnica,
+  // visão, compostura e finalização em torno da função tática do jogador.
+  // A função/role continua definindo COMO ele joga; o OVR define QUÃO BEM.
+  if (Number.isFinite(look.overall)) {
+    const q = Math.max(0, Math.min(1, (look.overall - 50) / 45));
+    const blend = (v, w = 0.34) => Math.max(0.05, Math.min(0.98, v * (1 - w) + q * w));
+    s.touch = blend(s.touch);
+    s.vision = blend(s.vision);
+    s.composure = blend(s.composure);
+    s.work = blend(s.work, 0.22);
+    s.risk = blend(s.risk, 0.18);
+    s.shoot = Math.max(0.65, Math.min(1.4, s.shoot * (0.88 + q * 0.24)));
   }
 
   if (!R.enabled) {
