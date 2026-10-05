@@ -351,6 +351,13 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
     selected.push(extra);
   }
 
+  const starters = selected.slice(0, 11);
+  const starterIds = new Set(starters.map((p) => p.id));
+  const bench = squad
+    .filter((p) => !starterIds.has(p.id))
+    .sort((a, b) => (b.overall || 0) - (a.overall || 0))
+    .slice(0, 7);
+
   return {
     id: club.id,
     name: club.name,
@@ -358,7 +365,8 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
     strength: club.strength,
     colors: { primary: club.primary, shorts: club.shorts, gk: club.gk },
     kits: { home: null, goalkeeper: null },
-    squad: selected.slice(0, 11).map((p, slot) => careerPlayerToMatchLook(p, slot)),
+    squad: starters.map((p, slot) => careerPlayerToMatchLook(p, slot)),
+    bench: bench.map((p) => careerPlayerToMatchLook(p, -1)),
     style: club.style || 'neutral',
     _comentario_mukeka: 'Equipe carregada do save da Master Liga.',
   };
@@ -367,6 +375,15 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
 export function buildClubTeam(clubOrId) {
   const club = typeof clubOrId === 'string' ? clubById(clubOrId) : clubOrId;
   if (!club) return null;
+
+  const full = buildClubCareerSquad(club);
+  const toMatch = (p, slot = -1) => {
+    const look = careerPlayerToMatchLook(p, slot);
+    // Amistoso não precisa gravar estatísticas de carreira, mas manter o ID
+    // permite que a mesma lógica de substituição funcione em todos os modos.
+    return look;
+  };
+
   return {
     id: club.id,
     name: club.name,
@@ -378,13 +395,8 @@ export function buildClubTeam(clubOrId) {
       gk: club.gk,
     },
     kits: { home: null, goalkeeper: null },
-    squad: buildClubCareerSquad(club).slice(0, 11).map((p) => {
-      const {
-        id, position, teamId, goals, mvp, appearances,
-        ...matchPlayer
-      } = p;
-      return matchPlayer;
-    }),
+    squad: full.slice(0, 11).map((p, slot) => toMatch(p, slot)),
+    bench: full.slice(11, 18).map((p) => toMatch(p, -1)),
     style: club.style || 'neutral',
     _comentario_mukeka: 'Equipe gerada do catálogo único Mukeka Retro.',
   };
