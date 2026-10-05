@@ -20,7 +20,8 @@
       "build": 0.98,
       "skin": "#c49b7c",
       "hair": "none",
-      "hairColor": "#3a2a1c"
+      "hairColor": "#3a2a1c",
+      "overall": 63
     },
     {
       "name": "LATERAL ESQ.",
@@ -33,7 +34,8 @@
       "role": "fullback",
       "depth": 6,
       "runOverlap": 0.7,
-      "work": 0.85
+      "work": 0.85,
+      "overall": 62
     },
     {
       "name": "ZAGUEIRO 1",
@@ -45,7 +47,8 @@
       "hairColor": "#160f0c",
       "role": "stopper",
       "press": 1,
-      "composure": 0.6
+      "composure": 0.6,
+      "overall": 65
     },
     {
       "name": "ZAGUEIRO 2",
@@ -58,7 +61,8 @@
       "role": "cover",
       "vision": 0.9,
       "composure": 0.85,
-      "runBox": 0.35
+      "runBox": 0.35,
+      "overall": 64
     },
     {
       "name": "LATERAL DIR.",
@@ -72,7 +76,8 @@
       "depth": 1,
       "runOverlap": 0.3,
       "trackBack": 1,
-      "shoot": 0.9
+      "shoot": 0.9,
+      "overall": 62
     },
     {
       "name": "MEIA 1",
@@ -86,7 +91,8 @@
       "width": -0.45,
       "runBox": 0.7,
       "shoot": 1.1,
-      "vision": 0.7
+      "vision": 0.7,
+      "overall": 64
     },
     {
       "name": "VOLANTE",
@@ -100,7 +106,8 @@
       "width": -0.2,
       "vision": 0.55,
       "risk": 0.15,
-      "composure": 0.9
+      "composure": 0.9,
+      "overall": 63
     },
     {
       "name": "MEIA 2",
@@ -114,7 +121,8 @@
       "width": -0.35,
       "press": 1,
       "work": 0.9,
-      "runShort": 0.7
+      "runShort": 0.7,
+      "overall": 63
     },
     {
       "name": "PONTA",
@@ -128,7 +136,8 @@
       "width": -0.5,
       "depth": 4,
       "touch": 0.8,
-      "shoot": 1.15
+      "shoot": 1.15,
+      "overall": 65
     },
     {
       "name": "ATACANTE 1",
@@ -144,7 +153,8 @@
       "touch": 0.95,
       "risk": 0.7,
       "runShort": 0.9,
-      "runBox": 0.55
+      "runBox": 0.55,
+      "overall": 66
     },
     {
       "name": "ATACANTE 2",
@@ -157,7 +167,8 @@
       "role": "target",
       "shoot": 0.7,
       "runShort": 0.7,
-      "touch": 0.4
+      "touch": 0.4,
+      "overall": 64
     }
   ],
   "style": "france98",
