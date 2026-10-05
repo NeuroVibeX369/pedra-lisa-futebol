@@ -604,6 +604,19 @@ export class Match {
     if (ownerGap <= CONFIG.ai.defence.badTouchDist) p.cancelBallApproach();
   }
 
+  setHumanTeamIndex(index) {
+    const next = index === 1 ? 1 : 0;
+    if (next === this.humanTeamIndex) return;
+    if (this.controlled) this.controlled.cancelBallApproach();
+    this.humanTeamIndex = next;
+    this.humanTeam = this.teams[next];
+    this.controlled = null;
+    this.switchCd = 0;
+    this.setControlled(this.nearestFieldPlayer(this.humanTeam), 0);
+    this._phase = this.possession === this.humanTeam ? 'attack' : 'defend';
+    document.body.dataset.phase = this._phase;
+  }
+
   setControlled(p, cd = CONFIG.ai.switch.cooldown) {
     if (!p) return;
     if (p === this.controlled) {
