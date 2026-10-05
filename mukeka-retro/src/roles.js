@@ -193,6 +193,9 @@ export function buildMods(player, slotId, style) {
     s.work = blend(s.work, 0.22);
     s.risk = blend(s.risk, 0.18);
     s.shoot = Math.max(0.65, Math.min(1.4, s.shoot * (0.88 + q * 0.24)));
+    // Um atributo explicitamente colocado no teto continua especial mesmo
+    // depois do blend de OVR. É o caso do drible do Hélio.
+    if (look.touch >= 0.99) s.touch = 1;
   }
 
   if (!R.enabled) {
