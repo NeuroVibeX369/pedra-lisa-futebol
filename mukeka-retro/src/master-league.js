@@ -870,6 +870,7 @@ function completePlayedMatch(state, score, report = null) {
 
   const goals = Array.isArray(report?.goals) ? report.goals : [];
   const substitutions = Array.isArray(report?.substitutions) ? report.substitutions : [];
+  const cards = Array.isArray(report?.cards) ? report.cards : [];
   state.matchHistory = Array.isArray(state.matchHistory) ? state.matchHistory : [];
   state.matchHistory.unshift({
     season: state.season,
@@ -891,6 +892,13 @@ function completePlayedMatch(state, score, report = null) {
       outName: x.outName || 'JOGADOR',
       inCareerId: x.inCareerId || null,
       inName: x.inName || 'JOGADOR',
+    })),
+    cards: cards.map((x) => ({
+      teamIndex: Number(x.teamIndex) || 0,
+      minute: Number(x.minute) || null,
+      careerId: x.careerId || null,
+      name: x.name || 'JOGADOR',
+      card: x.card === 'red' ? 'red' : 'yellow',
     })),
   });
   state.matchHistory = state.matchHistory.slice(0, 40);
@@ -914,6 +922,7 @@ function completePlayedMatch(state, score, report = null) {
     awayGoals: ag,
     goals,
     substitutions,
+    cards,
   };
 }
 
@@ -1103,10 +1112,12 @@ export function setupMasterLeague() {
     const matches = (state.matchHistory || []).slice(0, 10).map((m) => {
       const scorerText = (m.goals || []).map((g) =>
         `${g.name}${g.minute ? ` ${g.minute}'` : ''}`).join(' · ');
+      const cardText = (m.cards || []).map((c) =>
+        `${c.card === 'red' ? '🟥' : '🟨'} ${c.name}${c.minute ? ` ${c.minute}'` : ''}`).join(' · ');
       return `
         <div class="ml-card">
           <h3>${teamName(m.home)} ${m.homeGoals} × ${m.awayGoals} ${teamName(m.away)}</h3>
-          <small>Temporada ${m.season} · ${scorerText || 'Sem gols'}</small>
+          <small>Temporada ${m.season} · ${scorerText || 'Sem gols'}${cardText ? `<br>${cardText}` : ''}</small>
         </div>`;
     }).join('');
 
