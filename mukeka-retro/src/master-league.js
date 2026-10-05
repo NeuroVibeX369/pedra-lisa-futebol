@@ -1,43 +1,15 @@
+import {
+  CLUBS,
+  LOCAL_CLUBS as LOCAL_TEAMS,
+  REGIONAL_CLUBS as REGIONAL_TEAMS,
+  FINAL_CLUB as FINAL_BOSS,
+  buildClubCareerSquad,
+} from './clubs.js';
+
 const SAVE_KEY = 'mukeka.masterLiga.v1';
 
-const LOCAL_TEAMS = [
-  { id: 'pedra-lisa', name: 'PEDRA LISA', short: 'PDL', strength: 66 },
-  { id: 'retiro', name: 'RETIRO', short: 'RET', strength: 63 },
-  { id: 'jaburu', name: 'JABURU', short: 'JAB', strength: 62 },
-  { id: 'varzea-alegre', name: 'VÁRZEA ALEGRE', short: 'VAR', strength: 65 },
-  { id: 'nova-olinda', name: 'NOVA OLINDA', short: 'NOL', strength: 64 },
-  { id: 'brilhante', name: 'BRILHANTE', short: 'BRI', strength: 61 },
-  { id: 'palestina', name: 'PALESTINA', short: 'PAL', strength: 63 },
-  { id: 'sertao-independente', name: 'SERTÃO INDEPENDENTE', short: 'SIN', strength: 62 },
-];
+const TEAM_BY_ID = new Map(CLUBS.map((t) => [t.id, t]));
 
-const REGIONAL_TEAMS = [
-  { id: 'crateus-atletico', name: 'CRATEÚS ATLÉTICO', short: 'CRA', strength: 73 },
-  { id: 'novo-oriente', name: 'NOVO ORIENTE EC', short: 'NOR', strength: 70 },
-  { id: 'sertao-taua', name: 'SERTÃO TAUÁ', short: 'TAU', strength: 72 },
-  { id: 'tamboril', name: 'TAMBORIL ESPORTE', short: 'TAM', strength: 68 },
-  { id: 'ipaporanga', name: 'IPAPORANGA UNIÃO', short: 'IPA', strength: 67 },
-  { id: 'poranga', name: 'PORANGA ATLÉTICO', short: 'POR', strength: 66 },
-  { id: 'ararenda', name: 'ARARENDÁ FC', short: 'ARA', strength: 66 },
-  { id: 'monsenhor-tabosa', name: 'MONSENHOR TABOSA', short: 'MTA', strength: 69 },
-  { id: 'catunda', name: 'CATUNDA REAL', short: 'CAT', strength: 65 },
-  { id: 'santa-quiteria', name: 'SANTA QUITÉRIA EC', short: 'SQT', strength: 72 },
-  { id: 'boa-viagem', name: 'BOA VIAGEM ATLÉTICO', short: 'BVA', strength: 71 },
-  { id: 'madalena', name: 'MADALENA SC', short: 'MAD', strength: 68 },
-  { id: 'hidrolandia', name: 'HIDROLÂNDIA NORTE', short: 'HID', strength: 67 },
-  { id: 'quiterianopolis', name: 'QUITERIANÓPOLIS FC', short: 'QUI', strength: 69 },
-];
-
-const FINAL_BOSS = {
-  id: 'fortaleza-ce',
-  name: 'FORTALEZA CE',
-  short: 'FOR',
-  strength: 89,
-};
-
-const TEAM_BY_ID = new Map(
-  [...LOCAL_TEAMS, ...REGIONAL_TEAMS, FINAL_BOSS].map((t) => [t.id, t]),
-);
 
 const POSITIONS = [
   'GOL', 'LE', 'ZAG', 'ZAG', 'LD', 'VOL', 'MC', 'MEI', 'PE', 'ATA', 'PD',
@@ -110,25 +82,7 @@ function playerValue(p) {
 }
 
 function generatedSquad(team) {
-  const random = rng(team.id);
-  return POSITIONS.map((position, i) => {
-    const first = FIRST[Math.floor(random() * FIRST.length)];
-    const last = LAST[Math.floor(random() * LAST.length)];
-    let overall = Math.round(team.strength + (random() - 0.5) * 9);
-    if (position === 'ATA' || position === 'MEI') overall += random() > .72 ? 2 : 0;
-    overall = clamp(overall, 54, team.id === FINAL_BOSS.id ? 94 : 84);
-    if (team.id === FINAL_BOSS.id) overall = clamp(overall + 2, 83, 94);
-    return {
-      id: `${team.id}-${i}`,
-      name: `${first.toUpperCase()} ${last.toUpperCase()}`,
-      position,
-      overall,
-      teamId: team.id,
-      goals: 0,
-      mvp: 0,
-      appearances: 0,
-    };
-  });
+  return buildClubCareerSquad(team);
 }
 
 function pedraLisaSquad() {
