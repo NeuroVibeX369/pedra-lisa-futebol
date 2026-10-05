@@ -20,6 +20,7 @@ jobs:
         run: |
           node --check mukeka-retro/src/netplay.js
           node --check mukeka-retro/src/online.js
+          node --check mukeka-retro/src/pregame.js
           node --check mukeka-retro/src/commentator.js
           node --check mukeka-retro/src/main.js
           node --check mukeka-retro/src/match.js
