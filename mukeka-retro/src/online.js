@@ -60,6 +60,10 @@ export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
       netplay?.setConnected(true);
       say('Conectado! Sincronização 1v1 experimental ativa. Pedra Lisa x Independência.');
       gate.classList.add('connected');
+      // Dá tempo de ler o status e libera o campo para jogar.
+      setTimeout(() => {
+        if (peerReady) gate.classList.add('hidden');
+      }, 900);
     });
 
     signal.on('error', (m) => {
@@ -71,6 +75,7 @@ export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
       if (peerReady) say('O outro jogador saiu ou a conexão foi encerrada.');
       peerReady = false;
       gate.classList.remove('connected');
+      gate.classList.remove('hidden');
     });
 
     return signal;
