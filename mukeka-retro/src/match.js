@@ -723,6 +723,7 @@ export class Match {
     team.players[outgoingIndex] = incoming;
     bench.splice(benchIndex, 1);
     this._all = [...this.teams[0].players, ...this.teams[1].players];
+    if (this.replay) this.replay.players = this._all;
 
     if (wasControlled) {
       this.controlled = null;
