@@ -2,7 +2,7 @@ name: Mukeka Retro check
 
 on:
   push:
-    branches: [main]
+    branches: [main, mukeka-retro-dev]
     paths:
       - 'mukeka-retro/**'
       - '.github/workflows/mukeka-retro-check.yml'
