@@ -132,11 +132,11 @@ export class Arena {
         const code = String(msg.code || '').toUpperCase().trim();
         const room = this.rooms.get(code);
         if (!room) {
-          Arena.send(conn, { t: 'error', msg: `Room ${code} does not exist` });
+          Arena.send(conn, { t: 'error', msg: `A sala ${code} não existe` });
           return;
         }
         if (room.guest || !room.host) {
-          Arena.send(conn, { t: 'error', msg: `Room ${code} is full` });
+          Arena.send(conn, { t: 'error', msg: `A sala ${code} está cheia` });
           return;
         }
         this.leave(conn);

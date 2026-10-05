@@ -1,7 +1,7 @@
 {
-  "name": "WebSoccer",
-  "short_name": "WebSoccer",
-  "description": "Arcade football in the browser, with local and online multiplayer.",
+  "name": "Pedra Lisa Futebol",
+  "short_name": "Pedra Lisa",
+  "description": "Futebol arcade no navegador, com modos local e online.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

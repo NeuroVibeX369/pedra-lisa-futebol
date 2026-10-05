@@ -1,0 +1,242 @@
+// Мяч: простая аркадная физика — гравитация, отскок, качение с трением.
+// Никакого физического движка: для футбола хватает ручной математики, и её легко балансировать.
+
+import * as THREE from 'three';
+import { CONFIG } from './config.js';
+import { PACK } from './pack.js';
+import { predictLanding } from './ai/steering.js';
+import { createBlobAlphaMap } from './atmosphere.js';
+import { ballKick, ballBounce, ballBoard } from './sfx.js';
+
+function createBallTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f0f0ea';
+  ctx.fillRect(0, 0, c.width, c.height);
+  // Чёрные «пятна» — с расстояния читаются как классический мяч с пятиугольниками
+  // и остаются мгновенным фолбэком, пока грузится Tricolore-98.
+  ctx.fillStyle = '#1a1a1a';
+  for (let i = 0; i < 14; i++) {
+    const x = (i * 67 + (i % 2) * 29) % c.width;
+    const y = (i * 43) % c.height;
+    ctx.fillRect(x, y, 28, 24);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.NearestFilter;
+  // На рабочей ТВ-камере мяч занимает считаные пиксели: мипмапы не дают
+  // красно-синему рисунку мерцать при быстром вращении.
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.anisotropy = 2;
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  // Рисунок мяча — часть атрибутики: его назначает пак (src/pack.js).
+  // null = остаётся классический чёрно-белый мяч, нарисованный выше.
+  const skin = PACK.textures.ball;
+  if (skin) {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      tex.needsUpdate = true;
+    };
+    img.onerror = () => console.warn(`Не загрузилась текстура мяча: ${skin}`);
+    img.src = skin;
+  }
+  return tex;
+}
+
+export class Ball {
+  constructor(scene, goals = null) {
+    const B = CONFIG.ball;
+    // MeshBasic = мяч не зависит от света и всегда ярко читается (стиль PS1)
+    this.mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(B.radius, 10, 8),
+      new THREE.MeshBasicMaterial({ map: createBallTexture() }),
+    );
+    // Тень мяча: не 12-угольник с жёстким краем, а мягкое пятно с полутенью —
+    // тот же принцип, что у веера теней игроков (src/atmosphere.js).
+    // Квадрат вдвое шире мяча: карта прозрачности сама скругляет и растушёвывает.
+    this.shadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(B.radius * 4.4, B.radius * 4.4),
+      new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        alphaMap: createBlobAlphaMap(48, 2.1),
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+      }),
+    );
+    this.shadow.rotation.x = -Math.PI / 2;
+    this.shadow.position.y = 0.02;
+    this.vel = new THREE.Vector3();
+    this.spin = 0; // подкрутка (эффект Магнуса): уводит летящий мяч вбок
+    this.afterTouch = 0; // остаток окна докрутки после удара
+    this.spinAxis = new THREE.Vector3(1, 0, 0);
+    this.goals = goals;
+
+    // Маркер точки падения: маленькое ненавязчивое кольцо на газоне, пока
+    // мяч летит верхом (ТВ-графика, помогает врываться под навес)
+    const LM = CONFIG.ball.landingMark;
+    this.mark = new THREE.Mesh(
+      new THREE.RingGeometry(LM.innerR, LM.outerR, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: LM.opacity,
+        depthWrite: false,
+      }),
+    );
+    this.mark.rotation.x = -Math.PI / 2;
+    this.mark.position.y = 0.035;
+    this.mark.visible = false;
+    this._markT = 0; // фаза «дыхания» кольца
+
+    this.reset();
+    scene.add(this.mesh);
+    scene.add(this.shadow);
+    scene.add(this.mark);
+  }
+
+  reset() {
+    this.mesh.position.set(0, CONFIG.ball.radius, 0);
+    this.vel.set(0, 0, 0);
+    this.spin = 0;
+    this.afterTouch = 0;
+    this.goalScored = false;
+    this.inGoalNet = 0;  // 0 / ±1: вошёл ли мяч в ворота через ПРОЁМ (см. goal.js)
+    this.netContact = null;
+    if (this.mark) this.mark.visible = false;
+  }
+
+  // Маркер точки падения: виден, только пока мяч достаточно высоко и лететь
+  // ему ещё заметное время; за пределами поля (аут/за лицевой) — гаснет
+  _updateMark(dt) {
+    const LM = CONFIG.ball.landingMark;
+    const F = CONFIG.field;
+    const p = this.mesh.position;
+    let show = false;
+    if (p.y > LM.minY) {
+      const land = predictLanding(this, CONFIG.ball.radius);
+      if (land && land.t > LM.minFlight &&
+          Math.abs(land.x) < F.length / 2 + 1 &&
+          Math.abs(land.z) < F.width / 2 + 1) {
+        show = true;
+        this.mark.position.x = land.x;
+        this.mark.position.z = land.z;
+        this._markT += dt;
+        const s = 1 + Math.sin(this._markT * 6) * LM.pulse;
+        this.mark.scale.set(s, s, 1);
+      }
+    }
+    this.mark.visible = show;
+    if (!show) this._markT = 0;
+  }
+
+  // Удар: направление (единичный вектор), сила (м/с), подъём и подкрутка.
+  // curl > 0 — мяч в полёте заворачивает ВПРАВО от направления, < 0 — влево
+  // (проверено по формуле Магнуса в update; раньше комментарий врал зеркально).
+  strike(dir, power, lift, curl = 0) {
+    this.vel.x = dir.x * power;
+    this.vel.z = dir.z * power;
+    this.vel.y = lift;
+    this.spin = curl;
+    this.afterTouch = CONFIG.ball.afterTouchTime; // окно докрутки направлением
+    // Счётчик ударов: вратарь по нему понимает, что мяч ПЕРЕБИТ заново
+    // (новый удар = новое время реакции). Без него рикошет от защитника
+    // читался бы как продолжение прежнего удара, и кипер реагировал бы
+    // на дефлект мгновенно — то есть был бы непробиваем.
+    this.seq = (this.seq || 0) + 1;
+    this.strikeAge = 0; // сек с момента удара — «внезапность» для вратаря
+    // Звук касания: strike — единственная точка почти всех ударов и пасов,
+    // громкость от силы (kickRef), микро-тычки ведения отсеивает kickMin
+    ballKick(Math.hypot(this.vel.x, this.vel.z, lift) / CONFIG.audio.field.kickRef);
+  }
+
+  update(dt) {
+    const B = CONFIG.ball;
+    const F = CONFIG.field;
+    const p = this.mesh.position;
+
+    // Трение качения задано «за кадр при 60 fps» — приводим к реальному dt,
+    // иначе на 120-герцовом iPad мяч катился бы вдвое дольше
+    const roll = Math.pow(B.rollFriction, dt * 60);
+
+    // Гравитация в полёте
+    if (p.y > B.radius || this.vel.y > 0) {
+      this.vel.y += B.gravity * dt;
+      // Сопротивление воздуха ~ квадрату скорости: быстрый мяч тормозится
+      // сильнее, медленный почти нет — это и даёт «прострельность» PES
+      const sp = this.vel.length();
+      if (sp > 0.01) {
+        const d = Math.min(B.dragK * sp * dt, 0.5);
+        this.vel.multiplyScalar(1 - d);
+      }
+      // Эффект Магнуса: подкрутка заворачивает мяч перпендикулярно скорости
+      if (Math.abs(this.spin) > 0.01) {
+        const vx = this.vel.x;
+        const vz = this.vel.z;
+        this.vel.x += -vz * this.spin * B.magnus * dt;
+        this.vel.z += vx * this.spin * B.magnus * dt;
+        this.spin *= Math.pow(B.spinDecay, dt * 60);
+      }
+    } else {
+      // Качение по газону: закрутка быстро гаснет о траву, докрутка кончается
+      this.vel.x *= roll;
+      this.vel.z *= roll;
+      this.spin *= Math.pow(0.9, dt * 60);
+      this.afterTouch = 0;
+    }
+    if (this.afterTouch > 0) this.afterTouch -= dt;
+    this.strikeAge = (this.strikeAge || 0) + dt;
+
+    // Ворота сами двигают мяч по непрерывной траектории и ловят столкновение
+    // внутри кадра. Без них остаётся простой ход — удобно для изолированных тестов.
+    const goalEvent = this.goals
+      ? this.goals.moveBall(this, dt)
+      : (p.addScaledVector(this.vel, dt), null);
+
+    // Отскок от газона
+    if (p.y < B.radius) {
+      p.y = B.radius;
+      if (Math.abs(this.vel.y) > 1.2) {
+        ballBounce(this.vel.y); // глухой шлепок о газон (порог и кулдаун внутри)
+        this.vel.y = -this.vel.y * B.bounce;
+      } else this.vel.y = 0;
+    }
+
+    // Полная остановка на малой скорости
+    if (p.y <= B.radius + 0.001 && this.vel.lengthSq() < B.stopSpeed * B.stopSpeed) {
+      this.vel.set(0, 0, 0);
+    }
+
+    // Отскок от рекламных бортиков (позиция совпадает с их визуалом в scene.js)
+    const BD = CONFIG.boards;
+    const maxX = F.length / 2 + BD.marginX - B.radius;
+    const maxZ = F.width / 2 + BD.marginZ - B.radius;
+    if (Math.abs(p.x) > maxX) { p.x = Math.sign(p.x) * maxX; ballBoard(this.vel.x); this.vel.x *= -BD.bounce; }
+    if (Math.abs(p.z) > maxZ) { p.z = Math.sign(p.z) * maxZ; ballBoard(this.vel.z); this.vel.z *= -BD.bounce; }
+
+    // Тень следует за мячом и тает с высотой полёта
+    this.shadow.position.x = p.x;
+    this.shadow.position.z = p.z;
+    const hgt = Math.max(0, p.y - B.radius);
+    // Чем выше мяч, тем ШИРЕ и слабее пятно: полутень расходится с высотой.
+    // Прежняя тень, наоборот, сжималась — из-за этого мяч в воздухе читался
+    // как маленький мяч на газоне, а не как высоко летящий.
+    const sc = 1 + Math.min(1.2, hgt / 8);
+    this.shadow.scale.set(sc, sc, 1);
+    this.shadow.material.opacity = 0.42 * Math.max(0.12, 1 - hgt / 13);
+
+    this._updateMark(dt);
+
+    // Вращение мяча при движении — дёшево и очень «оживляет»
+    const speed = Math.hypot(this.vel.x, this.vel.z);
+    if (speed > 0.05) {
+      this.spinAxis.set(this.vel.z, 0, -this.vel.x).normalize();
+      this.mesh.rotateOnWorldAxis(this.spinAxis, (speed * dt) / B.radius);
+    }
+
+    return goalEvent;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "retro-legends",
+  "title": "MUKEKA RETRO",
+  "licensing": "authorized-custom",
+  "_licensing": "Versão Mukeka Games baseada em código usado com autorização do autor; conteúdo dos times personalizado.",
+  "_собрано": "Автоматически из пака wc98-real скриптом tools/build-anon-pack.mjs. Руками не править.",
+  "venue": "ESTÁDIO PEDRA LISA",
+  "teams": {
+    "home": "teams/home.json",
+    "away": "teams/away.json"
+  },
+  "textures": {
+    "boards": null,
+    "ball": null,
+    "channelLogo": "./textures/tv/ug1-white.svg"
+  }
+}

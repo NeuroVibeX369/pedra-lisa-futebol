@@ -1,0 +1,1223 @@
+// Слой «голова» полевого игрока (стейт-машина по Бакленду, упрощённая):
+// с мячом — веду/пасую/бью; назначен на приём — бегу к точке паса;
+// назначен догоняющим — преследую мяч; назначен в поддержку — открываюсь;
+// иначе — возвращаюсь в домашний регион и смотрю на мяч.
+// Решения — здесь, само движение исполняет player.aiUpdate («ноги»).
+
+import { CONFIG } from '../config.js';
+import { arrive, seek, pursuitBall, separation, distToBall, freeSpace, predictLanding, passStrikeKind } from './steering.js';
+
+// Приёмник точки встречи (Player.meetPoint) — один на всех, чтобы не сорить
+// объектами в кадре: игрок в этой ветке ровно один за проход
+const _meet = { x: 0, z: 0 };
+
+export function updateFieldPlayer(p, dt, ball) {
+  const AI = CONFIG.ai;
+  const team = p.team;
+  const match = team.match;
+  const pos = p.group.position;
+  if (!p.ai) p.ai = { decideCd: 0, dribDir: null };
+  if (p.ai.decideCd > 0) p.ai.decideCd -= dt;
+  // Обязательство «пока веду» и память о намерении (липкое намерение, 31.07)
+  if (p.ai.carryT > 0) p.ai.carryT -= dt;
+  if (p.ai.intent) p.ai.intent.t -= dt;
+  // Сколько живёт текущий вид решения — этим отличается «передумал» от
+  // «довёл своё и перешёл к следующему» (см. markDecision)
+  if (p.ai.lastKind) p.ai.kindT = (p.ai.kindT || 0) + dt;
+
+  const bp = ball.mesh.position;
+  const myBallDist = distToBall(p, ball);
+  const mateHasBall = match.toucher && match.toucher.team === team && match.toucher !== p;
+
+  let move = { x: 0, z: 0 };
+  let sprint = false;
+  let face = null;
+  let speedCap = null;
+
+  // Розыгрыш с центра: AI замирает по местам лицом к мячу — мяч трогает
+  // только разыгрывающий (человек или скриптовый пас тренера в match.js)
+  if (match.state === 'kickoff') {
+    p.ai.dribDir = null;
+    p.aiUpdate(dt, { x: 0, z: 0 }, { face: Math.atan2(bp.x - pos.x, bp.z - pos.z) });
+    return;
+  }
+
+  // Замыкание в одно касание уже идёт (замах): новых решений не принимаем,
+  // но и НЕ ЗАМИРАЕМ — ноги добегают до точки контакта. Стойка на месте гасила
+  // врывание (в PES мощь кивка даёт именно разбег) и выглядела как ступор
+  // посреди эпизода (фидбек Олега 24.07)
+  // Вплотную к точке ноги переходят на ДОБОР КУРСА, а не на стоп: замыкание —
+  // встреча на ходу (Player.strikeApproach, тот же код, что у человека). Раньше
+  // здесь стояло жёсткое обнуление внутри strikeHoldRadius, и AI в замахе
+  // вкапывался столбом — то есть ровно те 22 фигуры, на которые смотрит зритель
+  if (p.aerialStrike) {
+    const as = p.aerialStrike;
+    const ap = as.point;
+    // Темп подхода — от оставшегося до встречи времени: успеваю с запасом,
+    // значит иду шагом и прихожу ровно к мячу, а не проскакиваю точку
+    p.aiUpdate(dt, ap ? p.strikeApproach(ap.x, ap.z, as.hitAt - as.t) : { x: 0, z: 0 }, {});
+    return;
+  }
+
+  // ФИНТ ВЕДЁТ СЕБЯ САМ (правило с 31.07.2026). Пока движение идёт, мозг
+  // решений не принимает — руль и потолок скорости держит сам финт
+  // (Player.updateFeint). Мяч передаём в «ноги»: у aiUpdate своего мяча нет,
+  // а разворот Марадоны тащит мяч за игроком каждый кадр.
+  if (p.feint) {
+    p.aiUpdate(dt, { x: 0, z: 0 }, { ball });
+    return;
+  }
+
+  // Лежим после броска — только встаём, никаких решений
+  if (p.downT > 0) {
+    p.aiUpdate(dt, { x: 0, z: 0 }, {});
+    return;
+  }
+
+  // В подкате: скольжение и контакты считает updateTackle, руль отключён
+  if (p.tackleT > 0) {
+    p.updateTackle(dt, ball);
+    p.aiUpdate(dt, { x: 0, z: 0 }, {});
+    return;
+  }
+
+  // Стандарт (аут/угловой/от ворот): мяч мёртв. Соперники не давят точку —
+  // держат дистанцию (дух правила 9,15 м); расстановка обеих команд дальше
+  // живёт обычной логикой регионов, исполнителя ведёт Match
+  if (match.state === 'restart' && match.restart) {
+    const r = match.restart;
+    if (p.team !== r.team) {
+      const ddx = pos.x - r.x;
+      const ddz = pos.z - r.z;
+      const dd = Math.hypot(ddx, ddz) || 1;
+      if (dd < CONFIG.restart.keepAway) {
+        p.aiUpdate(dt, { x: ddx / dd, z: ddz / dd },
+          { face: Math.atan2(r.x - pos.x, r.z - pos.z) });
+        return;
+      }
+    }
+  }
+
+  // Вратарь соперника держит мяч в руках: не мешаем вводу (правило + фикс
+  // рикошета вратарского выброса от прилипшего соперника в свои ворота,
+  // фидбек Олега 22.07). Отходим на keeper.oppKeepAway и ждём ввода —
+  // как только вратарь выбросил/выбил, обычная логика возобновится.
+  const oppKeeper = match.toucher;
+  if (oppKeeper && oppKeeper.isKeeper && oppKeeper !== p &&
+      oppKeeper.ai && oppKeeper.ai.holding && oppKeeper.team !== team) {
+    const kp = oppKeeper.group.position;
+    const dxk = pos.x - kp.x;
+    const dzk = pos.z - kp.z;
+    const dk = Math.hypot(dxk, dzk) || 1;
+    const KA = CONFIG.ai.keeper.oppKeepAway;
+    let mv;
+    if (dk < KA) {
+      mv = { x: dxk / dk, z: dzk / dk }; // отступаем от вратаря
+    } else {
+      const home = team.homeTarget(p, ball); // ждём ввода на своей позиции
+      mv = arrive(pos.x, pos.z, home.x, home.z, AI.homeSlow);
+    }
+    const sepK = separation(p, match.allPlayers, AI.separationRadius, AI.separationPush);
+    p.aiUpdate(dt, { x: mv.x + sepK.x, z: mv.z + sepK.z },
+      { face: Math.atan2(kp.x - pos.x, kp.z - pos.z) });
+    return;
+  }
+
+  // Второй этаж (ресёрч 11): верховой мяч в досягаемости — играем В ОДНО
+  // КАСАНИЕ. Своя треть — вынос; у чужих ворот — замыкание в створ (сила
+  // от разбега!); середина — скидка вперёд. Летящий вверх мяч не трогаем.
+  // В броске (ласточка) зона контакта — вытянутый корпус (dive.stretch)
+  const AP = CONFIG.player.aerial;
+  const diving = p.diveT > 0;
+  // Замах начинается с той же дистанции, что у человека (prepareRadius), и по
+  // ПРОГНОЗНОЙ высоте контакта. На прежних 1.5 м AI решался, когда мяч уже был
+  // на ноге: замах не успевал прочитаться, а ноги не успевали встать под удар
+  // Адресат нашей верховой передачи ПРИНИМАЕТ мяч, а не бьёт по нему: он
+  // ждёт настоящего касания корпусом и до этого продолжает бежать к точке
+  const isTrapper = !diving && team.receiver === p &&
+    Math.hypot(team.attackGoalX - pos.x, pos.z) >= AI.aerial.headerRange;
+  const aerialOk = diving
+    ? (myBallDist < AP.reach + AP.dive.stretch &&
+        bp.y >= AP.dive.minY && bp.y <= AP.dive.maxY)
+    : isTrapper
+      ? p.bodyContactPoint(bp).reachable
+      : (() => {
+        // Замах только если прогноз нашёл НАСТОЯЩИЙ контакт: мяч действительно
+        // придёт на бутсу/лоб. Без этой проверки AI начинал замах под любой
+        // пролетающий мимо мяч и молотил воздух (замер симуляцией матча).
+        // Прогноз честно симулирует и полёт мяча, и БЕГ игрока к точке, так
+        // что он же и отсекает далёких: с 15 м зазор не сойдётся.
+        const pre = p.predictAerialContact(ball, AP.ai.horizon);
+        if (!(pre.y > CONFIG.player.kickMaxBallY && pre.y <= AP.maxY &&
+          pre.dist <= AP.sync.hitRadius * AP.ai.hitK)) return false;
+        // …А ВОТ КОГДА вступать — вопрос ВРЕМЕНИ, а не дистанции до мяча.
+        // Прежнее «ближе prepare» держало компьютер вне борьбы до последних
+        // 0.2–0.4 с полёта: добежать и замахнуться за это время нельзя.
+        if (myBallDist < AP.ai.prepare) return true;
+        // РАНО ВСТУПАЕТ ТОЛЬКО НАЗНАЧЕННЫЙ — замыкающий подачи у атакующих и
+        // страж точки прилёта у обороняющихся. Первая редакция пускала сюда
+        // всех, у кого сошёлся прогноз, и замер напечатал цену: замахов за
+        // 4 матча 225 → 381 при росте попаданий всего 40 → 58, то есть поле
+        // наполнилось фигурами, молотящими воздух. Кого пускать в борьбу —
+        // решает ТРЕНЕР (Team.onCrossStruck / onCrossDefend), это его слой
+        const assigned = team.receiver === p ||
+          (team.airGuards && team.airGuards.has(p));
+        return assigned && pre.t <= AP.ai.lead;
+      })();
+  if (p.kickCooldown <= 0 && aerialOk && match.state !== 'restart' &&
+      ball.vel.y < AP.ai.velY &&
+      // Полная скорость: крутая перекидка почти без горизонтали, но падает
+      // быстро — иначе адресат не принимал её и мяч «отскакивал» мимо ног
+      ball.vel.length() > AP.ai.minSpeed) {
+    aerialPlay(p, ball, diving);
+    // Замах создан — ноги в тот же кадр идут к его точке, а не встают. Стоячее
+    // замыкание в PES слабее и шумнее по построению (aerial.standNoise), и
+    // терять разбег на ровном месте нельзя
+    const as0 = p.aerialStrike;
+    const ap0 = as0 && as0.point;
+    p.aiUpdate(dt, ap0 ? p.strikeApproach(ap0.x, ap0.z, as0.hitAt - as0.t) : { x: 0, z: 0 }, {});
+    return;
+  }
+  // Бросок в падении (как у человека): назначенный замыкающий у чужих
+  // ворот не успевает на ноги, мяч пролетает мимо — ласточка
+  if (!diving && p.kickCooldown <= 0 && team.receiver === p &&
+      bp.y >= AP.dive.minY && bp.y <= AP.dive.maxY &&
+      myBallDist >= AP.reach && myBallDist < AP.dive.reach &&
+      Math.hypot(team.attackGoalX - pos.x, pos.z) < AI.aerial.headerRange + 4) {
+    const sp2 = ball.vel.x * ball.vel.x + ball.vel.z * ball.vel.z;
+    if (sp2 > 9) {
+      const relX = bp.x - pos.x;
+      const relZ = bp.z - pos.z;
+      const tCa = Math.max(0, -(relX * ball.vel.x + relZ * ball.vel.z) / sp2);
+      const closest = Math.hypot(relX + ball.vel.x * tCa, relZ + ball.vel.z * tCa);
+      if (closest > AP.reach * 0.75) {
+        p.startDive(relX / myBallDist, relZ / myBallDist, bp.y);
+      }
+    }
+  }
+
+  // Прострел/скидка пришла назначенному под подачу у чужих ворот — замыкание
+  // НОГОЙ в ОДНО касание, без такта решений: низовые подачи завершаются
+  // ударом с ходу, а не «отскакивают от деревянного» (фидбек Олега 22.07)
+  const FT = AI.firstTouch;
+  if (team.receiver === p && p.kickCooldown <= 0 && match.state !== 'restart' &&
+      myBallDist < CONFIG.player.kickRadius && bp.y < CONFIG.player.kickMaxBallY) {
+    const relV = Math.hypot(ball.vel.x - p.vel.x, ball.vel.z - p.vel.z);
+    const dg = Math.hypot(team.attackGoalX - pos.x, pos.z);
+    // Личная охота бить действует и здесь — это ВТОРАЯ из трёх точек входа в
+    // удар, и пропустить её значит повторить записанную граблю «слой наклона
+    // не вызывался у AI»: половина ударов осталась бы обезличенной
+    if (relV > FT.minRel && dg < FT.shotRange * p.mods.shoot &&
+        Math.abs(pos.z) < AI.shootMaxZ) {
+      aiShoot(p, ball, team.attackGoalX, dg);
+      p.aiUpdate(dt, { x: 0, z: 0 }, {});
+      return;
+    }
+  }
+
+  // Пас уже летит нашему адресату — остальные НЕ бросаются на мяч толпой:
+  // доверяем передаче (принцип PES), эпизод у мяча остаётся за receiver'ом.
+  // Соперники не в счёт — у них свой receiver (null) и погоня за перехватом
+  const passEnRoute = team.receiver && team.receiver !== p &&
+    team.receiveTimer > 0.3 &&
+    Math.hypot(ball.vel.x, ball.vel.z) > 3 &&
+    (ball.vel.x * (team.receiver.group.position.x - bp.x) +
+     ball.vel.z * (team.receiver.group.position.z - bp.z)) > 0;
+
+  if (p.isToucher) {
+    move = withBall(p, ball);
+    // ПЕРЕД УДАРОМ ПОДСТРАИВАЮТСЯ, А НЕ МЧАТСЯ (31.07.2026). Спринт с мячом
+    // толкает его далеко вперёд, и `canKick` (мяч у ноги) становится ложным
+    // на большей части кадров — а такт решений живёт ВНУТРИ `canKick`, то есть
+    // игрока просто не спрашивают, не пора ли бить. Пока выход длинный, это
+    // безобидно (тактов впереди много), но на коротком добегании удара может
+    // не случиться вовсе: замер стенда `oneOnOne` после введения чистого
+    // выхода дал с 22 м «мог бить 26 кадров из 210» и НОЛЬ ударов из 24.
+    // Поэтому у своих ворот спринт с мячом гасится — это и правдивее
+    // (нападающий выкладывает мяч под удар), и возвращает такту решений его
+    // кадры
+    sprint = (p.ai.dribFree || 0) > AI.dribbleSprintFree && !p.ai.nearGoal;
+  } else {
+    p.ai.dribDir = null;
+    // Мяч ушёл — память о виде решения и намерение обнуляются. Иначе игрок,
+    // взявший мяч через минуту, сравнит новое решение с решением ИЗ ПРОШЛОГО
+    // ЭПИЗОДА и запишет ложное метание, а липкое намерение (волна 2) попробует
+    // додержать пас на партнёра, которого рядом уже нет
+    p.ai.lastKind = null;
+    p.ai.kindT = 0;
+    p.ai.intent = null;
+    p.ai.carryT = 0;
+    if (team.receiver === p && team.receiveTarget) {
+      // Приём паса: бегу к точке адреса, у самой точки — навстречу мячу.
+      // Верховой мяч (навес) — строго к точке прилёта: врывание на прилёт,
+      // погоня за тенью мяча увела бы с траектории.
+      // У точки — arrive вместо seek и стойка лицом к мячу: seek без радиуса
+      // прибытия дрожал на месте (фидбек Олега 22.07 «адресат дёргается»)
+      // Точка прилёта ПЕРЕСЧИТЫВАЕТСЯ каждый кадр, пока мяч в воздухе: за
+      // время полёта drag и Магнус сдвигают её на метры, а приём теперь
+      // требует настоящего касания корпусом — стоять «примерно там» мало
+      // (замер 24.07: мяч проходил в метре от ждущего, и приёма не было)
+      let t = team.receiveTarget;
+      let airLeft = 0;
+      if (bp.y > CONFIG.player.kickMaxBallY && ball.vel.y < 3) {
+        const land = predictLanding(ball, CONFIG.player.aerial.contactY);
+        if (land) { t = land; airLeft = land.t || 0; }
+      }
+      const dT = Math.hypot(t.x - pos.x, t.z - pos.z);
+      // ТАЙМИНГ ЗАБЕГА (правка 29.07.2026). Раньше адресат летел к точке прилёта
+      // на полной, приезжал за секунду до мяча и вставал — 52 % замыканий
+      // исполнялись «стоя» (замер, aerial-rig → contactStats). Пока времени в
+      // запасе много, целимся в ОТСТУП от точки по своему же курсу; отступ тает
+      // вместе с оставшимся временем, и на мяч игрок приходит НА ХОДУ.
+      if (airLeft > 0) t = p.meetPoint(_meet, t.x, t.z, airLeft);
+      // Погоня за мячом — только когда мяч УЖЕ НИЗОМ. Пока он в воздухе, ноги
+      // стоят на точке прилёта: прежний порог 1.2 м срывал адресата с места
+      // ровно на последних метрах (pursuit целится с упреждением ВПЕРЁД мяча),
+      // и опускающийся мяч проходил у него за спиной
+      // ПАС В ЗОНУ ДЕРЖИТ АДРЕСАТА НА ТОЧКЕ ДОЛЬШЕ. Мяч там идёт низом с самого
+      // начала, и обычное правило «ближе 6 м — гонись за мячом» срывало бегущего
+      // с линии на полпути: pursuit целится с упреждением ВПЕРЁД мяча, то есть
+      // уводит наперерез — а мяч и так едет в ту самую точку, в которую бежит
+      // адресат. Переключаемся на погоню, только когда мяч уже почти на месте
+      const ballToT = Math.hypot(t.x - bp.x, t.z - bp.z);
+      const holdLine = team.receiveSpace && ballToT > 2.5;
+      if (myBallDist < 6 && bp.y < CONFIG.player.kickMaxBallY && !holdLine) {
+        move = pursuitBall(pos.x, pos.z, ball, CONFIG.player.speed);
+      } else {
+        move = arrive(pos.x, pos.z, t.x, t.z, 1.6);
+        if (dT < 0.5) face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+      }
+      sprint = myBallDist > AI.sprintDist || (bp.y > 1.2 && dT > 2) ||
+        (holdLine && dT > 1.5);
+    } else if (team.chaser === p && !mateHasBall && !passEnRoute) {
+      // Первый защитник (pressure): свободный мяч догоняем, владеющего
+      // соперника прессингуем по-PES — агрессивно в чужой половине,
+      // сдерживанием (jockey) в своей
+      const r = pressBall(p, dt, ball, match);
+      move = r.move;
+      sprint = r.sprint;
+      face = r.face;
+      speedCap = r.speedCap;
+    } else if (team.airGuards.has(p)) {
+      // ВЫХОД НА ЧУЖУЮ ПОДАЧУ: назначен тренером (Team.onCrossDefend) —
+      // бежим В ТОЧКУ ПРИЛЁТА, а не за тенью мяча и не за своим подопечным.
+      // Играть в мяч дальше будет общая ветка второго этажа выше по функции:
+      // она сработает, как только мяч подойдёт на aerial.ai.prepare
+      const t = team.airGuards.get(p);
+      move = arrive(pos.x, pos.z, t.x, t.z, 1.6);
+      sprint = Math.hypot(t.x - pos.x, t.z - pos.z) > 2;
+      if (!sprint) face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+    } else if (team.shortRunner === p && team.shortTarget) {
+      // Приход в ноги: показаться накоротке владельцу под прессингом.
+      // Спринтом и лицом к мячу — иначе пас придёт в спину и его не примут
+      const t = team.shortTarget;
+      move = arrive(pos.x, pos.z, t.x, t.z, 1.5);
+      sprint = Math.hypot(t.x - pos.x, t.z - pos.z) > 2;
+      if (!sprint) face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+    } else if (team.thirdMan === p && team.thirdManTarget) {
+      // Игра третьего: рывок стартовал по первому касанию партнёра — бежим
+      // за спину его опекуну, туда, куда пасующий даже не смотрел
+      move = seek(pos.x, pos.z, team.thirdManTarget.x, team.thirdManTarget.z);
+      sprint = true;
+    } else if (team.decoy === p && team.decoyTarget) {
+      // Ложный рывок: уводим своего опекуна прочь из канала настоящего
+      // раннера. Мяча не просим — его нам и не дадут (choosePass пропускает)
+      move = seek(pos.x, pos.z, team.decoyTarget.x, team.decoyTarget.z);
+      sprint = true;
+    } else if (team.runner === p && team.runnerTarget) {
+      // Забегание за спину: спринт в зону за линией защиты — владелец
+      // увидит рывок и положит мяч на ход (приоритет в choosePass).
+      // Сюда же попадает стеночка: пасующий рвёт вперёд за возвратом
+      move = seek(pos.x, pos.z, team.runnerTarget.x, team.runnerTarget.z);
+      sprint = true;
+    } else if (team.overlapper === p && team.overlapTarget) {
+      // Подключение по бровке (overlap): фулбек спринтует снаружи за линию
+      // мяча — растяжка обороны, адресат для паса в коридор (ресёрч 14)
+      move = seek(pos.x, pos.z, team.overlapTarget.x, team.overlapTarget.z);
+      sprint = true;
+    } else if (team.boxRuns.get(p)) {
+      // Врывание в штрафную под навес: рывком на штангу / 11 метров
+      const t = team.boxRuns.get(p);
+      move = arrive(pos.x, pos.z, t.x, t.z, 2);
+      sprint = Math.hypot(t.x - pos.x, t.z - pos.z) > 3;
+    } else if (team.coverer === p && !team.attacking && match.toucher && match.toucher.team !== team) {
+      // Второй защитник (cover): за спиной прессингующего, под углом
+      // к центру — ловит обыгрыш и закрывает прострел (ресёрч 09 + PES sweeper)
+      const D = team.defence;
+      const gx = team.ownGoalX;
+      const F = CONFIG.field;
+      let tx;
+      let tz;
+      // ЭКРАН ПЕРЕД ВОРОТАМИ. Обычная точка страхующего считается ОТ МЯЧА и
+      // вместе с ним уезжает в глубину фланга — зона 11 метров пустела ровно
+      // тогда, когда туда идёт прострел (а прострел даёт 6.4 гола на 100
+      // против 2.5 у навеса). Мяч в нашей трети и широко — держим зону, а не
+      // бежим за мячом
+      const ballDepth = team.side * bp.x + F.length / 2;
+      if (ballDepth < D.screen.depth && Math.abs(bp.z) > D.screen.wideZ) {
+        tx = gx + team.side * D.screen.x;
+        tz = bp.z * 0.25;
+      } else {
+        const dgx = gx - bp.x;
+        const dgz = -bp.z;
+        const dgl = Math.hypot(dgx, dgz) || 1;
+        tx = bp.x + (dgx / dgl) * D.coverDist;
+        tz = bp.z + (dgz / dgl) * D.coverDist - Math.sign(bp.z || 1) * D.coverSide;
+      }
+      move = arrive(pos.x, pos.z, tx, tz, 2.5);
+      sprint = Math.hypot(tx - pos.x, tz - pos.z) > 8;
+      face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+    } else if (team.marks.get(p)) {
+      // Персональный разбор в своей трети: встать goal-side — между
+      // подопечным и воротами, чуть в сторону мяча (успеть на прострел)
+      const D = team.defence;
+      const mp = team.marks.get(p).group.position;
+      const gx = team.ownGoalX;
+      let dx = gx - mp.x;
+      let dz = -mp.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      let tx = mp.x + (dx / dl) * D.markDist;
+      let tz = mp.z + (dz / dl) * D.markDist;
+      const bx = bp.x - mp.x;
+      const bz = bp.z - mp.z;
+      const bl = Math.hypot(bx, bz) || 1;
+      tx += (bx / bl) * D.markBallSide;
+      tz += (bz / bl) * D.markBallSide;
+      move = arrive(pos.x, pos.z, tx, tz, 2);
+      sprint = Math.hypot(tx - pos.x, tz - pos.z) > 8;
+      if (!sprint) face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+    } else if (team.supporter === p) {
+      const spot = team.supportSpot(ball);
+      move = arrive(pos.x, pos.z, spot.x, spot.z, AI.homeSlow);
+    } else {
+      const home = team.homeTarget(p, ball);
+      move = arrive(pos.x, pos.z, home.x, home.z, AI.homeSlow);
+      if (AI.waitFaceBall && Math.hypot(move.x, move.z) < 0.2) {
+        face = Math.atan2(bp.x - pos.x, bp.z - pos.z); // стоя дома — лицом к мячу
+      }
+    }
+  }
+
+  // КЛЮНУЛ НА ФИНТ (правило с 31.07.2026). Стоит ОДНИМ слоем поверх всех
+  // ролей, а не внутри pressBall: финт покупают и опекун, и страхующий, и
+  // просто оказавшийся рядом — а роль у них разная. Механика честная: не
+  // «защитник выключается», а ПЕРЕНОС ВЕСА НЕ ТУДА. Цель уезжает в ложную
+  // сторону на read.lunge и возвращается вместе с восстановлением, темп
+  // падает до read.speedCap, подкат запрещён (условие внутри pressBall).
+  // Лицом при этом он к мячу: обыгранный не слепнет, он опаздывает.
+  if (p.ai.feint && !p.isToucher) {
+    const R = CONFIG.player.feint.read;
+    const bite = p.ai.feint;
+    const k = Math.max(0, bite.t) / (bite.dur || R.recover);
+    move = seek(pos.x, pos.z,
+      pos.x + bite.x * R.lunge * k, pos.z + bite.z * R.lunge * k);
+    sprint = false;
+    speedCap = R.speedCap;
+    face = Math.atan2(bp.x - pos.x, bp.z - pos.z);
+  }
+
+  // Расталкивание со всеми игроками: у мяча не вырастает куча-мала.
+  // Владельцу — вполсилы: в толчее штрафной боковой пинок съедал долю его
+  // вектора вперёд и буквально выталкивал его из зоны удара.
+  // ТА ЖЕ БЕДА У БОРЬБЫ НА ВТОРОМ ЭТАЖЕ, и она вылезла ровно тогда, когда у
+  // подачи появился второй претендент: замер crossDuel показал «никто 95 %»
+  // при ближайшем атакующем в 2.3 м и защитнике в 2.0 м — оба честно пришли
+  // в точку прилёта и там ОТТОЛКНУЛИ ДРУГ ДРУГА от мяча. В воздухе так не
+  // бывает: там как раз идут корпус в корпус. Множитель по умолчанию 1 —
+  // «Новичок» не меняется, уровни его снижают
+  const aerialDuel = p.aerialStrike ||
+    (p.team && p.team.airGuards && p.team.airGuards.has(p));
+  const pushK = p.isToucher ? 0.4 : (aerialDuel ? AI.separationAerial : 1);
+  const sep = separation(p, match.allPlayers, AI.separationRadius,
+    AI.separationPush * pushK);
+  move = { x: move.x + sep.x, z: move.z + sep.z };
+
+  // `ball` идёт в «ноги» ради финта: withBall мог начать его прямо в этом
+  // кадре, и без мяча updateFeint погасил бы движение, не успев начаться
+  p.aiUpdate(dt, move, { sprint, face, speedCap, ball });
+
+  // Ведение: контроль мяча у ноги в сторону текущего курса
+  if (p.isToucher && p.ai.dribDir) {
+    p.aiDribble(dt, ball, p.ai.dribDir.x, p.ai.dribDir.z);
+  }
+}
+
+// Первый защитник у мяча (ресёрч 09 + гайд PES 5: «closing down, standing
+// off, goal-side»): свободный мяч — погоня; владеющий соперник в чужой
+// половине — агрессивный прессинг на курс дриблинга; в своей — сдерживание
+// (jockey): блок-точка между владельцем и воротами, скорость зеркалит
+// владельца, не выбрасываемся. Мяч отлетел от ноги (плохое касание) —
+// окно отбора: рывок в мяч. Отбор и случается на этой ошибке.
+function pressBall(p, dt, ball, match) {
+  const AI = CONFIG.ai;
+  const P = CONFIG.player;
+  const team = p.team;
+  const D = team.defence;
+  const pos = p.group.position;
+  const bp = ball.mesh.position;
+  const owner = match.toucher;
+  const myBallDist = distToBall(p, ball);
+  p.ai.jockey = false;   // сдерживаю ли я сейчас (см. ниже) — читает sellFeint
+
+  // Мяч свободен или у своего (страховка) — обычная погоня.
+  // Летящий верхом мяч (навес/вынос) — бежим к точке ПРИЗЕМЛЕНИЯ:
+  // защитник встречает подачу, а не бегает за тенью мяча
+  if (!owner || owner.team === team) {
+    if (bp.y > 1.2) {
+      const land = predictLanding(ball, 0.4);
+      if (land) {
+        return {
+          move: seek(pos.x, pos.z, land.x, land.z),
+          sprint: Math.hypot(land.x - pos.x, land.z - pos.z) > 3,
+          face: null,
+          speedCap: null,
+        };
+      }
+    }
+    // ЗАВЕРШЕНИЕ В ПАДЕНИИ. Мяч свободен, я ближе всех и уже у чужих ворот, но
+    // ногой стоя не достаю — иду в слайд и пробую дотянуться. Условия сидят
+    // внутри trySlideFinish и узкие нарочно: падать по всему полю нельзя.
+    if (p.trySlideFinish && p.trySlideFinish(ball)) {
+      return { move: { x: 0, z: 0 }, sprint: false, face: null, speedCap: null };
+    }
+    return {
+      move: pursuitBall(pos.x, pos.z, ball, P.speed),
+      sprint: myBallDist > AI.sprintDist,
+      face: null,
+      speedCap: null,
+    };
+  }
+
+  const op = owner.group.position;
+  const badTouch = Math.hypot(bp.x - op.x, bp.z - op.z) > D.badTouchDist;
+
+  // Окно отбора. Классическое — ОШИБКА ВЛАДЕЛЬЦА (мяч отскочил от ноги), там
+  // решаются охотно. Но ждать только её нельзя: AI-ведение держит мяч в 0.9 м
+  // от ноги, и «плохое касание» не наступает практически никогда — замер
+  // 24.07 дал 0.1% кадров ведения и НОЛЬ подкатов AI за 20 минут. Поэтому
+  // добавлено обычное окно: слайд идёт, когда он ФИЗИЧЕСКИ достаёт мяч сбоку.
+  // ОБЫГРАННЫЙ ФИНТОМ НЕ ПОДКАТЫВАЕТСЯ. Без этого условия защитник в тот же
+  // кадр падал бы в слайд сквозь только что купленный финт, и покупать его
+  // было бы нечем — вся система свелась бы к «финт = бесплатный подкат»
+  const TKA = D.tackle;
+  if (p.tackleCd <= 0 && !p.ai.feint &&
+      p.kickCooldown <= 0 && p.downT <= 0 && p.diveT <= 0 &&
+      bp.y < P.tackle.ballMaxY &&
+      myBallDist > TKA.rangeMin && myBallDist < TKA.range &&
+      p.tackleReachable(ball)) {
+    // Упреждение на приход НОГИ — целим, где мяч БУДЕТ (та же математика,
+    // что у человека: вынос ноги укорачивает путь корпуса)
+    const aim = p.tackleAim(ball);
+    const dl = Math.hypot(aim.x, aim.z) || 1;
+    const behind =
+      (aim.x / dl) * owner.facing.x + (aim.z / dl) * owner.facing.z > P.tackle.backCos;
+    // Ближе к своим воротам решаются злее — там цена потери выше
+    const ownDepth = Math.hypot(pos.x - team.ownGoalX, pos.z);
+    const rate = (badTouch ? TKA.ratePerSec : TKA.rateNormal) *
+      (ownDepth < TKA.desperateDepth ? TKA.desperateK : 1) * p.mods.gPress;
+    if (!behind && Math.random() < rate * dt) {
+      p.startTackle(aim.x, aim.z);
+      return { move: { x: 0, z: 0 }, sprint: false, face: null, speedCap: null };
+    }
+  }
+
+  if (badTouch) {
+    // Владелец потерял касание — рывок в мяч
+    return {
+      move: pursuitBall(pos.x, pos.z, ball, P.speed),
+      sprint: true,
+      face: null,
+      speedCap: null,
+    };
+  }
+
+  // Граница агрессивного прессинга. Было зашито «своя половина» (`< 0`),
+  // теперь это число: pressLine метров ВГЛУБЬ своей половины, где первый
+  // защитник ещё идёт в отбор, а не сдерживает (CONFIG.ai.defence.pressLine,
+  // 0 — прежнее поведение)
+  // Стиль команды добавляет метры АДДИТИВНО, а не множителем: на «Новичке»
+  // D.pressLine ровно 0, и умножать там нечего. Плюс личный press защитника:
+  // стоппер лезет в отбор глубже в своей половине, страхующий отходит раньше
+  const pressLine = D.pressLine + team.style.pressLine + p.mods.bPress;
+  // Se o humano ficar parado segurando a bola, não existe "zona segura" para
+  // gastar o relógio: depois de ~1,2 s o primeiro defensor fecha de verdade.
+  const antiStall = (team._stallPressureT || 0) >= 1.2;
+  const inOurHalf = team.side * bp.x < -pressLine && !antiStall;
+  if (!inOurHalf) {
+    // Высокий прессинг: на владельца с упреждением по его курсу (soccer.py)
+    const ospd = Math.hypot(owner.vel.x, owner.vel.z);
+    const odx = ospd > 1 ? owner.vel.x / ospd : owner.facing.x;
+    const odz = ospd > 1 ? owner.vel.z / ospd : owner.facing.z;
+    return {
+      move: seek(pos.x, pos.z, op.x + odx * D.presserLead, op.z + odz * D.presserLead),
+      sprint: myBallDist > AI.sprintDist,
+      face: null,
+      speedCap: null,
+    };
+  }
+
+  // Сдерживание: блок-точка между владельцем и нашими воротами (MarliK)
+  const gx = team.ownGoalX;
+  const dgx = gx - op.x;
+  const dgz = -op.z;
+  const dgl = Math.hypot(dgx, dgz) || 1;
+  const tx = op.x + (dgx / dgl) * D.jockeyDist;
+  const tz = op.z + (dgz / dgl) * D.jockeyDist;
+  const toBlock = Math.hypot(tx - pos.x, tz - pos.z);
+  let speedCap = null;
+  if (toBlock < D.jockeyDist * 1.5) {
+    // У блок-точки пятимся в темпе владельца — не выбрасываемся на финт.
+    // Раньше это была фигура речи, теперь буквально: sellFeint читает этот
+    // флаг и продаёт сдерживающему вдвое хуже (read.jockeyK). Сдерживание
+    // наконец получило измеримую награду
+    p.ai.jockey = true;
+    const ownerSpeed = Math.hypot(owner.vel.x, owner.vel.z);
+    speedCap = Math.max(2.5, ownerSpeed * D.jockeyMirror);
+  }
+  return {
+    move: arrive(pos.x, pos.z, tx, tz, 1.4),
+    sprint: toBlock > D.jockeySprint,
+    face: Math.atan2(op.x - pos.x, op.z - pos.z), // лицом к владельцу
+    speedCap,
+  };
+}
+
+// С мячом: такт решений (не каждый кадр) — удар, пас или продолжаем вести
+// ПРЯМАЯ МЕРА МЕТАНИЯ. Один такт решений — один вид действия; если вид сменился
+// СРАЗУ ЖЕ, значит игрок передумал. Это ровно то, что зритель читает как
+// «мечется». Разовая смена нормальна (обстановка меняется), а вот два-три
+// перещёлка в секунду — уже сумбур, и до 31.07.2026 их было нечем поймать.
+//
+// МЕТАНИЕ — ЭТО «ПЕРЕДУМАЛ», А НЕ «СДЕЛАЛ ДВА РАЗНЫХ ДЕЙСТВИЯ ПОДРЯД»
+// (уточнение 31.07.2026). Прежнее определение считало ЛЮБУЮ смену вида, и
+// стоило владельцу мяча начать вести, как метрика взлетела с 12.5 до 37 за
+// матч — при том, что «повёл три такта и отдал» это не сумбур, а нормальный
+// эпизод. Метрика, которая портится ровно тогда, когда игра становится лучше,
+// хуже отсутствия метрики (записанное правило проекта — так уже сломался
+// `passOk`, когда серии владения стали настоящими). Поэтому смена засчитывается
+// метанием, только если ПРЕЖНИЙ вид прожил меньше полутора тактов решений:
+// довёл своё решение до конца и сменил — это football, бросил через кадр —
+// это метание. Старый сигнал при этом сохраняется полностью: до правки
+// перещёлк «веду → отдаю» и происходил на соседних тактах
+function markDecision(p, team, kind) {
+  const held = p.ai.kindT || 0;
+  if (p.ai.lastKind && p.ai.lastKind !== kind &&
+      held < CONFIG.ai.decideInterval * 1.5) {
+    team.bump('flips');
+  }
+  p.ai.kindT = p.ai.lastKind === kind ? held : 0;
+  p.ai.lastKind = kind;
+}
+
+function withBall(p, ball) {
+  const AI = CONFIG.ai;
+  const P = CONFIG.player;
+  const team = p.team;
+  const pos = p.group.position;
+  const bp = ball.mesh.position;
+  const goalX = team.attackGoalX;
+  const distGoal = Math.hypot(goalX - pos.x, pos.z);
+
+  // Ближайший соперник — мера давления
+  let oppD = Infinity;
+  let opp = null;
+  for (const o of team.opponents) {
+    const op = o.group.position;
+    const d = Math.hypot(op.x - pos.x, op.z - pos.z);
+    if (d < oppD) {
+      oppD = d;
+      opp = o;
+    }
+  }
+
+  // КУРС ВЕДЕНИЯ И ЧИСТОТА КОРИДОРА СЧИТАЮТСЯ ДО РЕШЕНИЯ (31.07.2026).
+  // Раньше оба жили в САМОМ КОНЦЕ функции, и решение «вести или отдать»
+  // принималось, не зная о поле ничего. Просто прочитать `p.ai.dribFree` в
+  // начале было нельзя: при потере мяча его никто не сбрасывает (в ветке «не
+  // владею» обнуляется только `dribDir`), и на ПЕРВОМ кадре владения там лежит
+  // значение из прошлого эпизода — возможно, минутной давности. А первый кадр
+  // здесь и есть главный: замер показал медиану удержания мяча 0.00 с, то есть
+  // подавляющее большинство решений принимается именно на нём
+  const lane = carryLane(p, oppD, opp);
+  // ЧИСТЫЙ ВЫХОД НА ВОРОТА. Коридор `lane.free` меряет расстояние до
+  // ближайшего соперника ПО КУРСУ (вратарь из него исключён) — значит «никого
+  // между мной и воротами» это просто «коридор длиннее, чем до ворот».
+  // Считать отдельным проходом по сопернику не нужно: величина уже есть
+  const CR = AI.carry.clear;
+  const clearRun = !!CR && AI.carry.enabled &&
+    lane.road >= lane.toGoal - CR.slack &&
+    distGoal > CR.clearTo && distGoal < CR.clearFrom;
+  const cfg = team.phaseCfg();
+  const canKick = p.kickCooldown <= 0 && distToBall(p, ball) < P.kickRadius && bp.y < P.kickMaxBallY;
+  if (canKick && p.ai.decideCd <= 0) {
+    p.ai.decideCd = AI.decideInterval * cfg.tickK;
+    // РЕШЕНИЕ БИТЬ — не «попал в радиус», а качество момента. Прежний код
+    // стрелял при первой же возможности с 28 м, и замер дал 7 ударов за матч,
+    // из них НИ ОДНОГО ближе 11 м: атака гибла на дальнем ударе, а вратарь
+    // спокойно забирал (0 голов за 4 матча). Теперь дальний удар — редкость,
+    // а команда доводит мяч до убойной зоны, где и живёт прострел.
+    // РОЛЕВАЯ ОХОТА БИТЬ. Множитель растягивает ТОЛЬКО дальность, с которой
+    // игрок вообще думает об ударе: инсайд с 1.3 пробует с 36 м, столб с 0.75
+    // ждёт подачу и с 21 не стреляет. А вот УБОЙНАЯ ЗОНА (shootBest) — общая
+    // для всех и роли не подчиняется, и это условие корректности, а не вкус:
+    // внутри неё стоит правило «удар ОБЯЗАТЕЛЕН» (пол quality = 1), и растяни
+    // её ролью — получишь не личность, а правку баланса. Замер: при масштабе
+    // обеих величин голы за матч ушли с 1.5 до 3.5, ударов у Бразилии стало
+    // вдвое больше базы, а счета 2:4 вылезли из целевого коридора 1:0–3:2
+    const kShoot = p.mods.shoot;
+    const shootRange = AI.shootRange * kShoot;
+    const shootBest = AI.shootBest;
+    if (distGoal < shootRange && Math.abs(pos.z) < AI.shootMaxZ) {
+      // Качество момента: 1 в убойной зоне, тает с дистанцией и углом
+      let quality = Math.max(0, Math.min(1,
+        (shootRange - distGoal) / Math.max(1, shootRange - shootBest)));
+      quality = Math.pow(quality, AI.shootFalloff);
+      quality *= 1 - 0.55 * Math.min(1, Math.abs(pos.z) / AI.shootMaxZ);
+      // Защитник МЕЖДУ мной и воротами — момент испорчен. Но опекун вплотную
+      // (ближе shotBlockMin вдоль линии удара) — это не блок, а ДАВЛЕНИЕ:
+      // сдерживающий защитник по построению стоит ровно на линии удара к
+      // центру ворот, и «блок» находился почти в каждом эпизоде. Плотная
+      // опека обязана резать ТОЧНОСТЬ, а не отменять удар (принцип PES)
+      let blocked = false;
+      let pressed = false;
+      for (const o of team.opponents) {
+        if (o.isKeeper) continue;
+        const op = o.group.position;
+        const ax = (op.x - pos.x) * ((goalX - pos.x) / distGoal) +
+          (op.z - pos.z) * (-pos.z / distGoal);
+        if (ax < 0.5 || ax > distGoal) continue;
+        const perp = Math.abs(-(op.x - pos.x) * (-pos.z / distGoal) +
+          (op.z - pos.z) * ((goalX - pos.x) / distGoal));
+        if (perp >= AI.shotBlockWidth) continue;
+        if (ax < AI.shotBlockMin) pressed = true;
+        else { blocked = true; break; }
+      }
+      if (blocked) quality *= AI.shotBlockedK;
+      // В убойной зоне удар ОБЯЗАТЕЛЕН: вероятностный гейт иногда «прокатывал»
+      // момент из штрафной, и атака вырождалась в бесконечное перекатывание
+      // мяча (замер 26.07: 0 ударов за матч). Под блоком — с полом, а не с 1
+      if (distGoal < shootBest) {
+        quality = Math.max(quality, blocked ? AI.shootKillFloor : 1);
+      }
+      // ЧИСТЫЙ ВЫХОД: НЕ БЬЁМ ИЗДАЛЕКА, ИДЁМ НА ВРАТАРЯ. Гасится ПОСЛЕ пола
+      // убойной зоны нарочно — иначе пол вернул бы обязательный удар с 20 м
+      // (`shootBest` на «Профи»), а это ровно тот удар, который вратарь
+      // забирает в 96 % случаев. Ближе `clear.clearTo` состояние снимается
+      // само, и удар снова обязателен — уже с той дистанции, где он забивает
+      if (clearRun) quality *= CR.shootK;
+      if (Math.random() < quality) {
+        // Удар, ПОДГОТОВЛЕННЫЙ серией: тот же удар после трёх передач подряд
+        // и после отбитого наугад мяча — два разных события, а счётчик shot
+        // их не различает. Без этого «атаки стали осмысленнее» недоказуемо
+        if (team.seqPasses >= 3) team.bump('shotAfter3');
+        markDecision(p, team, 'shoot');
+        aiShoot(p, ball, goalX, distGoal, pressed);
+        p.ai.dribDir = null;
+        return { x: 0, z: 0 };
+      }
+    }
+    // Пас считаем ВСЕГДА: его лучший счёт нужен и навесу (сравнить, что
+    // ценнее), и тренеру (tryComingShort). Исполняем — под давлением или по
+    // собственному почину (passUrge)
+    const pass = team.choosePass(p, ball);
+    // Навес больше не имеет абсолютного приоритета: раньше он стоял ВЫШЕ паса
+    // и не проходил через модель вовсе, хотя даёт 2.5 гола на 100 против 6.4
+    // у прострела. Теперь подаём, только если передачи лучше нет
+    // Навес с ЧИСТОГО ВЫХОДА не подаём вовсе: подача — это признание, что
+    // пройти нельзя, а здесь пройти как раз можно. Замер до правки ловил на
+    // 38 м 21 % «паса поперёк» — это она и была
+    if (!clearRun && aiCross(p, ball, oppD, pass)) {
+      markDecision(p, team, 'cross');
+      p.ai.dribDir = null;
+      return { x: 0, z: 0 };
+    }
+    // ЛИПКОЕ НАМЕРЕНИЕ (31.07.2026). Раньше здесь бросалась монета passUrge —
+    // НА КАЖДОМ такте, то есть 4–5 раз в секунду, и между тактами не помнилось
+    // ничего. Игрок в одной и той же обстановке решал вести, через 0.2 с —
+    // отдавать, ещё через 0.2 с — снова вести. Это и есть «мечется»: замер до
+    // правки дал 23–24 перерешения за матч на команду при средней серии
+    // владения в 1.37 передачи.
+    // Теперь решение «пока веду» — это ОБЯЗАТЕЛЬСТВО на carryHold секунд:
+    // выпала «веду» — держим и не перерешаем. Снимает его не любой сосед, а
+    // только настоящая ловушка (`boxedIn` ниже).
+    // ХЛАДНОКРОВИЕ. Терпеливый игрок подпускает соперника ближе и не
+    // сбрасывает мяч рефлекторно; паникующий расстаётся с ним раньше.
+    // При composure 0.5 множитель ровно 1.0
+    const pressDist = AI.passPressure * p.mods.pressureK;
+    // ПРИЖАЛИ — ЭТО «СОПЕРНИК БЛИЗКО И БЕЖАТЬ НЕКУДА», А НЕ ПРОСТО «БЛИЗКО»
+    // (31.07.2026). Прежнее условие `oppD < pressDist` было ОБЯЗАТЕЛЬНЫМ пасом,
+    // и оно оказалось не редким случаем, а САМЫМ ЧАСТЫМ — по чистой арифметике
+    // двух чисел из разных файлов: сдерживающий защитник по построению
+    // паркуется в `defence.jockeyDist` от владельца (2.1 м в базе, 1.6 м на
+    // «Профи»), а порог давления `passPressure × pressureK` лежит в 2.24…4.16 м
+    // при ЛЮБОМ хладнокровии. То есть как только защитник дошёл до своей
+    // блок-точки, левый операнд `||` истинен ВСЕГДА: обязательство `carryHold`
+    // снималось, монета даже не бросалась, и мяч уходил на первом же такте.
+    // Это и есть замеренная медиана удержания мяча 0.00 с.
+    // Но защитник рядом ещё не значит «деваться некуда»: он может быть сбоку
+    // или сзади, а впереди — пустое поле, и тогда убежать от него и есть
+    // правильный футбол. Поэтому обязательный пас требует ОБОИХ условий.
+    const boxedIn = AI.carry.enabled
+      ? oppD < pressDist && lane.free < AI.carry.freeFrom
+      : oppD < pressDist;   // ablation: прежнее «любой сосед = отдавай»
+    const carrying = p.ai.carryT > 0 && !boxedIn;
+    // СВОБОДНАЯ ЗОНА ВПЕРЕДИ ГАСИТ ОХОТУ ОТДАТЬ МЯЧ (31.07.2026). Монета
+    // остаётся монетой — детерминированная игра читается соперником и выглядит
+    // роботом (записанное правило проекта), — но её вероятность наконец
+    // зависит от поля, а не только от фазы
+    const damp = carryDamp(p, lane, oppD, pressDist);
+    // ПОТОЛОК ОХОТЫ ОТДАТЬ. `passUrge` и множитель фазы `urgeK` — два писателя
+    // одного числа, и произведение никто не ограничивал: на «Профи» 0.6 × 1.6
+    // (фаза DIRECT) = 0.96, то есть мяч сбрасывался почти детерминированно, и
+    // ровно в тех фазах (контратака, длинная передача), где бежать в свободное
+    // поле и надо. Потолок оставляет случайности место всегда
+    let urge = AI.carry.enabled
+      // Потолок сверху, абсолютный пол снизу: скидка за свободную зону не
+      // имеет права ни сделать пас обязательным, ни отменить его как явление
+      ? Math.max(AI.carry.urgeMin,
+        Math.min(AI.carry.urgeMax, AI.passUrge * cfg.urgeK) * damp)
+      : AI.passUrge * cfg.urgeK;   // ablation: без потолка, как было
+    // ЧИСТЫЙ ВЫХОД — ЕДИНСТВЕННОЕ МЕСТО, ГДЕ АБСОЛЮТНЫЙ ПОЛ СНИМАЕТСЯ. Пол
+    // нужен, чтобы пас не исчезал как явление (записанная грабля «Новичка»),
+    // но выход один на один — ровно тот случай, когда отдавать НЕ НАДО: это
+    // самый ценный момент в футболе, и пас назад из него выбрасывает его
+    // целиком. Прижали (`boxedIn`) — по-прежнему отдаём, это выше по коду
+    if (clearRun) urge = Math.min(urge, CR.urge);
+    if (pass && !carrying && (boxedIn || Math.random() < urge)) {
+      markDecision(p, team, 'pass');
+      p.aiKick(ball, pass.dir, pass.power, pass.lift, 0, passStrikeKind(pass));
+      team.commitPass(pass, p); // короткий пас под прессингом → стеночка
+      p.ai.dribDir = null;
+      return { x: 0, z: 0 };
+    }
+    // ФИНТ КОМПЬЮТЕРА (правило с 31.07.2026). Стоит ПОСЛЕДНИМ и нарочно: удар
+    // ценнее финта, пас ценнее финта, и обыгрыш остаётся тем, чем он является
+    // в статистике, — последним доводом, когда ни бить, ни отдать некуда.
+    // Решение узкое: защитник перекрыл курс, до своих ворот далеко (потеря
+    // мяча в своей трети стоит гола), и передачи лучше passOver не нашлось.
+    if (aiFeint(p, ball, opp, oppD, pass)) {
+      markDecision(p, team, 'feint');
+      return { x: 0, z: 0 };
+    }
+    // Ни бить, ни отдать, ни финтить — ведём. Это тоже решение, и именно
+    // чередование «веду / отдаю / веду» на соседних тактах и есть метание.
+    // Взводим обязательство: следующие carryHold секунд монета не бросается.
+    // Побежал в ПУСТОЕ ПОЛЕ — обязательство длиннее (`carry.holdBonus`): рывок
+    // в свободную зону имеет смысл, только если его доводят до конца, а на
+    // прежних 0.45 с игрок успевал сделать три шага и передумать
+    if (!carrying) {
+      const C = AI.carry;
+      const bonus = C ? C.holdBonus * (1 - damp) / (1 - C.urgeFloor) : 0;
+      p.ai.carryT = (AI.carryHold + bonus) * p.mods.carryK;
+      team.bump('carry');
+      if (lane.free >= C.freeTo) team.bump('carryFree');
+    }
+    markDecision(p, team, 'dribble');
+  }
+
+  p.ai.dribDir = { x: lane.dx, z: lane.dz };
+  p.ai.dribFree = lane.free;
+  return { x: lane.dx, z: lane.dz };
+}
+
+// КУРС ВЕДЕНИЯ И ЧИСТОТА КОРИДОРА ПО НЕМУ. Вынесено из хвоста `withBall`
+// отдельной функцией, потому что теперь читается ДВАЖДЫ: решением «вести или
+// отдать» (до такта) и движением (после). Считать это дважды за кадр незачем —
+// вызов один, в начале withBall, результат идёт в оба места.
+function carryLane(p, oppD, opp) {
+  const AI = CONFIG.ai;
+  const team = p.team;
+  const pos = p.group.position;
+  const goalX = team.attackGoalX;
+
+  // Ведение к воротам, чуть к центру; соперник рядом — скользим в сторону.
+  // ИСКЛЮЧЕНИЕ — широкий игрок в финальной трети: он продавливает к ЛИЦЕВОЙ
+  // под прострел, а не сворачивает на центр в объятия блока. Без этого
+  // геометрия прострела (fCutback 1.6, второе оружие игры) была недостижима:
+  // мяч в угол штрафной никто не доводил ни разу за матч
+  const CB = AI.attack.cross;
+  // ГИСТЕРЕЗИС «ШИРОКОГО» (31.07.2026). Флаг стоял на двух голых порогах, и
+  // на самой границе (|z| около 15 м) цель ведения покадрово прыгала между
+  // «угол штрафной» и «центр ворот» — то есть между двумя точками в 20 м друг
+  // от друга. Вингер на этой границе живёт БОЛЬШУЮ ЧАСТЬ эпизода, и со стороны
+  // это выглядело как «не может решить, куда бежать». Вход в режим — по
+  // flankZ, выход — по более узкому flankZExit
+  const inFinalThirdW = team.side * pos.x > CONFIG.field.length / 2 - CB.finalThird;
+  // ЧИСТЫЙ ПУТЬ К ВОРОТАМ ОТМЕНЯЕТ «ШИРОКОГО» (31.07.2026). Широкий игрок
+  // ведёт мяч к ЛИЦЕВОЙ под прострел, и это верно, когда середина закрыта.
+  // Но на выходе один на один игра сама уводила его туда, где бить почти
+  // нельзя: угловой множитель желания бить равен `1 − 0.55·|z|/shootMaxZ`, то
+  // есть на цели ведения |z| = 16 он режет охоту на 44 %, а за `shootMaxZ`
+  // (20 м) ветки удара нет вовсе. Уходить на бровку, когда прямая дорога к
+  // воротам ПУСТА, — значит выбрасывать выход. Меряем коридор именно НА
+  // ВОРОТА, до выбора курса: это отдельный проход по сопернику, но он один
+  // на кадр у одного игрока — владельца мяча
+  const toGoal = Math.hypot(goalX - pos.x, pos.z) || 1;
+  const CRW = AI.carry.clear;
+  // Дорога меряется ПРЯМО НА ВОРОТА и ШИРОКИМ коридором: спринтеру мешает не
+  // только тот, кто стоит ровно на линии, но и всякий, кто успеет на неё выйти
+  const road = CRW
+    ? laneAlong(team, pos, (goalX - pos.x) / toGoal, -pos.z / toGoal, CRW.roadHalfWidth)
+    : Infinity;
+  const openRoad = !!CRW && AI.carry.enabled &&
+    road >= toGoal - CRW.slack && toGoal < CRW.clearFrom;
+  // «Уже у ворот» — гасит спринт с мячом (см. updateFieldPlayer). Считаем
+  // здесь, потому что дистанция до ворот уже посчитана, а второй раз её
+  // мерить незачем
+  p.ai.nearGoal = !!CRW && toGoal < CRW.steadyFrom;
+  const wide = inFinalThirdW && !openRoad &&
+    Math.abs(pos.z) > (p.ai.wide ? CB.flankZExit : CB.flankZ);
+  p.ai.wide = wide;
+  let dx;
+  let dz;
+  if (wide) {
+    dx = team.side * (CONFIG.field.length / 2 - 4) - pos.x;
+    dz = Math.sign(pos.z) * 16 - pos.z;
+  } else {
+    dx = goalX - pos.x;
+    dz = -pos.z * 0.35;
+  }
+  let dl = Math.hypot(dx, dz) || 1;
+  dx /= dl;
+  dz /= dl;
+  if (opp && oppD < AI.dribbleAvoidDist && oppD > 0.01) {
+    const op = opp.group.position;
+    const k = (1 - oppD / AI.dribbleAvoidDist) * 1.2;
+    dx += ((pos.x - op.x) / oppD) * k;
+    dz += ((pos.z - op.z) / oppD) * k;
+    dl = Math.hypot(dx, dz) || 1;
+    dx /= dl;
+    dz /= dl;
+  }
+  // Чистота коридора ПО КУРСУ: владелец включает спринт, только когда впереди
+  // никого. Общий гандикап дриблинга (dribbleSpeedFactor) не трогаем — по духу
+  // PES дриблинг не должен выигрывать у паса; но и убегать от прессинга после
+  // стеночки владелец обязан, иначе весь прогресс мяча упирается в передачу
+  return { dx, dz, free: laneAlong(team, pos, dx, dz), road, toGoal };
+}
+
+// Расстояние до ближайшего ПОЛЕВОГО соперника в коридоре по заданному курсу.
+// Вратарь исключён нарочно: он не помеха на пути, он и есть цель выхода —
+// именно поэтому величина годится и как «свободен ли коридор для спринта»,
+// и как «чист ли путь к воротам» (см. `clearRun` в withBall)
+function laneAlong(team, pos, dx, dz, halfWidth = 3.5) {
+  let ahead = Infinity;
+  for (const o of team.opponents) {
+    if (o.isKeeper) continue;
+    const op = o.group.position;
+    const rx = op.x - pos.x;
+    const rz = op.z - pos.z;
+    const along = rx * dx + rz * dz;
+    if (along <= 0) continue;
+    const side = Math.abs(rx * dz - rz * dx);
+    if (side > halfWidth) continue;
+    ahead = Math.min(ahead, along);
+  }
+  return ahead;
+}
+
+// НАСКОЛЬКО СЛАБЕЕ ОХОТА ОТДАТЬ МЯЧ, когда впереди свободно. Возвращает
+// множитель к `passUrge`: 1 — как было (стена перед носом), `urgeFloor` —
+// открытое поле. Отдельная функция, а не три строки на месте, ровно потому,
+// что у неё три ПРЕДОХРАНИТЕЛЯ, и каждый из них — отдельное утверждение о
+// футболе, которое должно быть видно глазами:
+//   1) вести имеет смысл только ВПЕРЁД (курс вдоль атаки, `progressMin`);
+//   2) в своей трети не ведут вовсе — потеря там стоит гола (`ownSafe`);
+//   3) соперник вплотную — никакой свободы нет, что бы ни говорил коридор
+//      (прессинг снимает обязательство и в `withBall`, здесь то же правило).
+// Техничный игрок пользуется свободой охотнее: тот же `touchK`, что решает
+// охоту финтить, — иначе «свободная зона» одинаково манила бы и Роналдо, и
+// центрального защитника
+function carryDamp(p, lane, oppD, pressDist) {
+  const C = CONFIG.ai.carry;
+  if (!C || !C.enabled || lane.free == null) return 1;
+  const team = p.team;
+  const pos = p.group.position;
+  // Курс вдоль атаки: ведение вбок и назад свободой не награждается
+  if (team.side * lane.dx < C.progressMin) return 1;
+  // Своя треть: считаем до СВОИХ ворот, а не по глубине — мяч у флажка своей
+  // половины стоит близко к лицевой и далеко от ворот (записанная грабля
+  // стенда атаки, где зоны мерили по глубине и получали ложную «убойную зону»)
+  const ownX = -team.side * CONFIG.field.length / 2;
+  if (Math.hypot(pos.x - ownX, pos.z) < C.ownSafe) return 1;
+  const t = Math.max(0, Math.min(1,
+    (lane.free - C.freeFrom) / Math.max(0.01, C.freeTo - C.freeFrom)));
+  const k = 1 - (1 - C.urgeFloor) * t;
+  // СОПЕРНИК ВПЛОТНУЮ ОСЛАБЛЯЕТ СКИДКУ ПРОПОРЦИОНАЛЬНО, А НЕ ОТМЕНЯЕТ ЕЁ.
+  // Первая редакция гасила скидку жёстким «если давят — не думай», и это
+  // противоречило самой правке: защитник может стоять СБОКУ или СЗАДИ, а
+  // впереди быть пустое поле — тогда убежать от него и есть правильный
+  // футбол, а не сброс мяча. Случай «прижали и бежать некуда» отдельно и
+  // раньше обрабатывает `boxedIn` в withBall, здесь же остаётся плавная мера:
+  // вплотную (oppD → 0) скидки нет вовсе, на пороге давления она полная
+  const near = Math.max(0, Math.min(1, oppD / Math.max(0.01, pressDist)));
+  // touchK — множитель вокруг единицы (0.5 техники = ровно 1.0). Ниже единицы
+  // он ослабляет скидку, выше — усиливает; зажимаем, чтобы личность не смогла
+  // ни отменить механику, ни сделать пас невозможным
+  const touchK = (p.mods && p.mods.touchK) || 1;
+  return Math.max(C.urgeFloor, Math.min(1, 1 - (1 - k) * touchK * near));
+}
+
+// Финт компьютера. Какой именно — решает та же геометрия, что у человека, но
+// «стик» подставляет мозг: защитник прямо по курсу — ПРОБРОС МИМО; перекрыл
+// наискось — КРОКЕТА в свободную сторону; вцепился сзади-сбоку и деваться
+// некуда — РАЗВОРОТ. Возвращает true, если финт начат.
+function aiFeint(p, ball, opp, oppD, pass) {
+  const F = CONFIG.ai.feint;
+  if (!F || !F.enabled || F.rate <= 0) return false;
+  // ТЕХНИКА игрока: техничный обыгрывает чаще, из большей зоны и охотнее, чем
+  // отдаёт. Провал финта на этот же атрибут уже завязан (player.js, feint.fail
+  // → look.touch), так что рычаг остаётся одним. При touch 0.5 множитель 1.0
+  const kTouch = p.mods.touchK;
+  if (!opp || oppD > F.range * kTouch) return false;
+  // Сравнивать надо с ЛУЧШИМ счётом паса (`_passBest`), а не со счётом того
+  // варианта, который вытянул softmax: софтмакс нарочно отдаёт лучшему лишь
+  // ~2/3 случаев, и в оставшейся трети сюда приезжал заведомо более слабый
+  // вариант — то есть порог «есть передача лучше финта» проверялся против
+  // случайного числа. `_passBest` для этого и заведён (team.js, choosePass)
+  if ((p.team._passBest || 0) >= F.passOver * kTouch) return false;
+  const team = p.team;
+  const pos = p.group.position;
+  if (Math.hypot(pos.x - team.ownGoalX, pos.z) < F.ownSafe) return false;
+  if (!p.canFeint(ball)) return false;
+  if (Math.random() >= F.rate * kTouch) return false;
+
+  // Курс — туда, куда игрок и вёл (dribDir), иначе на ворота
+  const d = p.ai.dribDir || { x: team.side, z: 0 };
+  const dl = Math.hypot(d.x, d.z) || 1;
+  const cx = d.x / dl;
+  const cz = d.z / dl;
+  const op = opp.group.position;
+  const rx = (op.x - pos.x) / (oppD || 1);
+  const rz = (op.z - pos.z) / (oppD || 1);
+  const ahead = rx * cx + rz * cz;          // защитник впереди по курсу?
+  // Вправо от курса — это (−cz, cx): формула выведена в проекте трижды
+  const side = Math.sign(rx * -cz + rz * cx) || 1;
+  let stick = null;
+  let kind = 'past';
+  if (ahead < 0.1) {
+    // Защитник сбоку или сзади: уходим разворотом от него
+    kind = 'roul';
+    stick = { x: -rx, z: -rz };
+  } else if (ahead < 0.62) {
+    // Наискось: крокета в СВОБОДНУЮ сторону — вектор «вправо от курса»
+    // (−cz, cx), взятый с обратным знаком к стороне защитника
+    kind = 'croq';
+    stick = { x: cz * side, z: -cx * side };
+  }
+  return p.tryFeint(ball, stick, { kind });
+}
+
+// AI-навес с фланга (ресёрч 10 + PES): вингер в финальной трети упёрся
+// в защитника — подача в штрафную на самого свободного из своих; никого
+// нет — на дальнюю штангу (PES-дефолт). Сила — баллистикой под дистанцию.
+// Возвращает true, если навес исполнен.
+function aiCross(p, ball, oppD, pass = null) {
+  const AI = CONFIG.ai;
+  const AC = AI.attack.cross;
+  const F = CONFIG.field;
+  const B = CONFIG.ball;
+  const team = p.team;
+  const pos = p.group.position;
+
+  // СКЛОННОСТЬ К ПОДАЧЕ — роль игрока И стиль команды в одном множителе,
+  // потому что рычаг один. Германия-98 с 1.45 грузит в штрафную раз за разом,
+  // вингер-подающий начинает искать подачу шире и раньше, а опорный с 0.75
+  // почти всегда предпочтёт передачу. При нейтрали множитель ровно 1.0
+  const kCross = p.mods.crossBias;
+  const inFlank = Math.abs(pos.z) > AC.flankZ / kCross;
+  const inFinalThird = team.side * pos.x > F.length / 2 - AC.finalThird * kCross;
+  if (!inFlank || !inFinalThird || oppD > AC.blockedDist) return false;
+  // Передача ценнее подачи — отдаём её. Навес остаётся тем, чем он является в
+  // статистике: последним доводом, когда прохода и паса нет.
+  // Тот же баг, что был у финта: порог сравнивался со СЛУЧАЙНО вытянутым
+  // softmax-вариантом вместо лучшего, и навес то отменялся, то нет при одной
+  // и той же обстановке — прямой источник дёрганости в финальной трети
+  if ((team._passBest || 0) >= AC.overPass * kCross) return false;
+
+  // Адресат: свой в штрафной соперника с максимально свободной зоной
+  const boxX = F.length / 2 - 16.5;
+  let target = null;
+  let bestSpace = -1;
+  for (const m of team.players) {
+    if (m === p || m.isKeeper) continue;
+    const mp = m.group.position;
+    if (team.side * mp.x < boxX || Math.abs(mp.z) > 20.16) continue;
+    const space = freeSpace(mp.x, mp.z, team.opponents);
+    if (space > bestSpace) {
+      bestSpace = space;
+      target = { x: mp.x + m.vel.x * 0.6, z: mp.z + m.vel.z * 0.6 };
+    }
+  }
+  if (!target) {
+    // В штрафной пусто, но туда уже бегут (рывок/врывания)? Подождём их.
+    if (team.runner || team.receiver || team.boxRuns.size) return false;
+    target = { x: team.side * (F.length / 2 - 5.5), z: -Math.sign(pos.z) * AC.farPostZ };
+  }
+
+  const dx = target.x - pos.x;
+  const dz = target.z - pos.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist < AC.minDist) return false;
+
+  // Баллистика под адрес (как crossSolution): скорость из угла дуги.
+  // Разнообразие подач: продавился к самой лицевой — режет низом (прострел),
+  // подаёт из глубины фланга — обычная дуга под голову
+  const nearByline = team.side * pos.x > F.length / 2 - AC.deepX;
+  const theta = ((nearByline ? AC.lowAngle : AC.angle) * Math.PI) / 180;
+  const g = -B.gravity;
+  let power = Math.sqrt((g * dist) / (2 * Math.tan(theta))) * 1.15;
+  power = Math.max(14, Math.min(30, power));
+  const lift = power * Math.tan(theta);
+  team.bump('cross');
+  p.aiKick(ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'cross');
+  // Замыкающего назначает тренер по точке прилёта (врывание на прилёт)
+  team.onCrossStruck(ball);
+  return true;
+}
+
+// Игра на втором этаже (ресёрч 11): верховой мяч в досягаемости играется
+// в одно касание. Контекст решает: своя треть — ВЫНОС на фланг; у чужих
+// ворот — удар головой/с лёта в створ, где сила растёт от разбега
+// (врывание бьёт сильнее, чем статичный прыжок — принцип PES); середина
+// поля — скидка вперёд (борьба за подбор после выносов).
+function aerialPlay(p, ball, diving = false) {
+  const AIR = CONFIG.ai.aerial;
+  const team = p.team;
+  const pos = p.group.position;
+  const bp = ball.mesh.position;
+  const goalX = team.attackGoalX;
+  const ownGoalX = team.ownGoalX;
+  // В падении бьёшь без опоры: слабее и шумнее (та же цена, что у человека)
+  const DF = diving ? CONFIG.player.aerial.dive.powerFactor : 1;
+  const DN = diving ? CONFIG.player.aerial.dive.noise : 1;
+
+  const isReceiver = team.receiver === p;
+  const distGoal = Math.hypot(goalX - pos.x, pos.z);
+  // Прицел считаем по ПРОГНОЗНОЙ высоте контакта, а не по высоте мяча сейчас:
+  // замах начинается заранее, и за это время мяч успевает заметно опуститься
+  const contactY = diving ? bp.y : p.predictAerialContact(ball).y;
+
+  // Приём (фидбек Олега 22–23.07.2026): адресат нашей верховой передачи
+  // гасит опускающийся мяч себе в ноги на ЛЮБОЙ досягаемой высоте — а не
+  // «упрыгивает» от него скидкой в прыжке (прыжок jumpT уносил меш от тени
+  // и звезды — читалось как поломанная анимация приёма). У чужих ворот
+  // приём не включается: там подачу ЗАМЫКАЮТ.
+  if (!diving && isReceiver && distGoal >= AIR.headerRange) {
+    // ПАС В КАСАНИЕ. Прежде адресат верховой передачи ВСЕГДА принимал мяч —
+    // игры в касание у компьютера не существовало вовсе. Играем её там, где
+    // она и нужна: опекун рядом (принимать некогда) и есть надёжный вариант
+    const FT = CONFIG.ai.firstTouch;
+    let press = Infinity;
+    for (const o of team.opponents) {
+      if (o.isKeeper) continue;
+      const op = o.group.position;
+      press = Math.min(press, Math.hypot(op.x - pos.x, op.z - pos.z));
+    }
+    if (p.kickCooldown <= 0 && press < FT.passPress) {
+      const pass = team.choosePass(p, ball);
+      if (pass && pass.score >= FT.passScore) {
+        p.aiAerial(ball, pass.dir, pass.power * FT.passPowerK, pass.lift);
+        team.commitPass(pass, p);
+        return;
+      }
+    }
+    // Гасим ТОЛЬКО когда мяч реально коснулся корпуса: раньше приём срабатывал,
+    // едва мяч влетал в радиус 1.5 м, и мяч менял курс в метре от груди.
+    // Направление первого касания у AI — В СТОРОНУ АТАКИ: принимая спиной к
+    // чужим воротам, он подрабатывает мяч себе на разворот, а не гасит намертво
+    const tgx = goalX - pos.x;
+    const tgz = -pos.z;
+    const tgl = Math.hypot(tgx, tgz) || 1;
+    p.trapBall(ball, p.bodyContactPoint(bp), { x: tgx / tgl, z: tgz / tgl });
+    return;
+  }
+
+  const ownDepth = Math.hypot(pos.x - ownGoalX, pos.z);
+  if (ownDepth < AIR.clearThird && !isReceiver) {
+    // Вынос: от своих ворот в сторону ближнего фланга (свой адресат паса
+    // вратаря/защитника мяч не выносит — он его принимает выше или ждёт)
+    const zs = pos.z !== 0 ? Math.sign(pos.z) : (Math.random() < 0.5 ? -1 : 1);
+    p.aiAerial(ball, { x: team.side, z: zs * 0.9 }, AIR.clearPower * DF, AIR.clearLift);
+    return;
+  }
+
+  // ТРЕТЬЯ точка входа в удар — замыкание головой и с лёта. У неё СВОЯ формула
+  // шума и силы, `aiShoot` тут не зовётся вовсе, поэтому личная охота бить
+  // обязана цепляться отдельно. Без этого столб с shoot 0.70 замыкал бы подачу
+  // головой ровно как поачер, а голов головой в этом матче как раз больше всего
+  if (distGoal < AIR.headerRange * p.mods.shoot && Math.abs(pos.z) < 16) {
+    // Замыкание в створ: прицел со случайной точкой и шумом (рычаг
+    // «голы не дешевеют»), сила — от скорости разбега в момент контакта.
+    // Это УДАР — статистика матча обязана его видеть, иначе замер конверсии
+    // врёт (голы головой и с лёта в счётчик ударов не попадали вовсе)
+    team.bump('shot');
+    const G = CONFIG.goal;
+    const spd = Math.hypot(p.vel.x, p.vel.z);
+    const noise = AIR.headerNoise * (0.6 + distGoal / AIR.headerRange) * DN;
+    const tz = (Math.random() * 2 - 1) * (G.width / 2 - 0.5) +
+      (Math.random() * 2 - 1) * noise;
+    const dx = goalX - pos.x;
+    const dz = tz - pos.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const power = Math.min(AIR.headerPowerMax,
+      AIR.headerPower + spd * AIR.headerPowerRun) * DF;
+    // Вертикаль: прийти к воротам на высоте headerTargetY (кивок вниз можно)
+    const t = d / (power * 0.85);
+    let vy = (AIR.headerTargetY - contactY) / t - 0.5 * CONFIG.ball.gravity * t;
+    vy = Math.max(-6, Math.min(5, vy));
+    p.aiAerial(ball, { x: dx / d, z: dz / d }, power, vy);
+    return;
+  }
+
+  // Середина поля: скидка головой вперёд, к центру — партнёры подберут
+  p.aiAerial(ball, { x: team.side, z: pos.z > 0 ? -0.3 : 0.3 },
+    AIR.flickPower * DF, AIR.flickLift);
+}
+
+// Удар AI: случайная точка створа + шум промаха, растущий с дистанцией.
+// Шум (CONFIG.ai.shotNoise) — главный рычаг против дешёвых голов;
+// в Фазе 3 сюда встанет вероятностная модель (мини-xG).
+// Удар AI. ЦЕЛИТСЯ В УГОЛ МИМО ВРАТАРЯ, а не в случайную точку створа:
+// равномерный прицел давал в основном мячи по центру, которые кипер после
+// переработки берёт все подряд (замер 26.07: 4 удара — 4 сейва, 0 голов за
+// четыре матча). Реальный бьющий выбирает дальний от вратаря угол; шум
+// прицела остаётся главным рычагом «голы не дешевеют».
+function aiShoot(p, ball, goalX, distGoal, pressed = false) {
+  const AI = CONFIG.ai;
+  if (p.team) p.team.bump('shot');
+  const G = CONFIG.goal;
+  const pos = p.group.position;
+  const inner = G.width / 2 - 0.5;
+
+  // Дальний от вратаря угол; кипера нет в поле зрения — выбираем сторону,
+  // противоположную своему сносу к бровке (уходим от острого угла)
+  const keeper = p.team ? p.team.match.otherTeam(p.team).keeper : null;
+  const kz = keeper ? keeper.group.position.z : 0;
+  // Дальний угол — это половина створа, ПРОТИВОПОЛОЖНАЯ вратарю. Прежнее
+  // сравнение шло с z БЬЮЩЕГО, а вратарь всегда стоит на биссектрисе, то есть
+  // по ту же сторону от центра, но ближе к оси — знак всегда совпадал, и AI
+  // на самом деле лупил в БЛИЖНИЙ угол, который вратарю легче на два kz
+  let side = kz >= 0 ? -1 : 1;
+  if (Math.abs(kz) < 0.4) side = Math.random() < 0.5 ? -1 : 1;
+  // Иногда бьём в ближний — иначе вратарь читал бы удар по одной схеме
+  if (Math.random() < AI.shotNearSide) side = -side;
+
+  const aim = inner * (AI.shotCornerMin + (1 - AI.shotCornerMin) * Math.random());
+  // Опекун вплотную не запрещает удар, но режет точность — Physical Pressure
+  const noise = AI.shotNoise * (0.5 + distGoal / AI.shootRange) +
+    (pressed ? AI.shotPressNoise : 0);
+  const targetZ = side * aim + (Math.random() * 2 - 1) * noise;
+  const dx = goalX - pos.x;
+  const dz = targetZ - pos.z;
+  const d = Math.hypot(dx, dz) || 1;
+  const power = Math.min(AI.shotPowerMax, AI.shotPowerBase + distGoal * AI.shotPowerPerM);
+  // Низом в угол — самый результативный удар в футболе; свечи оставляем редкими
+  const lowShot = Math.random() > AI.shotHighChance;
+  const lift = lowShot
+    ? Math.min(3.5, 0.4 + distGoal * 0.075)
+    : Math.min(7, 1.2 + distGoal * 0.12 + Math.random() * 1.5);
+  // Клип по манере удара: на разбеге — полный мах подъёмом, с места — щёчка
+  const running = Math.hypot(p.vel.x, p.vel.z) > CONFIG.shot.styles.instep.minRunSpeed;
+  p.aiKick(ball, { x: dx / d, z: dz / d }, power, lift, 0, running ? 'instep' : 'side');
+}

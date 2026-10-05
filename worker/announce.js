@@ -34,17 +34,21 @@ export function newRows(before, after) {
 }
 
 function ordinal(n) {
-  if (n === 1) return 'top of the table';
-  if (n === 2) return 'second';
-  if (n === 3) return 'third';
-  return `number ${n}`;
+  if (n === 1) return 'líder do ranking';
+  if (n === 2) return 'segundo lugar';
+  if (n === 3) return 'terceiro lugar';
+  return `posição ${n}`;
+}
+
+function levelLabel(level) {
+  return ({ easy: 'FÁCIL', normal: 'NORMAL', hard: 'DIFÍCIL' })[level] || String(level).toUpperCase();
 }
 
 function line({ entry, level, place }) {
   const result = `${entry.scored}-${entry.conceded}`;
   const beat = entry.scored === entry.conceded
-    ? `held **${level.toUpperCase()}** to ${result}`
-    : `beat **${level.toUpperCase()}** ${result}`;
+    ? `empatou no **${levelLabel(level)}** por ${result}`
+    : `venceu no **${levelLabel(level)}** por ${result}`;
   return `🏆 **${entry.name}** ${beat} — ${ordinal(place)}`;
 }
 
@@ -53,7 +57,7 @@ function line({ entry, level, place }) {
  * somewhere else, because the whole point of the message is that people can
  * click it and go and beat the score.
  */
-export const GAME_URL = 'https://markclausing.github.io/websoccer/';
+export const GAME_URL = 'https://pedra-lisa-futebol.netlify.app/';
 
 /** Blue, the same blue the home side wears. */
 const COLOUR = 0x2f6fd0;
@@ -72,18 +76,18 @@ const COLOUR = 0x2f6fd0;
 export function announcement(rows, gameUrl = GAME_URL) {
   const shown = rows.slice(0, MAX_LINES).map(line);
   if (rows.length > MAX_LINES) {
-    shown.push(`…and ${rows.length - MAX_LINES} more.`);
+    shown.push(`…e mais ${rows.length - MAX_LINES}.`);
   }
   const url = gameUrl || GAME_URL;
-  const plural = rows.length > 1 ? 'New high scores' : 'New high score';
+  const plural = rows.length > 1 ? 'Novos recordes' : 'Novo recorde';
   return {
-    username: 'WebSoccer',
+    username: 'Pedra Lisa Futebol',
     embeds: [{
-      title: `⚽ ${plural} in WebSoccer`,
+      title: `⚽ ${plural} no Pedra Lisa Futebol`,
       url,
       description: shown.join('\n'),
       color: COLOUR,
-      footer: { text: `Play at ${url.replace(/^https?:\/\//, '').replace(/\/$/, '')}` },
+      footer: { text: `Jogue em ${url.replace(/^https?:\/\//, '').replace(/\/$/, '')}` },
     }],
     // Names are three characters of A-Z, 0-9 and a dash, so they cannot spell a
     // mention - but a board this open should not be one webhook away from

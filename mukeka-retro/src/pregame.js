@@ -1,0 +1,312 @@
+import { CLUBS, LOCAL_CLUBS, REGIONAL_CLUBS, FINAL_CLUB } from './clubs.js';
+
+export function setupPregame({ match } = {}) {
+  const gate = document.getElementById('pregame-menu');
+  if (!gate) {
+    return { get open() { return false; }, close() {}, openMenu() {} };
+  }
+
+  const params = new URLSearchParams(location.search);
+  // Link online e partida já escolhida entram direto no fluxo correspondente.
+  let open = params.get('online') !== '1' && !params.get('room') && params.get('start') !== '1';
+  gate.classList.toggle('hidden', !open);
+
+  const friendly = document.getElementById('pg-friendly');
+  const online = document.getElementById('pg-online');
+  const master = document.getElementById('pg-master');
+  const cup = document.getElementById('pg-cup');
+  const penalties = document.getElementById('pg-penalties');
+  const settings = document.getElementById('pg-settings');
+  const back = document.getElementById('pg-back');
+  const grid = gate.querySelector('.pg-grid');
+  const title = gate.querySelector('.pg-title');
+  const footer = gate.querySelector('.pg-footer');
+  const settingsPanel = document.getElementById('settings');
+  const settingsClose = document.getElementById('settings-close');
+
+  // Nada clicado no lobby deve virar passe/chute no campo atrás dele.
+  for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'keydown', 'keyup']) {
+    gate.addEventListener(type, (e) => e.stopPropagation());
+  }
+
+  function close() {
+    open = false;
+    gate.classList.add('hidden');
+  }
+
+  function hideFriendlySetup() {
+    gate.querySelector('.pg-friendly-setup')?.remove();
+    gate.querySelector('.pg-online-setup')?.remove();
+    if (grid) grid.style.display = '';
+    if (title) title.textContent = 'ESCOLHA COMO JOGAR';
+    if (footer) footer.style.display = '';
+  }
+
+  function openMenu() {
+    hideFriendlySetup();
+    open = true;
+    gate.classList.remove('hidden');
+  }
+
+  function clubOptions(selectedId) {
+    const groups = [
+      ['LIGA DE INDEPENDÊNCIA', LOCAL_CLUBS],
+      ['REGIONAL', REGIONAL_CLUBS],
+      ['DESAFIO DOS CAMPEÕES', [FINAL_CLUB]],
+    ];
+    return groups.map(([label, clubs]) =>
+      `<optgroup label="${label}">` +
+      clubs.map((club) =>
+        `<option value="${club.id}" ${club.id === selectedId ? 'selected' : ''}>${club.name} · FORÇA ${club.strength}</option>`
+      ).join('') +
+      '</optgroup>'
+    ).join('');
+  }
+
+  function showFriendlySetup() {
+    hideFriendlySetup();
+    if (grid) grid.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (title) title.textContent = 'AMISTOSO · ESCOLHA OS TIMES';
+
+    const box = document.createElement('div');
+    box.className = 'pg-friendly-setup';
+    box.innerHTML = `
+      <div class="pg-versus">
+        <label>
+          <span>SEU TIME</span>
+          <select id="pg-home-team">${clubOptions(params.get('home') || 'pedra-lisa')}</select>
+        </label>
+        <b>×</b>
+        <label>
+          <span>ADVERSÁRIO</span>
+          <select id="pg-away-team">${clubOptions(params.get('away') || 'independencia')}</select>
+        </label>
+      </div>
+      <div id="pg-match-preview" class="pg-match-preview"></div>
+      <div class="pg-setup-actions">
+        <button id="pg-friendly-back" type="button">← VOLTAR</button>
+        <button id="pg-friendly-play" class="primary" type="button">JOGAR PARTIDA</button>
+      </div>
+      <div class="pg-setup-note">Todos os ${CLUBS.length} clubes usam o mesmo catálogo da Master Liga.</div>
+    `;
+    footer?.before(box);
+
+    const home = box.querySelector('#pg-home-team');
+    const away = box.querySelector('#pg-away-team');
+    const preview = box.querySelector('#pg-match-preview');
+
+    const sync = (changed) => {
+      if (home.value === away.value) {
+        const fallback = CLUBS.find((c) => c.id !== home.value);
+        if (changed === home && fallback) away.value = fallback.id;
+        else if (fallback) home.value = fallback.id;
+      }
+      const h = CLUBS.find((c) => c.id === home.value);
+      const a = CLUBS.find((c) => c.id === away.value);
+      if (preview && h && a) {
+        preview.innerHTML =
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
+          '<strong>×</strong>' +
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
+      }
+    };
+    home.addEventListener('change', () => sync(home));
+    away.addEventListener('change', () => sync(away));
+    sync();
+
+    box.querySelector('#pg-friendly-back')?.addEventListener('click', openMenu);
+    box.querySelector('#pg-friendly-play')?.addEventListener('click', () => {
+      const next = new URL(location.href);
+      next.searchParams.delete('online');
+      next.searchParams.delete('room');
+      next.searchParams.set('mode', 'friendly');
+      next.searchParams.set('home', home.value);
+      next.searchParams.set('away', away.value);
+      next.searchParams.set('side', 'home');
+      next.searchParams.set('start', '1');
+      location.href = next.toString();
+    });
+  }
+
+  function showPenaltySetup() {
+    hideFriendlySetup();
+    if (grid) grid.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (title) title.textContent = 'DISPUTA DE PÊNALTIS · ESCOLHA OS TIMES';
+
+    const box = document.createElement('div');
+    box.className = 'pg-friendly-setup';
+    box.innerHTML = `
+      <div class="pg-versus">
+        <label>
+          <span>SEU TIME</span>
+          <select id="pg-pens-home">${clubOptions(params.get('home') || 'pedra-lisa')}</select>
+        </label>
+        <b>×</b>
+        <label>
+          <span>ADVERSÁRIO</span>
+          <select id="pg-pens-away">${clubOptions(params.get('away') || 'independencia')}</select>
+        </label>
+      </div>
+      <div id="pg-pens-preview" class="pg-match-preview"></div>
+      <div class="pg-setup-actions">
+        <button id="pg-pens-back" type="button">← VOLTAR</button>
+        <button id="pg-pens-play" class="primary" type="button">IR PARA OS PÊNALTIS</button>
+      </div>
+      <div class="pg-setup-note">Cinco cobranças para cada lado. Persistindo o empate, a disputa segue em morte súbita.</div>
+    `;
+    footer?.before(box);
+
+    const home = box.querySelector('#pg-pens-home');
+    const away = box.querySelector('#pg-pens-away');
+    const preview = box.querySelector('#pg-pens-preview');
+
+    const sync = (changed) => {
+      if (home.value === away.value) {
+        const fallback = CLUBS.find((club) => club.id !== home.value);
+        if (changed === home && fallback) away.value = fallback.id;
+        else if (fallback) home.value = fallback.id;
+      }
+      const h = CLUBS.find((club) => club.id === home.value);
+      const a = CLUBS.find((club) => club.id === away.value);
+      if (preview && h && a) {
+        preview.innerHTML =
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
+          '<strong>×</strong>' +
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
+      }
+    };
+    home.addEventListener('change', () => sync(home));
+    away.addEventListener('change', () => sync(away));
+    sync();
+
+    box.querySelector('#pg-pens-back')?.addEventListener('click', openMenu);
+    box.querySelector('#pg-pens-play')?.addEventListener('click', () => {
+      const next = new URL(location.href);
+      next.searchParams.delete('online');
+      next.searchParams.delete('room');
+      next.searchParams.set('mode', 'penalties');
+      next.searchParams.set('home', home.value);
+      next.searchParams.set('away', away.value);
+      next.searchParams.set('side', 'home');
+      next.searchParams.set('start', '1');
+      location.href = next.toString();
+    });
+  }
+
+  function showOnlineSetup() {
+    hideFriendlySetup();
+    if (grid) grid.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (title) title.textContent = 'ONLINE 1×1 · ESCOLHA OS TIMES';
+
+    const box = document.createElement('div');
+    box.className = 'pg-online-setup';
+    box.innerHTML = `
+      <div class="pg-versus">
+        <label>
+          <span>SEU TIME · QUEM CRIA A SALA</span>
+          <select id="pg-online-home">${clubOptions(params.get('home') || 'pedra-lisa')}</select>
+        </label>
+        <b>×</b>
+        <label>
+          <span>TIME DO AMIGO</span>
+          <select id="pg-online-away">${clubOptions(params.get('away') || 'independencia')}</select>
+        </label>
+      </div>
+      <div id="pg-online-preview" class="pg-match-preview"></div>
+      <div class="pg-setup-actions">
+        <button id="pg-online-back" type="button">← VOLTAR</button>
+        <button id="pg-online-next" class="primary" type="button">IR PARA A SALA ONLINE</button>
+      </div>
+      <div class="pg-setup-note">O convite leva os mesmos dois clubes para o aparelho do seu amigo. Depois podemos evoluir para cada jogador escolher o próprio time dentro da sala.</div>
+    `;
+    footer?.before(box);
+
+    const home = box.querySelector('#pg-online-home');
+    const away = box.querySelector('#pg-online-away');
+    const preview = box.querySelector('#pg-online-preview');
+
+    const sync = (changed) => {
+      if (home.value === away.value) {
+        const fallback = CLUBS.find((club) => club.id !== home.value);
+        if (changed === home && fallback) away.value = fallback.id;
+        else if (fallback) home.value = fallback.id;
+      }
+      const h = CLUBS.find((club) => club.id === home.value);
+      const a = CLUBS.find((club) => club.id === away.value);
+      if (preview && h && a) {
+        preview.innerHTML =
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
+          '<strong>×</strong>' +
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
+      }
+    };
+    home.addEventListener('change', () => sync(home));
+    away.addEventListener('change', () => sync(away));
+    sync();
+
+    box.querySelector('#pg-online-back')?.addEventListener('click', openMenu);
+    box.querySelector('#pg-online-next')?.addEventListener('click', () => {
+      const next = new URL(location.href);
+      next.searchParams.set('online', '1');
+      next.searchParams.delete('room');
+      next.searchParams.delete('start');
+      next.searchParams.set('mode', 'online');
+      next.searchParams.set('home', home.value);
+      next.searchParams.set('away', away.value);
+      next.searchParams.set('side', 'home');
+      location.href = next.toString();
+    });
+  }
+
+  friendly?.addEventListener('click', showFriendlySetup);
+  online?.addEventListener('click', showOnlineSetup);
+  penalties?.addEventListener('click', showPenaltySetup);
+
+  cup?.addEventListener('click', () => {
+    close();
+    document.dispatchEvent(new CustomEvent('mukeka:cup-open'));
+  });
+
+  master?.addEventListener('click', () => {
+    close();
+    document.dispatchEvent(new CustomEvent('mukeka:master-open'));
+  });
+
+  document.addEventListener('mukeka:master-close', () => openMenu());
+  document.addEventListener('mukeka:cup-close', () => openMenu());
+
+  settings?.addEventListener('click', () => {
+    document.body.classList.add('pregame-settings');
+    settingsPanel?.classList.add('show');
+  });
+
+  settingsClose?.addEventListener('click', () => {
+    document.body.classList.remove('pregame-settings');
+  });
+
+  // Mantém a proteção contra saída acidental também no menu principal.
+  let backArmed = false;
+  let backTimer = null;
+  back?.addEventListener('click', () => {
+    if (!backArmed) {
+      backArmed = true;
+      back.textContent = 'TOQUE NOVAMENTE PARA SAIR';
+      clearTimeout(backTimer);
+      backTimer = setTimeout(() => {
+        backArmed = false;
+        back.innerHTML = '<strong>VOLTAR AO MUKEKA GAMES</strong><small>Retorna ao catálogo principal com confirmação.</small>';
+      }, 2600);
+      return;
+    }
+    location.href = '/';
+  });
+
+  return {
+    get open() { return open; },
+    close,
+    openMenu,
+  };
+}

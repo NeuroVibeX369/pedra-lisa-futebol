@@ -19,28 +19,28 @@ export const ACTION_BIT = {
 };
 
 export const ACTION_LABELS = {
-  up: 'Up',
-  down: 'Down',
-  left: 'Left',
-  right: 'Right',
-  fire: 'Kick / slide',
-  switch: 'Switch player',
+  up: 'Cima',
+  down: 'Baixo',
+  left: 'Esquerda',
+  right: 'Direita',
+  fire: 'Chutar / carrinho',
+  switch: 'Trocar jogador',
 };
 
 export const PRESETS = [
   {
     key: 'wasd',
-    label: 'W A S D + Space',
+    label: 'W A S D + Espaço',
     bindings: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', fire: 'Space', switch: 'KeyQ' },
   },
   {
     key: 'arrows',
-    label: 'Arrows + Enter',
+    label: 'Setas + Enter',
     bindings: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', fire: 'Enter', switch: 'ShiftRight' },
   },
   {
     key: 'arrowsSpace',
-    label: 'Arrows + Space',
+    label: 'Setas + Espaço',
     bindings: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', fire: 'Space', switch: 'ControlRight' },
   },
   {
@@ -122,16 +122,16 @@ export function keyLabel(code) {
     ArrowDown: '↓',
     ArrowLeft: '←',
     ArrowRight: '→',
-    Space: 'Space',
+    Space: 'Espaço',
     Enter: 'Enter',
-    ShiftLeft: 'L Shift',
-    ShiftRight: 'R Shift',
-    ControlLeft: 'L Ctrl',
-    ControlRight: 'R Ctrl',
-    AltLeft: 'L Alt',
-    AltRight: 'R Alt',
+    ShiftLeft: 'Shift esq.',
+    ShiftRight: 'Shift dir.',
+    ControlLeft: 'Ctrl esq.',
+    ControlRight: 'Ctrl dir.',
+    AltLeft: 'Alt esq.',
+    AltRight: 'Alt dir.',
     Tab: 'Tab',
-    Backspace: 'Backspace',
+    Backspace: 'Apagar',
     Slash: '/',
     Backslash: '\\',
     Comma: ',',

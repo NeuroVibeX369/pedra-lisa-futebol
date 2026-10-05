@@ -223,7 +223,7 @@ async function main() {
     } else if (announced.length !== 2) {
       console.error(`FAIL: ${announced.length} posts for 2 new scores`);
       failed = true;
-    } else if (!announced.every((a) => a.embeds?.[0]?.url && a.username === 'WebSoccer')) {
+    } else if (!announced.every((a) => a.embeds?.[0]?.url && a.username === 'Pedra Lisa Futebol')) {
       console.error('FAIL: the posts do not name the game or link to it');
       failed = true;
     } else {

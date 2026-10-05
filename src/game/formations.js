@@ -92,7 +92,7 @@ export const PRESETS = [
   {
     key: '433',
     label: '4-3-3',
-    note: 'Three up front and width in attack. The line-up every other one here is measured against.',
+    note: 'Três atacantes e amplitude no ataque. É a formação-base usada como referência para as demais.',
     spots: lineup([
       [0.00, 0.025],
       [-0.62, 0.19], [-0.22, 0.13], [0.22, 0.13], [0.62, 0.19],
@@ -102,8 +102,8 @@ export const PRESETS = [
   },
   {
     key: '442diamond',
-    label: '4-4-2 diamond',
-    note: 'A holding man behind, a hanging ten in front, two strikers. Narrow through the middle, so the ball has to come round the outside.',
+    label: '4-4-2 losango',
+    note: 'Um volante atrás, um meia mais avançado e dois atacantes. O meio fica estreito, então os lados do campo ganham importância.',
     spots: lineup([
       [0.00, 0.025],
       [-0.62, 0.19], [-0.22, 0.13], [0.22, 0.13], [0.62, 0.19],
@@ -115,8 +115,8 @@ export const PRESETS = [
   },
   {
     key: '442',
-    label: '4-4-2 flat',
-    note: 'Two banks of four. Nothing clever, and hard to play through.',
+    label: '4-4-2 em linha',
+    note: 'Duas linhas de quatro. Simples, compacta e difícil de atravessar.',
     spots: lineup([
       [0.00, 0.025],
       [-0.66, 0.18], [-0.24, 0.13], [0.24, 0.13], [0.66, 0.18],
@@ -127,7 +127,7 @@ export const PRESETS = [
   {
     key: '352',
     label: '3-5-2',
-    note: 'Wing-backs the length of the pitch and a crowded middle. Three at the back is a gamble.',
+    note: 'Alas percorrem o campo inteiro e o meio fica povoado. Jogar com três defensores exige mais risco.',
     spots: lineup([
       [0.00, 0.025],
       [-0.40, 0.15], [0.00, 0.12], [0.40, 0.15],
@@ -138,7 +138,7 @@ export const PRESETS = [
   {
     key: '532',
     label: '5-3-2',
-    note: 'Five across the back. You will not concede many, and you will not score many either.',
+    note: 'Cinco jogadores atrás. A defesa fica forte, mas o ataque perde presença.',
     spots: lineup([
       [0.00, 0.025],
       [-0.72, 0.22], [-0.34, 0.12], [0.00, 0.10], [0.34, 0.12], [0.72, 0.22],

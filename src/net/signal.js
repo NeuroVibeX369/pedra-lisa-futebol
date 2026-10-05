@@ -40,7 +40,7 @@ export class Signal {
       this.emit('close', {});
     };
     // transport: true means the socket itself failed, not the server rejecting us.
-    this.ws.onerror = () => this.emit('error', { msg: 'No connection to the server', transport: true });
+    this.ws.onerror = () => this.emit('error', { msg: 'Sem conexão com o servidor', transport: true });
   }
 
   on(type, fn) {
@@ -58,11 +58,27 @@ export class Signal {
   send(msg) {
     if (!this.open) {
       this.queue.push(msg);
-      return;
+      return true;
     }
     try {
       this.ws.send(JSON.stringify(msg));
-    } catch { /* connection is gone; onclose handles the rest */ }
+      return true;
+    } catch {
+      return false; /* connection is gone; onclose handles the rest */
+    }
+  }
+
+  // Estados de jogo são substituíveis: se o socket já está acumulando dados,
+  // enviar mais snapshots só aumenta o atraso. Movimento novo corrige o antigo,
+  // portanto este caminho pode descartar um pacote sem perder a sessão.
+  sendRealtime(msg, maxBuffered = 64 * 1024) {
+    if (!this.open || !this.ws) return false;
+    if ((Number(this.ws.bufferedAmount) || 0) > maxBuffered) return false;
+    return this.send(msg);
+  }
+
+  get bufferedAmount() {
+    return Number(this.ws?.bufferedAmount) || 0;
   }
 
   create() {

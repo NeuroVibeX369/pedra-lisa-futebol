@@ -78,6 +78,19 @@ h1 {
 
 h1 span { display: block; color: #fff; text-shadow: 3px 3px 0 #12446b; }
 
+.hubBack {
+  display: inline-block;
+  margin: 0 0 12px;
+  color: #9fc7a8;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.hubBack:hover { color: #ffe14d; }
+
+
 h2 { margin: 0 0 18px; letter-spacing: 3px; color: #ffe14d; }
 
 .tag { margin: 6px 0 22px; color: #9fc7a8; font-size: 13px; letter-spacing: 1px; }
@@ -235,6 +248,111 @@ button.primary:hover { background: #fff08a; }
 button:disabled { opacity: 0.45; cursor: default; }
 button:disabled:hover { background: #1c4a2a; }
 button.primary:disabled:hover { background: #ffe14d; }
+
+/* --- lobby online --- */
+
+.onlineIdentity {
+  margin: 12px 0 6px;
+  padding: 12px;
+  border: 1px solid #234c2f;
+  background: rgba(12, 36, 20, 0.55);
+}
+
+.onlineIdentity label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #9fc7a8;
+  letter-spacing: 1px;
+}
+
+.onlineIdentity input {
+  text-transform: none;
+  letter-spacing: 1px;
+  text-align: left;
+}
+
+.lobbyTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 8px;
+  color: #ffe14d;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.lobbyTitle strong { flex: 1; }
+.lobbyTitle button { padding: 5px 8px; font-size: 10px; }
+
+.onlinePlayers {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 12px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.onlinePlayer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #0c2414;
+  border: 1px solid #234c2f;
+}
+
+.onlinePlayerName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e8f2e8;
+  font-size: 13px;
+}
+
+.onlinePlayerState {
+  font-size: 10px;
+  color: #7ea888;
+  white-space: nowrap;
+}
+
+.onlinePlayer button {
+  padding: 6px 9px;
+  font-size: 10px;
+}
+
+.onlineEmpty {
+  padding: 12px;
+  text-align: center;
+  color: #7ea888;
+  font-size: 11px;
+  border: 1px dashed #234c2f;
+}
+
+.inviteBox {
+  margin: 10px 0;
+  padding: 12px;
+  background: #173d23;
+  border: 2px solid #ffe14d;
+}
+
+.inviteBox .status {
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+button.inlinePrimary {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+#codeFallback {
+  margin-top: 12px;
+}
 
 /* A phone held sideways is about 400px tall. The panel scrolls, but a button
    you have to scroll to find is a button nobody presses, so the primary action

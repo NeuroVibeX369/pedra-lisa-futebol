@@ -250,11 +250,11 @@ function handleMessage(conn, raw) {
       const code = String(msg.code || '').toUpperCase().trim();
       const room = rooms.get(code);
       if (!room) {
-        conn.send({ t: 'error', msg: `Room ${code} does not exist` });
+        conn.send({ t: 'error', msg: `A sala ${code} não existe` });
         return;
       }
       if (room.guest || !room.host) {
-        conn.send({ t: 'error', msg: `Room ${code} is full` });
+        conn.send({ t: 'error', msg: `A sala ${code} está cheia` });
         return;
       }
       leaveRoom(conn);

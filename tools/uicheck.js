@@ -407,10 +407,10 @@ async function main() {
 
     const expected = {
       'the match start': [saidStart, '<start>'],
-      'a throw-in to red': [saidThrow, 'throw in for red'],
-      'a goal kick to blue': [saidKick, 'goal kick for blue'],
-      'the score after a goal': [saidScore, 'blue two red nil'],
-      'full time': [saidEnd, 'full time blue three red one'],
+      'a throw-in to red': [saidThrow, 'lateral para independencia'],
+      'a goal kick to blue': [saidKick, 'tiro de meta para pedra lisa'],
+      'the score after a goal': [saidScore, 'pedra lisa dois independencia zero'],
+      'full time': [saidEnd, 'fim de jogo pedra lisa tres independencia um'],
       'half time': [saidHalf, ''],
     };
     for (const [what, [got, want]] of Object.entries(expected)) {
@@ -422,7 +422,7 @@ async function main() {
       { type: 'restart', kind: 'CORNER', team: 0 },
       { type: 'kickoff', reason: 'goal', score: [4, 4] },
     ]);
-    if (back2back !== 'corner for blue | blue four red four') {
+    if (back2back !== 'escanteio para pedra lisa | pedra lisa quatro independencia quatro') {
       throw new Error(`a scoreline was held back behind a restart: "${back2back}"`);
     }
     console.log('OK: he names the side at a restart, reads the score after a goal, and says nil');
