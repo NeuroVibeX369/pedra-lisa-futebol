@@ -580,7 +580,7 @@ function difficultyLabel(level) {
 // be handed to the other machine in an online match without either side needing
 // to agree on what "4-4-2 diamond" means.
 
-const KITS = ['#2f6fd0', '#d33b3b'];
+const KITS = ['#178a3c', '#f5f5f5'];
 const lineups = [readLineup(0), readLineup(1)];
 let editing = 0;
 
