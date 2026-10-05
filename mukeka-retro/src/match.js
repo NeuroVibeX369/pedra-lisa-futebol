@@ -85,6 +85,8 @@ export class Match {
       if (look) {
         p.name = look.name;
         p.number = look.number;
+        p.careerId = look.careerId || null;
+        p.overall = Number.isFinite(look.overall) ? look.overall : null;
       }
       return p;
     });
@@ -112,6 +114,8 @@ export class Match {
     this.toucher = null;      // кто из 22 сейчас у мяча (арбитраж владения)
     this.lastTouch = null;    // последнее касание — решает, чей аут/угловой
     this.touchLog = [];       // журнал касаний: по нему ищем автора гола
+    // Relatório simples consumido pela Master Liga no apito final.
+    this.goalEvents = [];
     this.restart = null;      // активный стандарт: аут / угловой / удар от ворот
     this.score = [0, 0];
     this.clock = 0;           // игровые секунды (0..90×60 плюс добавка)
@@ -2177,6 +2181,13 @@ export class Match {
     // Автор гола: он побежит праздновать, его назовёт титр и его же покажет
     // крупный план в конце серии повторов
     this._scorerPlayer = this.findScorer(scorerIdx);
+    const goalMinute = Math.max(1, Math.min(120, Math.floor(this.clock / 60) || 1));
+    this.goalEvents.push({
+      teamIndex: scorerIdx,
+      careerId: this._scorerPlayer?.careerId || null,
+      name: this._scorerPlayer?.name || this._teamNames[scorerIdx],
+      minute: goalMinute,
+    });
     this.replay.markGoal(this._scorerPlayer ? this._all.indexOf(this._scorerPlayer) : -1);
     // Стадион взрывается: рёв трибун, шквал фотовспышек, сектора светлеют
     crowdCheer(1);
@@ -2193,7 +2204,7 @@ export class Match {
     // последний касавшийся из забившей команды (свой гол подписываем
     // командой: имя защитника в титре гола выглядело бы наградой)
     if (this.hud.card) {
-      const min = Math.max(1, Math.min(90, Math.floor(this.clock / 60)));
+      const min = goalMinute;
       const scorer = this._scorerPlayer;
       this.hud.cardMark.style.background = this._teamColors[scorerIdx];
       this.hud.cardTeam.textContent = (scorer && scorer.name)
