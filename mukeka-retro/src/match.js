@@ -30,53 +30,35 @@ function smooth01(t) {
   return k * k * (3 - 2 * k);
 }
 
-function createControlledMarker() {
-  const starPath = (tipRadius, notchRadius, clockwise = false) => {
-    const path = clockwise ? new THREE.Path() : new THREE.Shape();
-    for (let i = 0; i < 10; i++) {
-      const radius = i % 2 === 0 ? tipRadius : notchRadius;
-      const angle = Math.PI / 2 + (clockwise ? -1 : 1) * i * Math.PI / 5;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      if (i === 0) path.moveTo(x, y);
-      else path.lineTo(x, y);
-    }
-    path.closePath();
-    return path;
-  };
-
-  const hollowStar = (outerTip, outerNotch, innerTip, innerNotch) => {
-    const shape = starPath(outerTip, outerNotch);
-    shape.holes.push(starPath(innerTip, innerNotch, true));
-    return shape;
-  };
-
-  const marker = new THREE.Group();
-  const material = (color, opacity) => new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-
-  // Полый центр оставляет газон видимым. Тёмная печатная кайма удерживает
-  // огненно-жёлтый контур после 240p и CRT-размытия, особенно на белых линиях.
-  const outline = new THREE.Mesh(
-    new THREE.ShapeGeometry(hollowStar(0.86, 0.41, 0.56, 0.265)),
-    material(0x6b3d00, 0.82),
+function createControlArrow(color) {
+  // Seta 3D simples e leve: fica acima da cabeça e aponta para baixo.
+  // Verde = jogador local; vermelho = adversário humano ou portador da bola.
+  const group = new THREE.Group();
+  const shadow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.36, 0.58, 3),
+    new THREE.MeshBasicMaterial({
+      color: 0x101010,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+    }),
   );
-  const fire = new THREE.Mesh(
-    new THREE.ShapeGeometry(hollowStar(0.78, 0.37, 0.60, 0.285)),
-    material(0xffb800, 0.98),
+  shadow.rotation.z = Math.PI;
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.29, 0.48, 3),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.98,
+      depthWrite: false,
+    }),
   );
-  fire.position.z = 0.008;
-  outline.renderOrder = 3;
-  fire.renderOrder = 4;
-  marker.add(outline, fire);
-  marker.rotation.x = -Math.PI / 2;
-  marker.position.y = 0.045;
-  return marker;
+  arrow.rotation.z = Math.PI;
+  arrow.position.y = -0.015;
+  shadow.renderOrder = 5;
+  arrow.renderOrder = 6;
+  group.add(shadow, arrow);
+  return group;
 }
 
 export class Match {
@@ -209,9 +191,12 @@ export class Match {
       strike() { /* фантомный мяч — по нему нельзя сыграть */ },
     };
 
-    // Полая огненно-жёлтая звезда — как курсор в футсимах 90-х.
-    this.controlledMarker = createControlledMarker();
-    scene.add(this.controlledMarker);
+    // Cursores tipo futsim: verde identifica o jogador local; vermelho,
+    // o adversário controlado no online ou, no solo, o rival que está com a bola.
+    this.controlledMarker = createControlArrow(0x46f56a);
+    this.opponentMarker = createControlArrow(0xff4f4f);
+    this.opponentMarker.visible = false;
+    scene.add(this.controlledMarker, this.opponentMarker);
 
     // Табло-телеграфика
     this.hud = {
@@ -429,7 +414,8 @@ export class Match {
     this._clapCd = 0;
     // Титр «кто с кем и где» выезжает поверх заставки, как в начале эфира
     if (this.hud.matchcard) this.hud.matchcard.classList.add('show');
-    this.controlledMarker.visible = false; // звезда не мельтешит в кино-кадре
+    this.controlledMarker.visible = false;
+    this.opponentMarker.visible = false; // cursores não aparecem na abertura
     this._setTempHint('');
   }
 
@@ -954,11 +940,30 @@ export class Match {
       this.ball.vel.set(0, 0, 0);
     }
 
-    // Звезда следует за управляемым
-    if (this.controlled) {
+    // Setas seguem os jogadores sem interferir em colisão, física ou IA.
+    // No solo, o vermelho só aparece sobre o adversário que está com a bola;
+    // no online, identifica sempre o jogador controlado pelo outro usuário.
+    const markerQuiet = this.state === 'intro' || this.state === 'replay' ||
+      this.state === 'celebration' || this.state === 'fulltime';
+
+    if (this.controlled && !markerQuiet) {
       const cp = this.controlled.group.position;
-      this.controlledMarker.position.x = cp.x;
-      this.controlledMarker.position.z = cp.z;
+      const h = this.controlled.look?.height ? this.controlled.look.height / 100 : 1.75;
+      this.controlledMarker.position.set(cp.x, cp.y + Math.max(2.05, h + 0.42), cp.z);
+      this.controlledMarker.visible = true;
+    } else {
+      this.controlledMarker.visible = false;
+    }
+
+    const rival = this.remoteControlled ||
+      (this.toucher && this.toucher.team !== this.humanTeam ? this.toucher : null);
+    if (rival && !markerQuiet) {
+      const rp = rival.group.position;
+      const h = rival.look?.height ? rival.look.height / 100 : 1.75;
+      this.opponentMarker.position.set(rp.x, rp.y + Math.max(2.05, h + 0.42), rp.z);
+      this.opponentMarker.visible = true;
+    } else {
+      this.opponentMarker.visible = false;
     }
 
     // Бригада арбитров живёт своей жизнью — на паузах тоже (они не замирают,
@@ -2216,7 +2221,8 @@ export class Match {
     this.state = 'replay';
     this.stateTimer = 0;
     this.goals.reset();               // сетка перестаёт колыхаться от «того» мяча
-    this.controlledMarker.visible = false; // курсор игрока — не эфирная графика
+    this.controlledMarker.visible = false;
+    this.opponentMarker.visible = false; // cursores não entram no replay
     if (this.replayTag) this.replayTag.classList.add('show');
     document.body.classList.add('replaying'); // полосы видеомагнитофона
     return true;
@@ -2227,6 +2233,7 @@ export class Match {
     if (this.replayTag) this.replayTag.classList.remove('show');
     document.body.classList.remove('replaying');
     this.controlledMarker.visible = true;
+    this.opponentMarker.visible = false;
     this.goals.reset();
     this.kickoff(this.kickoffTeam);
     playWhistle(CONFIG.audio.field.whistleKickoff); // возобновление с центра
