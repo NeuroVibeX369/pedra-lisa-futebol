@@ -28,6 +28,7 @@ jobs:
           node --check mukeka-retro/src/roles.js
           node --check mukeka-retro/src/commentator.js
           node --check mukeka-retro/src/main.js
+          node --check mukeka-retro/src/config.js
           node --check mukeka-retro/src/crt.js
           node --check mukeka-retro/src/match.js
           node --check mukeka-retro/src/player.js
