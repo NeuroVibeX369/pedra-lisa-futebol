@@ -806,7 +806,30 @@ function applyPyro(v, save = false) {
 applyPyro(pyroLevel);
 pyroSlider.addEventListener('input', () => applyPyro(Number(pyroSlider.value), true));
 
-// Настройка камеры: подлёт к дальней бровке (пишем прямо в живой CONFIG)
+// Câmeras jogáveis. Alteramos apenas enquadramento/focal; a lógica de
+// acompanhamento do jogo continua a mesma e, por isso, não há custo extra.
+const cameraModeSelect = document.getElementById('set-camera-mode');
+const CAMERA_MODES = {
+  tv:     { fov: 33, height: 27.0, distance: 55.0 },
+  close:  { fov: 31, height: 24.5, distance: 49.0 },
+  closer: { fov: 29, height: 22.5, distance: 45.0 },
+};
+function applyCameraMode(id, save = false) {
+  const mode = CAMERA_MODES[id] || CAMERA_MODES.tv;
+  CONFIG.camera.fov = mode.fov;
+  CONFIG.camera.height = mode.height;
+  CONFIG.camera.distance = mode.distance;
+  camera.fov = mode.fov;
+  camera.updateProjectionMatrix();
+  if (cameraModeSelect) cameraModeSelect.value = CAMERA_MODES[id] ? id : 'tv';
+  if (save) remember('f98.cameraMode', CAMERA_MODES[id] ? id : 'tv');
+}
+applyCameraMode(localStorage.getItem('f98.cameraMode') || 'tv');
+cameraModeSelect?.addEventListener('change', () => {
+  applyCameraMode(cameraModeSelect.value, true);
+});
+
+// Ajuste fino: aproximação na lateral distante.
 const farSlider = document.getElementById('set-far');
 const farVal = document.getElementById('set-far-val');
 farSlider.value = CONFIG.camera.farApproach;
