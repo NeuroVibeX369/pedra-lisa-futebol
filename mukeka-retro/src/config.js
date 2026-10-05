@@ -3032,7 +3032,7 @@ export const CONFIG = {
     },
 
     // Открывание под пас: фолбэк, пока лучший спот не посчитан
-    supportDist: 12,      // м впереди мяча, куда бежит поддерживающий
+    supportDist: 10.5,    // apoio mais próximo: forma triângulo sem encostar no portador
 
     // Ведение AI
     dribbleAvoidDist: 4,  // м: соперник по курсу ближе — обвести в сторону
@@ -3105,6 +3105,22 @@ export const CONFIG = {
       // ближайшим к мячу и держал роль — страховки при обыгрыше не было вовсе
       chaseBehindPen: 4,  // м штрафа тому, кто НЕ между мячом и своими воротами
       chaseHold: 1.5,     // м форы действующему прессингующему (гистерезис)
+
+      // Anti-cera. Se o humano simplesmente parar com a bola, a defesa deixa
+      // de fazer jockey passivo e passa a atacar o portador. Depois entra um
+      // segundo defensor para fechar a linha de passe. No fim do jogo, se o
+      // humano estiver vencendo, a reação é ainda mais rápida.
+      stall: {
+        moveSpeedMax: 0.85,     // abaixo disso consideramos que está segurando a bola
+        pressAfter: 0.75,       // s parado antes do primeiro defensor encurtar de verdade
+        secondAfter: 2.0,       // s parado antes do segundo defensor fechar o apoio
+        latePressAfter: 0.45,   // vencendo depois de 70': pressão quase imediata
+        lateSecondAfter: 1.25,
+        directLead: 0.30,       // quase na bola, não dois metros à frente do portador
+        secondDist: 3.2,        // distância do segundo defensor para bloquear passe
+        tackleK: 1.9,           // mais disposto ao bote se a cera continuar
+        maxTimer: 6.0,
+      },
       // Экран перед воротами на прострел. Точка страхующего считается ОТ МЯЧА
       // и вместе с ним уезжает на лицевую — зона 11 метров оставалась пустой
       // ровно в тот момент, когда туда идёт прострел
