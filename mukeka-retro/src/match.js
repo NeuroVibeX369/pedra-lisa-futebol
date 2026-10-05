@@ -933,6 +933,7 @@ export class Match {
     for (const team of this.teams) team.side *= -1;
     this.half = 2;
     this.halftimeDone = true;
+    this.clock = 45 * 60;
     this.stoppage = 0;
     this.offsideSnapshot = null;
     this.hud.flash.classList.remove('show');
@@ -1939,7 +1940,7 @@ export class Match {
     let best = null;
     let bestScore = -Infinity;
     for (const mate of team.players) {
-      if (mate === player || mate.isKeeper) continue;
+      if (mate.dismissed || mate === player || mate.isKeeper) continue;
       const mp = mate.group.position;
       const dx = mp.x - pos.x;
       const dz = mp.z - pos.z;
@@ -2074,6 +2075,7 @@ export class Match {
   beginRestart(type, team, x, z, opts = {}) {
     this.state = 'restart';
     this.stateTimer = 0;
+    this.offsideSnapshot = null;
     this.stoppage += CONFIG.match.stoppage.restart; // пауза стандарта — в добавку
     playWhistle(CONFIG.audio.field.whistleRestart); // мяч мёртв — короткий свисток
     let taker = type === 'goalkick'
@@ -2307,20 +2309,29 @@ export class Match {
       else if (through !== null) this.executeRestartPass(r, 'through', through, aim);
       else if (shot !== null) this.executeCorner(r, { charge: shot, taps: 3 }); // УДАР = прострел
     } else if (r.type === 'freekick') {
-      if (pass !== null) this.executeRestartPass(r, 'pass', pass, aim);
-      else if (through !== null) this.executeRestartPass(r, 'through', through, aim);
+      if (pass !== null) {
+        this._captureOffsideSnapshot(r.taker);
+        this.executeRestartPass(r, 'pass', pass, aim);
+      }
+      else if (through !== null) {
+        this._captureOffsideSnapshot(r.taker);
+        this.executeRestartPass(r, 'through', through, aim);
+      }
       else if (cross) {
+        this._captureOffsideSnapshot(r.taker);
         r.taker.doCross(cross, this.input, this.ball);
         this._finishRestart();
       } else if (swipe) {
         if (r.indirect) this.executeRestartPass(r, 'pass', Math.min(1.2, swipe.power || 0.7), swipe.dir);
         else {
+          this._captureOffsideSnapshot(r.taker);
           r.taker.swipeShot(swipe, this.input, this.ball);
           this._finishRestart();
         }
       } else if (shot !== null) {
         if (r.indirect) this.executeRestartPass(r, 'pass', Math.max(0.55, shot), aim);
         else {
+          this._captureOffsideSnapshot(r.taker);
           r.taker.shoot(Math.max(0.35, shot), this.input, this.ball);
           this._finishRestart();
         }
@@ -2466,6 +2477,7 @@ export class Match {
     }
 
     if (r.type === 'freekick') {
+      this._captureOffsideSnapshot(taker);
       const goalX = team.attackGoalX;
       const bp = this.ball.mesh.position;
       const goalDist = Math.hypot(goalX - bp.x, bp.z);
