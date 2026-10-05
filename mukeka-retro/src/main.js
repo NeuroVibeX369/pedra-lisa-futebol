@@ -369,6 +369,32 @@ function toggleFullscreen() {
   else if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
 
+// Em celular tentamos entrar no fullscreen real no primeiro gesto útil
+// (a resposta sobre o som). Só um gesto do usuário pode esconder a barra de
+// endereço no Chrome/Android. Safari/iPhone pode recusar; nesse caso o layout
+// ainda ocupa 100% da área disponível e, ao abrir pela Tela de Início, o meta
+// apple-mobile-web-app-capable remove a barra do navegador.
+function requestMobileImmersive() {
+  const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+  if (!coarse) return;
+  setFullscreen(true, false);
+
+  const root = document.documentElement;
+  try {
+    let p = null;
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      p = root.requestFullscreen({ navigationUI: 'hide' });
+    } else if (!document.webkitFullscreenElement && root.webkitRequestFullscreen) {
+      root.webkitRequestFullscreen();
+    }
+    if (p && typeof p.then === 'function') {
+      p.then(() => {
+        try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch {}
+      }).catch(() => {});
+    }
+  } catch {}
+}
+
 document.getElementById('key-full')?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleFullscreen();
@@ -619,6 +645,7 @@ if (soundGate) {
   }
   document.getElementById('sg-yes').addEventListener('click', (e) => {
     e.stopPropagation();
+    requestMobileImmersive();
     // Зал мог остаться выведенным в ноль с прошлого запуска, а «ДА» означает
     // «хочу звук» — возвращаем штатную громкость, иначе ответ ничего не даст
     if (CONFIG.audio.master <= 0.001) applyCrowdVolume(CROWD_DEFAULT, true);
@@ -641,6 +668,7 @@ if (soundGate) {
   });
   document.getElementById('sg-no').addEventListener('click', (e) => {
     e.stopPropagation();
+    requestMobileImmersive();
     denyAudio();                      // глушим контекст целиком: и зал, и свисток
     applyCrowdVolume(0, true);        // и в меню видно, что зал выведен — ползунок вернёт
     closeGate();
