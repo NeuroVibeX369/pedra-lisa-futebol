@@ -29,25 +29,25 @@ const LAST = [
 ];
 
 const PEDRA_LISA = [
-  ['OLAVO LOBÃO', 'GOL', 66, 29],
-  ['NETO', 'LE', 61, 28],
-  ['DJHA', 'ZAG', 64, 30],
-  ['BASTIAOZÃO REI', 'ZAG', 67, 31],
-  ['BRUNO', 'LD', 62, 25],
-  ['MANOEL', 'VOL', 65, 27],
-  ['RONILTON', 'MC', 65, 26],
-  ['LUCIANO', 'MEI', 69, 25],
-  ['HÉLIO', 'PE', 67, 24],
-  ['BASTIAOZINHO', 'ATA', 71, 23],
-  ['RICARDO', 'PD', 66, 24],
-  ['CÉSAR', 'GOL', 60, 21],
-  ['LUCAS PEDRA', 'ZAG', 60, 20],
-  ['EDUARDO', 'LD', 59, 22],
-  ['RAIMUNDO', 'VOL', 61, 28],
-  ['DUDU', 'MEI', 62, 19],
-  ['JÚNIOR', 'ATA', 63, 21],
-  ['FABINHO', 'PD', 60, 20],
-];
+  ['OLAVO LOBÃO', 'GOL', 83],
+  ['NETO', 'LE', 80],
+  ['DJHA', 'ZAG', 82],
+  ['BASTIAOZÃO REI', 'ZAG', 84],
+  ['BRUNO', 'LD', 81],
+  ['MANOEL', 'VOL', 82],
+  ['RONILTON', 'MC', 83],
+  ['LUCIANO', 'MEI', 90],
+  ['HÉLIO', 'PE', 85],
+  ['BASTIAOZINHO', 'ATA', 92],
+  ['RICARDO', 'PD', 84],
+  ['JARDEL', 'GOL', 70],
+  ['LORIVAL', 'ZAG', 72],
+  ['NATANAEL', 'LD', 70],
+  ['THEO LUCCA', 'VOL', 72],
+  ['ISAAC', 'MEI', 73],
+  ['ARTHUR', 'ATA', 74],
+  ['DAVI', 'PD', 72],
+]
 
 function hash(text) {
   let h = 2166136261;
@@ -199,12 +199,30 @@ function newState() {
   };
 }
 
+function syncPedraLisaBase(state) {
+  if (!state?.squads?.['pedra-lisa']) return state;
+  const squad = state.squads['pedra-lisa'];
+  const base = pedraLisaSquad();
+  for (let i = 0; i < base.length; i++) {
+    const current = squad.find((p) => p.id === base[i].id);
+    if (current) {
+      current.name = base[i].name;
+      current.position = base[i].position;
+      current.overall = base[i].overall;
+      current.teamId = 'pedra-lisa';
+    } else {
+      squad.push(base[i]);
+    }
+  }
+  return state;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const state = JSON.parse(raw);
-    return state && state.version === 1 ? state : null;
+    return state && state.version === 1 ? syncPedraLisaBase(state) : null;
   } catch {
     return null;
   }
