@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -667,10 +667,10 @@
  <div id="tv-screen">
   <canvas id="game"></canvas>
   <img id="channel-logo" alt="">
-  <div id="scoreboard"><span class="sb-mark" id="sb-home-mark"></span><span class="sb-team" id="sb-home">КРА</span><span id="sb-score">0:0</span><span class="sb-team" id="sb-away">СИН</span><span class="sb-mark" id="sb-away-mark"></span><span id="sb-time">0'</span></div>
-  <div id="goal-flash">ГОЛ!</div>
+  <div id="scoreboard"><span class="sb-mark" id="sb-home-mark"></span><span class="sb-team" id="sb-home">PDL</span><span id="sb-score">0:0</span><span class="sb-team" id="sb-away">IND</span><span class="sb-mark" id="sb-away-mark"></span><span id="sb-time">0'</span></div>
+  <div id="goal-flash">GOL!</div>
   <div id="goal-card"><span class="gc-mark" id="gc-mark"></span><span class="gc-team" id="gc-team"></span><span class="gc-min" id="gc-min"></span></div>
-  <div id="replay-tag">ПОВТОР</div>
+  <div id="replay-tag">REPLAY</div>
   <div id="matchcard">
     <div id="mc-teams">
       <span class="mc-mark" id="mc-home-mark"></span><span id="mc-home"></span><span class="mc-dash">—</span><span id="mc-away"></span><span class="mc-mark" id="mc-away-mark"></span>
@@ -682,183 +682,108 @@
   <div id="stats-card"><span id="stats-title"></span><div id="stats-body"></div></div>
 
   <div id="settings">
-    <button id="settings-close" aria-label="Закрыть">✕</button>
-    <button id="settings-fold">СВЕРНУТЬ ВСЁ</button>
-    <h2>НАСТРОЙКИ</h2>
+    <button id="settings-close" aria-label="Fechar">✕</button>
+    <button id="settings-fold">RECOLHER TUDO</button>
+    <h2>CONFIGURAÇÕES</h2>
 
-    <h3 data-open="1">ИЗОБРАЖЕНИЕ</h3>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Основная картинка настраивается на КОРПУСЕ телевизора: ручки <span class="key">КАНАЛ</span>, <span class="key">ЯРКОСТЬ</span>, <span class="key">КОНТРАСТ</span>, <span class="key">ЦВЕТ</span> и клавиши <span class="key">ЧЁТКОСТЬ</span> / <span class="key">ГАЗОН</span>. Рисунок покоса выбирается ниже, в разделе <span class="key">СТАДИОН</span>. Ручку можно крутить мышью, пальцем или колесом; двойной щелчок по ручке возвращает её в середину. Все положения запоминаются.</div>
+    <h3 data-open="1">IMAGEM</h3>
+    <div class="row" style="color:rgba(255,255,255,0.5)">
+      A imagem é ajustada no painel do televisor: <span class="key">CANAL</span>,
+      <span class="key">BRILHO</span>, <span class="key">CONTRASTE</span>,
+      <span class="key">COR</span>, <span class="key">NITIDEZ</span> e
+      <span class="key">GRAMADO</span>. As posições ficam salvas neste navegador.
+    </div>
 
-    <h3 data-open="1">ТЕЛЕВИЗОР (панель справа)</h3>
-    <div class="row"><span class="key">КАНАЛ</span> — переключает ТРАКТ «телеканала», а не степень испорченности картинки: <span class="key">ТВ-эфир 98</span> (камертон проекта — трансляция конца 90-х), <span class="key">Антенна</span> (мягче, теплее, шумнее), <span class="key">VHS-запись</span> (цвет уплыл, срывы строк), <span class="key">Чистый RGB</span> (самый резкий). Ручка щёлкает по положениям и идёт по кругу</div>
-    <div class="row"><span class="key">ЯРКОСТЬ · КОНТРАСТ · ЦВЕТ</span> — живая подстройка ПОВЕРХ канала, от −10 до +10. Смена канала их не сбрасывает, как на настоящем телевизоре. Двойной щелчок по ручке — обратно в ноль</div>
-    <div class="row"><span class="key">ЧЁТКОСТЬ</span> — разрешение внутреннего рендера: 240p (совсем PS1) · 360p · 480p · 720p · 1080p. По умолчанию 1080p — на iPad оно «летает и не греет». Строчность кинескопа и зерно от разрешения НЕ зависят: полосы всегда как у ТВ 90-х. Слабое железо просядет по FPS — ставь 480p</div>
-    <div class="row"><span class="key">ГАЗОН</span> — износ поля: 0% ухоженное · 50% умеренные следы игры · 100% сильно вытоптанное</div>
-    <div class="row"><span class="key">Логотип слева вверху</span> — «жучок» телеканала. Он часть ПАКА атрибутики: в своей сборке настоящий УТ-1, в публичной вымышленный УГ-1. Меняется файлом, не кодом</div>
-    <div class="row"><span class="key">ВО ВЕСЬ ЭКРАН</span> — прячет корпус телевизора с ручками, картинка занимает всё окно. Обратно — маленькая кнопка <span class="key">⤡</span> в правом верхнем углу или <span class="key">Esc</span>. Режим запоминается</div>
-    <div class="row"><span class="key">Бегущая строка</span> — в начале матча внизу один быстрый проход с составами обеих команд, как в трансляции 90-х. Имена и номера — из состава, значит в публичной сборке поедут псевдонимы</div>
-    <div class="row"><span class="key">Разделы этого меню</span> — складываются: щелчок по заголовку сворачивает раздел, кнопка <span class="key">СВЕРНУТЬ ВСЁ</span> — сразу все. Справочник управления по умолчанию свёрнут, чтобы настройки были под рукой. Что свёрнуто — запоминается</div>
-    <div class="row"><span class="key">Плашка внизу кадра</span> — номер и фамилия игрока, у которого мяч; мяч ничей — подписан тот, кем управляешь. Цветная метка слева — форма его команды</div>
-
-    <h3 data-open="1">ГЕЙМПЛЕЙ</h3>
+    <h3 data-open="1">JOGABILIDADE</h3>
     <div class="row">
-      <label for="set-difficulty">Уровень:</label>
-      <select id="set-difficulty" aria-label="Уровень сложности"></select>
+      <label for="set-difficulty">Dificuldade:</label>
+      <select id="set-difficulty" aria-label="Nível de dificuldade"></select>
       <span id="set-difficulty-note" style="color:rgba(255,255,255,0.5)"></span>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)"><span class="key">НОВИЧОК</span> — базовый баланс, каким игра была до введения уровней: соперник осторожен в передачах, оборона сдерживает и почти не идёт в отбор, на подачу в штрафную никто не выбрасывается. Хорош для тестов и для того, чтобы разобраться с управлением.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)"><span class="key">ЛЮБИТЕЛЬ</span> — соперник ищет комбинации (стеночка, игра третьего, подключения фулбека), заводит в штрафную вторую волну, отбирает мяч и в своей половине, на подачу выбрасывается один защитник. Вратари ОБЕИХ команд быстрее реагируют и чаще берут намертво.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)"><span class="key">ПРОФЕССИОНАЛ</span> — плотный прессинг по всему полю, сдерживающий не отстаёт на спринте, защитники читают финты, на подачу выбрасываются двое, а компьютер вступает в верховую борьбу с той же дистанции, что и ты. Помощь в ударах и пасах на высоких уровнях ниже — ползунками ниже её можно вернуть.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Уровень применяется сразу, менять можно и по ходу матча. Запоминается; в адресе работает <span class="key">?difficulty=pro</span> — посмотреть уровень, не трогая настройку.</div>
     <div class="row">
-      Темп игры:
+      Ritmo do jogo:
       <input id="set-tempo" type="range" min="70" max="110" step="5" style="vertical-align:middle;width:180px">
       <span id="set-tempo-val"></span>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Ход всего матча целиком — как <span class="key">Game Speed</span> в PES. Ниже 100% игра идёт размереннее: эпизод разворачивается дольше, у тебя больше времени поднять голову и выбрать пас, движения читаются мягче. Меняется только темп, не баланс: соотношения «успею — не успею» те же, и счёт остаётся прежним. Трибуны, дым и сам телевизор идут своим темпом всегда.</div>
     <div class="row">
-      <label for="set-radar">Радар:</label>
-      <select id="set-radar" aria-label="Радар">
-        <option value="1">ВКЛ</option>
-        <option value="0">ВЫКЛ</option>
+      <label for="set-radar">Radar:</label>
+      <select id="set-radar" aria-label="Radar">
+        <option value="1">LIGADO</option>
+        <option value="0">DESLIGADO</option>
       </select>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Мини-карта внизу кадра, как в PES: видно открывания и забегания за пределами телекадра — пас на ход перестаёт играться вслепую.</div>
     <div class="row">
-      Помощь в ударах:
+      Assistência de chute:
       <input id="set-assist" type="range" min="10" max="30" step="5" style="vertical-align:middle;width:180px">
       <span id="set-assist-val"></span>%
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Дотягивает почти точные удары к створу, глушит разброс и усиливает докрутку в полёте. Прицел внутри створа не трогает — чувство управляемости прежнее. Явный промах останется промахом.</div>
     <div class="row">
-      Помощь в пасах:
+      Assistência de passe:
       <input id="set-pass-assist" type="range" min="10" max="30" step="5" style="vertical-align:middle;width:180px">
       <span id="set-pass-assist-val"></span>%
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Шире ищет адресата по направлению и подтягивает силу паса к дистанции до него. Пас без партнёра в конусе летит ровно как нарисован; сильная передержка всё равно уводит мяч дальше.</div>
 
-    <h3 data-open="1">СТАДИОН</h3>
+    <h3 data-open="1">ESTÁDIO</h3>
     <div class="row">
-      <label for="set-pitch-pattern">Рисунок газона:</label>
-      <select id="set-pitch-pattern" aria-label="Рисунок газона"></select>
+      <label for="set-pitch-pattern">Desenho do gramado:</label>
+      <select id="set-pitch-pattern" aria-label="Desenho do gramado"></select>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)"><span class="key">КЛАССИКА</span> — прежние частые прямые полосы и вариант по умолчанию. <span class="key">ШИРОКИЕ</span> — десять широких прямых проходов. <span class="key">80-Е</span> — вложенные полукруги вокруг центра поля, как на референсе. Износ 0–100% переключается отдельно клавишей <span class="key">ГАЗОН</span> на корпусе.</div>
     <div class="row">
-      Звук трибун:
+      Som da torcida:
       <input id="set-crowd" type="range" min="0" max="100" step="5" style="vertical-align:middle;width:180px">
       <span id="set-crowd-val"></span>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Зал звучит записями, а не шумом: ровный гул весь матч, взвинченный ропот при атаке у ворот, рёв после гола, «ах» на сейве, аплодисменты и свист. Фанатский сектор заводит дудки и барабан <span class="key">волнами</span> — в спокойные минуты, как настоящий вираж. Всё идёт через тракт телевизора: моно, узкая полоса, компрессия. Свисток арбитра этой ручке не подчиняется — он слышен всегда.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Игра стартует с вопроса <span class="key">ВКЛЮЧИТЬ ЗВУК?</span> — иначе браузер (особенно Safari на iPad) звук не отдаёт: ему нужно нажатие. Пока вопрос на экране, матч заморожен, стадион уже шумит с первого кадра заставки. С клавиатуры: <span class="key">Enter</span> — со звуком, <span class="key">Esc</span> — без. Ответил «БЕЗ ЗВУКА» и передумал — просто подними эту ручку, звук вернётся.</div>
     <div class="row">
-      Пиротехника на трибунах:
+      Pirotecnia:
       <input id="set-pyro" type="range" min="0" max="150" step="50" style="vertical-align:middle;width:180px">
       <span id="set-pyro-val"></span>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Фанатский сектор зажигает файеры на выходе команд и после гола своей команды: белое ядро, ореол цвета формы и столб дыма, который ветер сносит через лучи прожекторов. Часть дыма остывает, сползает с трибуны и стелется пеленой по газону. Дым — самая дорогая часть кадра, поэтому на слабом планшете ставь МЕНЬШЕ или ВЫКЛ.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Той же ручкой управляется <span class="key">серпантин</span>: на выходе команд и после гола фанатский сектор бросает ленты и бумажный дождь цветов своей формы.</div>
-    <div class="row" style="color:rgba(255,255,255,0.5)"><span class="key">Мошкара</span> у ламп мачт и <span class="key">волна на трибунах</span> идут всегда и настройки не требуют: мошкара живёт целиком в видеокарте, волна — прямо в материале секторов. Волна проходит по чаше сама, в спокойные минуты матча.</div>
 
-    <h3 data-open="1">КАМЕРА</h3>
+    <h3 data-open="1">CÂMERA</h3>
     <div class="row">
-      Подлёт к дальней бровке:
+      Aproximação na lateral distante:
       <input id="set-far" type="range" min="0" max="30" step="1" style="vertical-align:middle;width:180px">
       <span id="set-far-val"></span>
     </div>
-    <div class="row" style="color:rgba(255,255,255,0.5)">Камера приближается, когда мяч уходит на дальнюю сторону — дальний игрок не мельчает.</div>
 
-    <h3 data-open="0">УПРАВЛЕНИЕ — КЛАВИАТУРА</h3>
-    <div class="row"><span class="key">Стрелки</span> — движение; во время замаха удара — прицел по створу</div>
-    <div class="row"><span class="key">Q</span> — смена управляемого игрока, когда мяч НЕ у тебя (берётся ближний к мячу); авто — когда партнёр принял мяч или сосед заметно ближе к мячу</div>
-    <div class="row"><span class="key">Q + S (с мячом)</span> — СТЕНОЧКА: отдал пас и сам рванул вперёд за спину опекуну; курсор переходит на принимающего — верни мяч на ход (<span class="key">W</span>), когда пасующий откроется</div>
-    <div class="row"><span class="key">E</span> — спринт (мяч ведётся толчками, хуже контроль)</div>
-    <div class="row"><span class="key">Shift</span> — ФИНТ. Нажал и отпустил — движение исполнено; КАКОЕ именно, решает направление стрелок ОТНОСИТЕЛЬНО ХОДА игрока (не взгляда). Без стрелок — ОБМАННОЕ ДВИЖЕНИЕ НОГОЙ: мяча не касаешься вовсе, вес уходит в одну сторону, бежишь дальше. Стрелка ПО ХОДУ — ПРОБРОС МИМО (финт Ромарио): мяч уходит с одной стороны защитника, сам обегаешь с другой, сходитесь за его спиной. Стрелка ВБОК — КРОКЕТА: резкий перевод мяча под собой в сторону. Стрелка НАЗАД — РАЗВОРОТ МАРАДОНЫ/ЗИДАНА: накрываешь мяч подошвой, прокручиваешься на 360° и выходишь туда, куда показал</div>
-    <div class="row"><span class="key">Shift + D</span> — ЛОЖНЫЙ УДАР: полный замах, мяча нога не касается. Защитники покупают его охотнее всего — бросаются в блок</div>
-    <div class="row"><span class="key">Как защитник ведётся на финт</span> — не «выключается», а ПЕРЕНОСИТ ВЕС НЕ ТУДА: бежит в ложную сторону, теряет темп и не может подкатиться, пока не восстановится. Покупает только тот, кто с тобой играет и близко: вплотную почти всегда, с трёх метров изредка, дальше четырёх — никогда. СДЕРЖИВАЮЩИЙ (тот, что пятится и не выбрасывается) ведётся заметно реже — против него финт работает хуже, и это правильно</div>
-    <div class="row"><span class="key">Цена финта</span> — он может НЕ УДАТЬСЯ, и тогда мяч уходит сильнее и мимо: тем вероятнее, чем быстрее катится мяч, чем плотнее опека и чем слабее техника игрока. Плюс пауза между финтами и потеря темпа в самом движении. Разворот и обманное движение мяча почти не теряют, проброс мимо — самый рискованный</div>
-    <div class="row"><span class="key">Shift удерживать (мяч у ноги)</span> — БЛИЖНИЙ КОНТРОЛЬ: мяч держится вплотную к ноге, но бежишь медленнее. То же, что L2 в современных футсимах</div>
-    <div class="row"><span class="key">Shift удерживать (мяч летит)</span> — ТЕХНИЧНЫЙ ПРИЁМ: разброс первого касания вдвое меньше, мяч кладётся под ногу и почти останавливается. Платишь темпом — касание дольше, и проброс на ход в это время невозможен (спринт и техника — противоположные намерения)</div>
-    <div class="row"><span class="key">S</span> — пас низом</div>
-    <div class="row"><span class="key">S в обороне (мяч не у нас)</span> — игра КОРПУСОМ: рядом с владельцем, сбоку или спереди — навал плечом: соперник оттеснён, касание сбито, мяч отскакивает — забирай. Под верховым мячом — оттеснение соперника от точки падения. В спину толкать нельзя — сам споткнёшься</div>
-    <div class="row"><span class="key">W</span> — ПАС В ЗОНУ (на ход). S кладёт мяч В НОГИ, W — В ТОЧКУ, куда партнёр добежит. Полоска здесь не только сила, а ДАЛЬНОСТЬ: тап — лёгкий накат рядом стоящему, полный замах — сильный пас на забег метров за пятнадцать вперёд. Стрелки задают сектор; помощь выбирает точку ВНУТРИ него и уводит её от ближайшего соперника — но если под стик никого разумного нет, мяч летит строго как нарисован. Курсор сразу переходит на бегущего под пас</div>
-    <div class="row"><span class="key">Q + W (с мячом)</span> — ЗАБРОС НА ХОД: тот же пас в зону, но верхом, через выдвинувшуюся линию обороны. Тап перекидывает одного защитника, полный замах бросает мяч за спину линии. Если на пути никого — траектория сама становится настильнее. В руки вратарю не кладётся никогда</div>
-    <div class="row"><span class="key">W в обороне (мяч не у нас)</span> — ВРАТАРЬ НА ВЫХОД: пока держишь, свой кипер идёт на мяч — забрать подачу, накрыть выход один на один, подчистить за спиной защиты. Расчёты при этом выключены: обычно вратарь выходит только там, где успевает наверняка, а по твоей команде — идёт всегда. Вышел не вовремя — пустые ворота за спиной, и это твоя ошибка, а не его</div>
-    <div class="row"><span class="key">D</span> — удар (держать = замах; короткий тап = носок в касание)</div>
-    <div class="row"><span class="key">A</span> — навес: тап ×1 свеча · ×2 настильный · ×3 низовой прострел</div>
-    <div class="row"><span class="key">A в обороне (мяч не у нас)</span> — ПОДКАТ: скольжение с вытянутой ногой по направлению стрелок; без стрелок целит САМ В МЯЧ — в точку, где мяч будет к приходу ноги. Выбивает именно вытянутая нога, поэтому подкат достаёт дальше, чем кажется по корпусу, и на бегущего соперника идёт чисто, а не в него. Чисто в мяч — тот отлетает в 50/50, подбирай. Промазал — лежишь и выключен из эпизода. Сзади мяч закрыт корпусом — снос: соперник падает, сам лежишь дольше всех (со свистком Фазы 5 это станет фолом)</div>
-    <div class="row"><span class="key">Навес с фланга</span> — сам наводится в штрафную (бежать можно не разворачиваясь!): сила замаха = адрес (короткий — ближняя штанга, средний — центр, полный — дальняя, передержка — мяч уйдёт за дальнюю)</div>
-    <div class="row"><span class="key">A вдали от штрафной</span> — АДРЕСНЫЙ верховой мяч: тап — короткая КРУТАЯ перекидка через соперника на ближнего, полный замах — дальний перевод на другой фланг. Адресат сам выйдет под мяч и примет его, как обычный пас</div>
-    <div class="row"><span class="key">Приём верхового мяча (авто)</span> — опускающийся свой пас/перевод игрок гасит себе в ноги, КОГДА МЯЧ РЕАЛЬНО КОСНУЛСЯ КОРПУСА. Часть тела решает высота: СТОПА кладёт мяч точно под ногу (и играет свой клип), БЕДРО гасит мягче всего, ГРУДЬ позволяет пробросить мяч дальше всех, ГОЛОВА гасит хуже всех. Если заказан удар или пас — приёма нет; в чужой штрафной авто-приём молчит — там подачу замыкают</div>
-    <div class="row"><span class="key">Стрелки в момент приёма</span> — НАПРАВЛЕННОЕ ПЕРВОЕ КАСАНИЕ: мягкий доворот подрабатывает мяч под ногу, а резкая смена стороны (больше ~60°) ПРОБРАСЫВАЕТ его туда грудью, и корпус доворачивается следом. Цена честная: чем быстрее приходит мяч, чем круче разворот и чем ближе опекун — тем больше разброс первого касания. Мяч может и убежать — это окно для подбора</div>
-    <div class="row"><span class="key">Приём НА БЕГУ (авто)</span> — если бежишь на мяч по ходу атаки и впереди свободно, игрок не останавливает мяч, а ПРОБРАСЫВАЕТ его вперёд со скоростью своего бега и мчится дальше: темп атаки не теряется, мяч остаётся перед ногами. Соперник рядом с точкой проброса — игрок берёт мяч под ногу, как обычно. Пробрасывать рискованнее: разброс касания выше, мяч может и убежать</div>
-    <div class="row"><span class="key">S / W пока мяч ЛЕТИТ к тебе</span> — ПАС В КАСАНИЕ: игрок не принимает мяч, а сразу отдаёт его с лёта. Жать можно в любой момент полёта, заказ не сгорает. Цена — ТОЧНОСТЬ, а не сила: помощь прицела урезана вдвое, разброс растёт со скоростью мяча, крутизной разворота и опекой. Скорость мяча наоборот выше обычной — импульс приходящей передачи складывается с касанием</div>
-    <div class="row"><span class="key">Стрелки при навесе</span> — уточняют точку: к воротам = прижать к вратарской, от ворот = оттянуть под удар, поперёк = сдвиг между штангами</div>
-    <div class="row"><span class="key">D в полёте навеса</span> — ЗАМЫКАНИЕ в одно касание: с лёта (мяч ниже груди) или головой в прыжке (выше). Жать можно в ЛЮБОЙ момент полёта — заказ не сгорает. Пока D зажат, игрок НЕ вкапывается в прицельную стойку, а врывается к точке встречи и бьёт ровно в кадре контакта: удар, выпрыг и разворот корпуса приходят одним мигом</div>
-    <div class="row"><span class="key">ЗАЖАТЬ D (или ПАС), пока мяч летит</span> — ЗАЯВКА НА УДАР. Угадывать миг нажатия больше не нужно: держи кнопку, и футболист сам выйдет к точке встречи и сыграет по мячу. Тайминг теперь в ДЛИТЕЛЬНОСТИ удержания — чем дольше держишь, тем сильнее удар и тем хуже прицел, а на полном замахе легче и вовсе смазать по мячу. Отпустил раньше — сила зафиксирована на этом уровне. Если игрок к мячу физически не поспевает, заявка не принимается: это по-прежнему промах, а не гарантия</div>
-    <div class="row"><span class="key">Удар в падении (авто)</span> — не успеваешь на ноги, а мяч пролетает мимо — игрок бросается ласточкой: рывок ~2 м + вытянутый корпус, головой или ногой. Слабее и рискованнее обычного, после броска лежит секунду</div>
-    <div class="row"><span class="key">Кольцо на газоне</span> — пока мяч летит верхом, маленький маркер показывает точку падения — беги туда</div>
-    <div class="row"><span class="key">После подачи</span> — управление само переходит на врывающегося (как курсор в PES): веди его на мяч. Врывание на скорости бьёт мощнее и точнее; стоять и ждать под мячом — слабый шумный кивок</div>
-    <div class="row"><span class="key">После удара держать направление</span> — докрутка мяча в полёте</div>
-    <div class="row"><span class="key">Стандарты (авто-свисток)</span> — мяч полностью ушёл за линию: АУТ / УГЛОВОЙ / ОТ ВОРОТ. Свой аут: игрок сам подходит к бровке — S бросок ближнему (стрелки = направление), W или A — бросок сильнее. Свой угловой: обычная машина навеса — полоска A выбирает штангу, тапы — тип дуги, S — короткий розыгрыш, D — низовой прострел. Удар от ворот бьёт вратарь сам</div>
-    <div class="row"><span class="key">Вратарь забрал мяч в руки</span> — управление сразу на вратаре: <span class="key">D</span> — выбить ногой (сильно; стрелки задают сторону), <span class="key">S</span> / <span class="key">W</span> — бросок рукой в ноги партнёру (точно, настильно). Не выбрал за 6 сек — вратарь выносит сам. Соперник вратаря с мячом в руках не отбирает — это свисток</div>
-    <div class="row"><span class="key">Начало матча</span> — ТВ-заставка: крупный план мяча, свисток, отлёт камеры. <span class="key">S</span> (или любая кнопка действия) — разыграть с центра</div>
-    <div class="row"><span class="key">После гола</span> — ПРАЗДНОВАНИЕ (автор бежит к бровке, партнёры догоняют), затем СЕРИЯ ПОВТОРОВ с разных камер: вся комбинация с момента отбора → завершение крупнее и медленнее → празднование крупным планом. Ракурсы каждый раз тасуются. Любая кнопка действия (<span class="key">S</span>, <span class="key">W</span>, <span class="key">A</span>, <span class="key">D</span>) — пропустить текущий ракурс, ещё нажатия — уйти в розыгрыш</div>
-    <div class="row"><span class="key">Стеночка (авто)</span> — короткий пас под прессингом: пасующий сам рвёт вперёд за спину опекуну — верни ему на ход (<span class="key">W</span>). Крайний защитник на фланге сам подключается по бровке — пас на ход накормит рывок</div>
+    <h3 data-open="0">CONTROLES — TECLADO</h3>
+    <div class="row"><span class="key">Setas</span> — movimentação e direção.</div>
+    <div class="row"><span class="key">Q</span> — trocar o jogador controlado.</div>
+    <div class="row"><span class="key">E</span> — sprint.</div>
+    <div class="row"><span class="key">Shift</span> — drible; segurado, faz controle curto e domínio técnico.</div>
+    <div class="row"><span class="key">S</span> — passe rasteiro; <span class="key">W</span> — passe em profundidade.</div>
+    <div class="row"><span class="key">A</span> — cruzamento; <span class="key">D</span> — chute.</div>
+    <div class="row"><span class="key">Q + S</span> — tabelinha; <span class="key">Q + W</span> — lançamento em profundidade.</div>
+    <div class="row">Segure os botões de ação para controlar a força. Após o chute, continue direcionando para aplicar efeito.</div>
 
-    <h3 data-open="0">УПРАВЛЕНИЕ — ГЕЙМПАД</h3>
-    <div class="row"><span class="key">Левый стик</span> — движение · <span class="key">RT/R2</span> (дальний правый курок) — спринт · <span class="key">LB/L1</span> — смена игрока (когда мяч не у тебя)</div>
-    <div class="row"><span class="key">LT/L2</span> (дальний ЛЕВЫЙ курок) — ФИНТ, полный аналог <span class="key">Shift</span>: нажал и отпустил — движение, какое именно решает наклон стика ОТНОСИТЕЛЬНО ХОДА (без наклона — обманное движение ногой, по ходу — проброс мимо защитника, вбок — крокета, назад — разворот Марадоны). Удержание — ближний контроль и техничный приём. Два дальних курка держат два противоположных намерения: правый разгоняет мяч вперёд, левый прячет его под ногой</div>
-    <div class="row"><span class="key">LT/L2 + B</span> — ЛОЖНЫЙ УДАР: замах без касания мяча</div>
-    <div class="row"><span class="key">A</span> пас · <span class="key">Y</span> пас на ход · <span class="key">B</span> удар · <span class="key">X</span> навес (в обороне — ПОДКАТ)</div>
-    <div class="row"><span class="key">Y в обороне (мяч не у нас)</span> — ВРАТАРЬ НА ВЫХОД: держи — и свой кипер идёт на мяч (подача, выход один на один, мяч за спиной защиты). Расчёты выключены: решение и риск — твои</div>
-    <div class="row"><span class="key">LB/L1 + A (с мячом)</span> — СТЕНОЧКА: пас и рывок вперёд; курсор на принимающем, возврат — <span class="key">Y</span> (пас на ход)</div>
-    <div class="row"><span class="key">LB/L1 + Y (с мячом)</span> — ЗАБРОС НА ХОД: верховой пас в зону за спину линии обороны (та же раскладка, что в FIFA). Полоска = дальность: тап перекидывает одного защитника, полный замах бросает мяч через полполя</div>
-    <div class="row"><span class="key">A / Y пока мяч ЛЕТИТ к тебе</span> — пас в касание: игрок отдаёт с лёта, не принимая. Точность ниже, скорость мяча выше</div>
-    <div class="row"><span class="key">После удара наклонить левый стик вбок</span> — подкрутка мяча в полёте (тот же приём, что жест-докрутка на планшете)</div>
+    <h3 data-open="0">CONTROLES — GAMEPAD</h3>
+    <div class="row"><span class="key">Analógico esquerdo</span> — movimento · <span class="key">R2/RT</span> — sprint · <span class="key">L1/LB</span> — trocar jogador.</div>
+    <div class="row"><span class="key">A</span> — passe · <span class="key">Y</span> — profundidade · <span class="key">B</span> — chute · <span class="key">X</span> — cruzamento.</div>
+    <div class="row"><span class="key">L2/LT</span> — drible e controle técnico.</div>
 
-    <h3 data-open="0">УПРАВЛЕНИЕ — ПЛАНШЕТ</h3>
-    <div class="row"><span class="key">Левая половина</span> — виртуальный стик (движение; после удара — докрутка)</div>
-    <div class="row"><span class="key">Кнопки</span> ⇄ смена игрока · ⚡спринт · ФИНТ · две КОНТЕКСТНЫЕ кнопки (меняются сами, как в мобильных футсимах)</div>
-    <div class="row"><span class="key">ФИНТ</span> (над ⚡) — тап исполняет финт, какой именно решает наклон стика ОТНОСИТЕЛЬНО ХОДА: без наклона обманное движение ногой, по ходу проброс мимо защитника, вбок крокета, назад разворот Марадоны. Удержание — ближний контроль мяча и техничный приём. Тап с зажатой кнопкой УДАР — ложный удар</div>
-    <div class="row"><span class="key">В атаке (мяч наш)</span> — ПАС и УДАР; круг НАВЕС для жеста подачи</div>
-    <div class="row"><span class="key">В обороне</span> — те же кнопки становятся КОРПУС (навал плечом на владельца / оттеснение под верховым мячом; в спину нельзя — споткнёшься) и ВЫНОС (выбить мяч; в полёте навеса — вынос головой)</div>
-    <div class="row"><span class="key">Тап по кругу ПОДКАТ (в обороне)</span> — подкат по направлению стика; без стика целит сам (в соперника с мячом или в свободный мяч): чисто — отскок 50/50, промазал — лежишь, сзади — грубый снос и сам лежишь дольше</div>
-    <div class="row"><span class="key">⇄</span> — переключиться на ближнего к мячу; плюс авто: партнёр принял мяч или оказался заметно ближе (жёлтое кольцо показывает, кем управляешь)</div>
-    <div class="row"><span class="key">УДАР</span> — тап/удержание = обычный удар; свайп от кнопки рисует траекторию: направление = куда летит мяч, длина = сила, изгиб = подкрутка</div>
-    <div class="row"><span class="key">Правая зона (круг НАВЕС)</span> — жест: направление = куда, длина = сила, скорость = характер дуги, изгиб пальца = подкрутка</div>
-    <div class="row"><span class="key">Короткий росчерк</span> — ПАС В ЗОНУ (на ход): длина = дальность выноса, а СКОРОСТЬ жеста выбирает форму — резкий даёт настильный пас низом, медленный ЗАБРОС за спину обороне (та же грамматика, что у навеса)</div>
-    <div class="row"><span class="key">Тап по ПАС пока мяч летит к тебе</span> — пас в касание: игрок отдаёт с лёта, не принимая мяч</div>
-    <div class="row"><span class="key">Стик в момент приёма</span> — направленное первое касание: резко повёл в сторону — игрок пробрасывает мяч туда грудью</div>
-    <div class="row"><span class="key">Жест с фланга в сторону ворот</span> — навес наводится в штрафную сам: длина жеста = адрес (ближняя/центр/дальняя), изгиб пальца докручивает дугу</div>
-    <div class="row"><span class="key">Тап по УДАР в полёте навеса</span> — замыкание в одно касание: с лёта или головой в прыжке; после подачи управление само на врывающемся — на скорости удар мощнее</div>
-    <div class="row"><span class="key">Стандарты</span> — АУТ: кнопка ПАС — бросок ближнему, жест — бросок по нарисованному направлению. УГЛОВОЙ: жест из круга НАВЕС — подача (длина = адрес, изгиб = дуга), ПАС — короткий розыгрыш. Удар от ворот — вратарь сам</div>
-    <div class="row"><span class="key">Вратарь забрал мяч</span> — управление на вратаре: ВЫНОС — выбить ногой (свайп/стик = сторона), ПАС — бросок рукой в ноги партнёру. Сам вынесет через 6 сек</div>
-    <div class="row"><span class="key">Начало матча</span> — ТВ-заставка: крупный план мяча и свисток; тап по ПАС — разыграть с центра</div>
-    <div class="row"><span class="key">После гола</span> — празднование и серия повторов с разных камер (комбинация → завершение в слоу-мо → празднование крупным планом); тап по любой кнопке действия пропускает текущий ракурс</div>
+    <h3 data-open="0">CONTROLES — CELULAR/TABLET</h3>
+    <div class="row">Use o direcional virtual à esquerda e os botões de ação à direita.</div>
+    <div class="row"><span class="key">PASSE</span> e <span class="key">CHUTE</span> mudam de função conforme ataque ou defesa.</div>
+    <div class="row">O gesto na área de cruzamento define direção, força e curva da bola.</div>
 
-    <h3 data-open="0">МЕХАНИКИ УДАРА (авто)</h3>
-    <div class="row">Тип выбирается сам: <span class="key">с места</span> — щёчка (точно) · <span class="key">на скорости/с хода</span> — подъём (мощно, ныряет) · <span class="key">тап</span> — носок (добивание)</div>
-    <div class="row">Бьющая нога — от положения корпуса к мячу: мяч слева → левая, справа → правая; крутка «наружу» = внешняя сторона стопы (шведка)</div>
-    <div class="row">Нога решает дугу навеса: правая с правого фланга — аутсвингер (от вратаря к набегающим), с левого — инсвингер (закручивается к воротам)</div>
-    <div class="row">Замыкание (авто по высоте мяча): ниже груди — удар с лёта (мощный, капризный, резкий щелчок) · выше — головой (кивок вниз в угол). Мяч всегда бьётся в ВЕРХНЕЙ точке выпрыга и ровно в кадре удара анимации. Прыгает игрок ровно настолько, чтобы достать мяч: низкий волей — почти без подскока, высокий навес — полный выпрыг. Сила и точность растут от скорости разбега; сила нажатия задаёт мощь и потолок выпрыга (тапом высокий мяч не достать). Мяч, до которого нога/лоб не дотянулись, — честный промах: замах доигрывает вхолостую</div>
+    <h3 data-open="0">DICAS DE PARTIDA</h3>
+    <div class="row">Laterais, escanteios e tiros de meta são cobrados automaticamente ou pelos mesmos botões de passe/cruzamento.</div>
+    <div class="row">Depois do gol há comemoração e sequência de replays; pressione um botão de ação para avançar.</div>
+    <div class="row">Quando o goleiro segura a bola, chute para repor com o pé ou passe para lançar com a mão.</div>
   </div>
 
-  <!-- Строка внизу кадра. Постоянной шпаргалки управления тут БОЛЬШЕ НЕТ
-       (фидбек Олега 27.07.2026: «мешает») — в эфире её и не бывает. Элемент
-       остался под временные подсказки (вратарь с мячом, стандарт) и под
-       ловушку ошибок модулей. Полная раскладка — в меню НАСТРОЙКИ. -->
   <div id="hint"></div>
   <div id="stick-base"><div id="stick-knob"></div></div>
-  <div id="cross-zone"><span class="lbl-atk">НАВЕС</span><span class="lbl-def">ПОДКАТ</span></div>
+  <div id="cross-zone"><span class="lbl-atk">CRUZAR</span><span class="lbl-def">CARRINHO</span></div>
   <canvas id="gesture-viz"></canvas>
   <div id="btn-switch" class="tbtn">⇄</div>
-  <div id="btn-pass" class="tbtn"><span class="lbl-atk">ПАС</span><span class="lbl-def">КОРПУС</span></div>
-  <div id="btn-shoot" class="tbtn"><span class="lbl-atk">УДАР</span><span class="lbl-def">ВЫНОС</span></div>
+  <div id="btn-pass" class="tbtn"><span class="lbl-atk">PASSE</span><span class="lbl-def">CORPO</span></div>
+  <div id="btn-shoot" class="tbtn"><span class="lbl-atk">CHUTE</span><span class="lbl-def">AFASTAR</span></div>
   <div id="btn-sprint" class="tbtn">⚡</div>
-  <div id="btn-feint" class="tbtn">ФИНТ</div>
+  <div id="btn-feint" class="tbtn">DRIBLE</div>
   <div id="power"><div id="power-fill"></div></div>
   <div id="lineups"><div id="lineups-text"></div></div>
-  <button id="fs-exit" title="Свернуть (Esc)" aria-label="Свернуть">⤡</button>
+  <button id="fs-exit" title="Sair da tela cheia (Esc)" aria-label="Sair da tela cheia">⤡</button>
 
   <!-- Вопрос про звук: первое, что видит игрок. Ответ «ДА» — это тот самый
        жест, без которого браузер (особенно Safari на iPad) не отдаёт звук.
@@ -866,13 +791,13 @@
        читают вопрос. Механика — src/main.js. -->
   <div id="sound-gate">
     <div class="sg-card">
-      <div class="sg-title">ВКЛЮЧИТЬ ЗВУК?</div>
-      <div class="sg-sub">ПЛАНШЕТ ОТДАЁТ ЗВУК ТОЛЬКО ПОСЛЕ НАЖАТИЯ</div>
+      <div class="sg-title">ATIVAR O SOM?</div>
+      <div class="sg-sub">O NAVEGADOR PRECISA DE UM TOQUE PARA LIBERAR O ÁUDIO</div>
       <div class="sg-row">
-        <button id="sg-yes" class="sg-btn sg-main">ДА, СО ЗВУКОМ</button>
-        <button id="sg-no" class="sg-btn">БЕЗ ЗВУКА</button>
+        <button id="sg-yes" class="sg-btn sg-main">SIM, COM SOM</button>
+        <button id="sg-no" class="sg-btn">SEM SOM</button>
       </div>
-      <div class="sg-note">ГРОМКОСТЬ ТРИБУН — В НАСТРОЙКАХ</div>
+      <div class="sg-note">VOLUME DA TORCIDA — NAS CONFIGURAÇÕES</div>
     </div>
   </div>
 
@@ -881,15 +806,15 @@
 
  <!-- Панель телевизора: ручки живые, значения пишет src/tvset.js -->
  <div id="tv-panel">
-  <div id="tv-brand">ФУТБОЛ<span>·98</span></div>
-  <div class="knob" id="knob-channel" data-name="Канал"></div>
-  <div class="knob" id="knob-gain" data-name="Яркость"></div>
-  <div class="knob" id="knob-contrast" data-name="Контраст"></div>
-  <div class="knob" id="knob-color" data-name="Цвет"></div>
-  <button class="tv-key" id="key-sharp">ЧЁТКОСТЬ<b>—</b></button>
-  <button class="tv-key" id="key-pitch">ГАЗОН<b>—</b></button>
-  <button class="tv-key" id="key-full">ВО ВЕСЬ<b>ЭКРАН</b></button>
-  <button class="tv-key" id="key-menu">НАСТРОЙКИ</button>
+  <div id="tv-brand">MUKEKA<span>·RETRO</span></div>
+  <div class="knob" id="knob-channel" data-name="Canal"></div>
+  <div class="knob" id="knob-gain" data-name="Brilho"></div>
+  <div class="knob" id="knob-contrast" data-name="Contraste"></div>
+  <div class="knob" id="knob-color" data-name="Cor"></div>
+  <button class="tv-key" id="key-sharp">NITIDEZ<b>—</b></button>
+  <button class="tv-key" id="key-pitch">GRAMADO<b>—</b></button>
+  <button class="tv-key" id="key-full">TELA<b>CHEIA</b></button>
+  <button class="tv-key" id="key-menu">CONFIGURAÇÕES</button>
   <div id="tv-grille"></div>
   <div id="tv-led"></div>
  </div>
@@ -901,12 +826,12 @@
       const h = document.getElementById('hint');
       h.classList.remove('dim'); // строка обычно погашена — иначе сбой не увидеть
       h.textContent =
-        'ОШИБКА: ' + (e.message || 'загрузка ' + (e.target && e.target.src ? e.target.src : '?'));
+        'ERRO: ' + (e.message || 'carregamento ' + (e.target && e.target.src ? e.target.src : '?'));
     }, true);
     window.addEventListener('unhandledrejection', (e) => {
       const h = document.getElementById('hint');
       h.classList.remove('dim');
-      h.textContent = 'ОШИБКА (promise): ' + e.reason;
+      h.textContent = 'ERRO (promise): ' + e.reason;
     });
 
     // iOS Safari игнорирует user-scalable=no: двойной тап по кнопке зумил экран
