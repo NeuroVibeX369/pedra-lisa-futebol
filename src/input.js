@@ -30,7 +30,7 @@ export const ACTION_LABELS = {
 export const PRESETS = [
   {
     key: 'wasd',
-    label: 'W A S D + Space',
+    label: 'W A S D + Espaço',
     bindings: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', fire: 'Space', switch: 'KeyQ' },
   },
   {
