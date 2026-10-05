@@ -495,7 +495,7 @@ export class Match {
         this.introPhase = 'wait';
         this.introT = 0;
         if (this.teams[this.kickoffTeam] === this.humanTeam) {
-          this._setTempHint('ПАС (S / кнопка ПАС) — разыграть с центра');
+          this._setTempHint('PASSE (S / botão PASSE) — dar a saída');
         }
       }
     } else {
@@ -681,8 +681,8 @@ export class Match {
       if (!alive) this.endReplay();
       else if (this.replayTag) {
         this.replayTag.textContent = this.replay.segmentCount > 1
-          ? `ПОВТОР ${this.replay.segmentNumber}/${this.replay.segmentCount}`
-          : 'ПОВТОР';
+          ? `REPLAY ${this.replay.segmentNumber}/${this.replay.segmentCount}`
+          : 'REPLAY';
       }
       this.updateHUD();
       return;
@@ -1351,7 +1351,7 @@ export class Match {
     }
     if (team === this.humanTeam && type !== 'goalkick') this.setControlled(taker, 1.0);
 
-    const label = { throwin: 'АУТ', corner: 'УГЛОВОЙ', goalkick: 'ОТ ВОРОТ' };
+    const label = { throwin: 'LATERAL', corner: 'ESCANTEIO', goalkick: 'TIRO DE META' };
     this.hud.flash.textContent = label[type];
     this.hud.flash.classList.add('show');
     this.flashTimer = CONFIG.restart.flashTime;
@@ -1770,7 +1770,7 @@ export class Match {
     team.keeper.gkOrder = true;
     this.input.through.cancel();
     if (!this._gkOrderHintShown) {
-      this._setTempHint('ВРАТАРЬ ПОШЁЛ НА ВЫХОД');
+      this._setTempHint('GOLEIRO SAIU DO GOL');
       this._gkOrderHintShown = true;
     }
   }
@@ -1805,7 +1805,7 @@ export class Match {
       // Пока мяч в руках — управление на вратаре: человек целится и выбирает
       if (this.controlled !== p) this.setControlled(p, 0);
       if (!this._keeperHintShown) {
-        this._setTempHint('ВРАТАРЬ ЗАБРАЛ МЯЧ: УДАР — ВЫБИТЬ НОГОЙ · ПАС — БРОСОК РУКОЙ · сам вынесет через 6 сек');
+        this._setTempHint('GOLEIRO COM A BOLA: CHUTE — REPOR COM O PÉ · PASSE — LANÇAR COM A MÃO · reposição automática em 6 s');
         this._keeperHintShown = true;
       }
       const pass = this.input.pass.consume();
@@ -2033,7 +2033,7 @@ export class Match {
     // И фанатский сектор забившей зажигает файеры. Сектор СВОЙ, то есть за
     // своими воротами: t.side — это сторона ЧУЖИХ ворот (куда команда атакует).
     this.litFlares('goal', scorerIdx);
-    this.hud.flash.textContent = 'ГОЛ!';
+    this.hud.flash.textContent = 'GOL!';
     this.hud.flash.classList.add('show');
     this.flashTimer = 2.0;
 
@@ -2092,7 +2092,7 @@ export class Match {
     this._releaseKeeperHolds();
     playWhistle(1.6);        // финальный свисток длинный — так и свистят конец
     crowdApplause(1);
-    this.hud.flash.textContent = `МАТЧ ОКОНЧЕН ${this.score[0]}:${this.score[1]}`;
+    this.hud.flash.textContent = `FIM DE JOGO ${this.score[0]}:${this.score[1]}`;
     this.hud.flash.classList.add('show');
     this.flashTimer = CONFIG.match.fulltimePause;
     this.showStatsCard();
@@ -2125,10 +2125,10 @@ export class Match {
       return p > 0 ? Math.round((d('passOk', i) / p) * 100) : 0;
     };
     const rows = [
-      ['УДАРЫ', d('shot', 0), d('shot', 1)],
-      ['ВЛАДЕНИЕ', `${poss[0]}%`, `${poss[1]}%`],
-      ['ТОЧНОСТЬ ПАСА', `${acc(0)}%`, `${acc(1)}%`],
-      ['СЕЙВЫ', d('save', 0), d('save', 1)],
+      ['CHUTES', d('shot', 0), d('shot', 1)],
+      ['POSSE', `${poss[0]}%`, `${poss[1]}%`],
+      ['PRECISÃO DE PASSE', `${acc(0)}%`, `${acc(1)}%`],
+      ['DEFESAS', d('save', 0), d('save', 1)],
     ];
     body.innerHTML = rows.map(([label, a, b]) =>
       `<div class="st-row"><span class="st-a">${a}</span>` +
