@@ -90,6 +90,13 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const attr01 = (overall, random, bias = 0) =>
   clamp(0.28 + (overall - 50) / 70 + bias + (random() - .5) * .12, .25, .99);
 
+const PEDRA_LISA_NAMES = [
+  'OLAVO LOBÃO', 'NETO', 'DJHA', 'BASTIAOZÃO REI', 'BRUNO', 'MANOEL',
+  'RONILTON', 'LUCIANO', 'HÉLIO', 'BASTIAOZINHO', 'RICARDO',
+  'JARDEL', 'LORIVAL', 'NATANAEL', 'THEO LUCCA', 'ISAAC', 'ARTHUR', 'DAVI',
+];
+const PEDRA_LISA_OVR = [83,80,82,84,81,82,83,90,85,92,84,70,72,70,72,73,74,72];
+
 const INDEPENDENCIA_NAMES = [
   'JUNIOR PAREDÃO', 'NETO', 'ABERLADO', 'ZÉ NETO', 'EDIMAR', 'MANINHO',
   'AURISTÊNIO', 'CHICO BAIÃO', 'CLODOALDO', 'VALDEKE MATTOS', 'ALEX',
@@ -176,6 +183,7 @@ export function buildClubCareerSquad(clubOrId) {
     const last = LAST[Math.floor(random() * LAST.length)];
     let overall = minOvr + Math.floor(random() * (maxOvr - minOvr + 1));
 
+    if (club.id === 'pedra-lisa') overall = PEDRA_LISA_OVR[i] || 78;
     if (club.id === 'independencia') overall = INDEPENDENCIA_OVR[i] || 84;
     if (club.id === FINAL_CLUB.id) {
       // Distribuição controlada para o adversário final ficar entre 95 e 99.
@@ -186,9 +194,11 @@ export function buildClubCareerSquad(clubOrId) {
     const skill = attr01(overall, random);
     const player = {
       id: club.id + '-' + i,
-      name: club.id === 'independencia'
-        ? INDEPENDENCIA_NAMES[i]
-        : (first + ' ' + last).toUpperCase(),
+      name: club.id === 'pedra-lisa'
+        ? PEDRA_LISA_NAMES[i]
+        : club.id === 'independencia'
+          ? INDEPENDENCIA_NAMES[i]
+          : (first + ' ' + last).toUpperCase(),
       number: NUMBERS[i],
       position,
       overall,
