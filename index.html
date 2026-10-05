@@ -153,27 +153,53 @@
 
         <div id="onlineSetup" class="hidden">
           <p class="explain">
-            Um jogador abre a partida e envia o código; o outro digita esse código.
-            Quem abre a partida joga com o <b>Pedra Lisa</b>; o segundo, com o <b>Independência</b>.
-            Cada jogador controla seu próprio time com um dos conjuntos de teclas acima.
+            Escolha como você quer aparecer no modo online. Depois disso, você verá
+            quem está conectado e poderá convidar alguém para jogar sem sair do jogo.
           </p>
 
-          <div id="roomCode" class="code hidden"></div>
-          <p id="onlineStatus" class="status"></p>
-
-          <div class="joinrow">
-            <input id="joinCode" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
-            <button id="join">ENTRAR</button>
+          <div id="onlineIdentity" class="onlineIdentity">
+            <label for="onlineName">Seu nome</label>
+            <div class="joinrow">
+              <input id="onlineName" maxlength="20" placeholder="SEU NOME" autocomplete="nickname" spellcheck="false">
+              <button id="saveOnlineName">ENTRAR NO ONLINE</button>
+            </div>
+            <p id="onlineNameHint" class="status">Na primeira vez, escolha um nome. Ele ficará salvo neste navegador.</p>
           </div>
 
-          <p class="fineprint">
-            Funciona entre duas abas do navegador, entre computadores na mesma rede
-            e pela internet quando o servidor <code>server/relay.js</code> estiver hospedado.
-          </p>
+          <div id="onlineLobby" class="hidden">
+            <div class="lobbyTitle">
+              <strong>JOGADORES ONLINE</strong>
+              <span id="onlineCount" class="shape">0</span>
+              <button id="editOnlineName" type="button">Editar nome</button>
+            </div>
+            <div id="onlinePlayers" class="onlinePlayers"></div>
+
+            <div id="inviteBox" class="inviteBox hidden">
+              <p id="inviteText" class="status"></p>
+              <div class="btns">
+                <button id="acceptInvite" class="primary inlinePrimary">ACEITAR</button>
+                <button id="declineInvite">RECUSAR</button>
+              </div>
+            </div>
+
+            <p id="onlineStatus" class="status"></p>
+
+            <details id="codeFallback">
+              <summary>Entrar por código (opção alternativa)</summary>
+              <p class="fineprint">
+                O convite direto é a forma principal. O código continua disponível como plano B.
+              </p>
+              <div id="roomCode" class="code hidden"></div>
+              <div class="joinrow">
+                <input id="joinCode" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+                <button id="join">ENTRAR</button>
+              </div>
+            </details>
+          </div>
         </div>
         <div class="panelFooter">
           <button id="start" class="primary">INICIAR PARTIDA</button>
-          <button id="host" class="primary hidden">ABRIR NOVA PARTIDA</button>
+          <button id="host" class="primary hidden">CRIAR PARTIDA POR CÓDIGO</button>
         </div>
       </div>
     </div>
