@@ -1,7 +1,8 @@
 import { Signal } from '../../src/net/signal.js';
 import { relayFor } from '../../src/config.js';
+import { RetroNetplay } from './netplay.js';
 
-export function setupRetroOnlineTest({ onRole } = {}) {
+export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
   const gate = document.getElementById('retro-online-test');
   if (!gate) return { active: false, dispose() {} };
 
@@ -23,6 +24,7 @@ export function setupRetroOnlineTest({ onRole } = {}) {
   let signal = null;
   let role = null;
   let peerReady = false;
+  let netplay = null;
 
   const say = (text) => { if (status) status.textContent = text; };
 
@@ -36,6 +38,9 @@ export function setupRetroOnlineTest({ onRole } = {}) {
     closeSignal();
     say('Conectando ao servidor...');
     signal = new Signal(relayFor(location));
+    netplay = null;
+    peerReady = false;
+    gate.classList.remove('connected');
 
     signal.on('room', (m) => {
       role = m.role;
@@ -45,13 +50,15 @@ export function setupRetroOnlineTest({ onRole } = {}) {
         room.classList.toggle('hidden', !m.code);
       }
       onRole?.({ role, localTeam, code: m.code, signal });
+      netplay = new RetroNetplay({ signal, role, match, ball, input });
       if (role === 'host') say('Sala criada. Aguardando o segundo jogador...');
       else say('Entrando na sala...');
     });
 
     signal.on('peer', () => {
       peerReady = true;
-      say('Conexão entre os dois jogadores estabelecida. A sincronização da partida está em desenvolvimento.');
+      netplay?.setConnected(true);
+      say('Conectado! Sincronização 1v1 experimental ativa. Pedra Lisa x Independência.');
       gate.classList.add('connected');
     });
 
@@ -60,7 +67,10 @@ export function setupRetroOnlineTest({ onRole } = {}) {
     });
 
     signal.on('close', () => {
+      netplay?.setConnected(false);
       if (peerReady) say('O outro jogador saiu ou a conexão foi encerrada.');
+      peerReady = false;
+      gate.classList.remove('connected');
     });
 
     return signal;
@@ -99,6 +109,8 @@ export function setupRetroOnlineTest({ onRole } = {}) {
     get signal() { return signal; },
     get role() { return role; },
     get peerReady() { return peerReady; },
+    beforeSimulation(now) { netplay?.beforeSimulation(now); },
+    afterSimulation(now) { netplay?.afterSimulation(now); },
     dispose: closeSignal,
   };
 }
