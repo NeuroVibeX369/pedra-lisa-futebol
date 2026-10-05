@@ -69,7 +69,7 @@ export function setupPauseMenu({ match, pack } = {}) {
     formationView.innerHTML =
       '<b>FORMAÇÃO ATUAL · 4-4-2</b><br>' +
       (squad.length
-        ? squad.map((p) => `${p.number || '—'} · ${p.name || 'JOGADOR'} · OVR ${p.overall || '—'}`).join('<br>')
+        ? squad.map((p) => `${p.number || '—'} · ${p.name || 'JOGADOR'} · FORÇA ${p.overall || '—'}`).join('<br>')
         : 'Escalação indisponível.') +
       '<br><br>Na Master Liga, trocas de titulares são feitas na tela ESCALAÇÃO antes da partida.';
     formationView.classList.add('show');
