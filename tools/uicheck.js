@@ -409,8 +409,8 @@ async function main() {
       'the match start': [saidStart, '<start>'],
       'a throw-in to red': [saidThrow, 'throw in for red'],
       'a goal kick to blue': [saidKick, 'goal kick for blue'],
-      'the score after a goal': [saidScore, 'blue two red nil'],
-      'full time': [saidEnd, 'full time blue three red one'],
+      'the score after a goal': [saidScore, 'two nil'],
+      'full time': [saidEnd, 'full time three one'],
       'half time': [saidHalf, ''],
     };
     for (const [what, [got, want]] of Object.entries(expected)) {
@@ -422,10 +422,10 @@ async function main() {
       { type: 'restart', kind: 'CORNER', team: 0 },
       { type: 'kickoff', reason: 'goal', score: [4, 4] },
     ]);
-    if (back2back !== 'corner for blue | blue four red four') {
+    if (back2back !== 'corner for blue | four four') {
       throw new Error(`a scoreline was held back behind a restart: "${back2back}"`);
     }
-    console.log('OK: he names the side at a restart, reads the score after a goal, and says nil');
+    console.log('OK: he names restarts, reads the score after a goal, and says nil');
 
     // 1d. The on-screen controls: a thumb on the stick has to come out as the
     // same bitmask a keyboard would produce.
@@ -589,7 +589,15 @@ async function joinAs(code) {
   });
   signal.on('start', (m) => {
     peer.state = createMatch({
-      seed: m.seed, halfSeconds: m.halfSeconds, humans: [true, true], formations: m.formations,
+      seed: m.seed,
+      halfSeconds: m.halfSeconds,
+      humans: [true, true],
+      offside: m.offside !== false,
+      premiumAI: false,
+      premiumManagement: true,
+      premiumRatings: true,
+      premiumStats: true,
+      formations: m.formations,
     });
     peer.transport = new OnlineTransport({ signal, devices: peer.devices, localTeam: 1 });
   });
