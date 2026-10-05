@@ -36,6 +36,9 @@ const PHONEMES = {
   AH: { f: [640, 1190, 2390], dur: 0.10 },
   AA: { f: [730, 1090, 2440], dur: 0.15 },
   AO: { f: [570, 840, 2410], dur: 0.15 },
+  // Vogais extras para a narração em português do Brasil.
+  OH: { f: [500, 950, 2450], dur: 0.15 },
+  OOL: { f: [500, 950, 2450], dur: 0.52 }, // O longo de "GOOOOL"
   UW: { f: [300, 870, 2240], dur: 0.13 },
   UH: { f: [440, 1020, 2240], dur: 0.10 },
   ER: { f: [490, 1350, 1690], dur: 0.14 },
