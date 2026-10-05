@@ -290,13 +290,23 @@
        textures.channelLogo): у своей сборки реальный УТ-1, у публичной
        вымышленный УГ-1. Пак без логотипа — блок просто не показывается. */
     #channel-logo {
-      position: fixed; top: 38px; left: 28px;
-      height: clamp(40px, 7.6vh, 78px); width: auto;
-      opacity: 0.82; pointer-events: none; display: none;
-      filter: drop-shadow(0 0 6px rgba(120, 200, 255, 0.55))
-              drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.55));
+      position: fixed; top: 36px; left: 28px;
+      display: block;
+      padding: 3px 9px 2px;
+      font-family: var(--tv-font);
+      font-size: clamp(16px, 2.1vw, 28px);
+      font-weight: 700;
+      font-style: italic;
+      letter-spacing: 2px;
+      color: #ffffff;
+      background: rgba(7, 24, 13, 0.68);
+      border-left: 6px solid #178a3b;
+      transform: skewX(-10deg);
+      opacity: 0.9;
+      pointer-events: none;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.65);
+      z-index: 10;
     }
-    #channel-logo.show { display: block; }
 
     /* ================= ТЕЛЕГРАФИКА =================
        Стиль один на всю инфографику матча и снят с логотипа УТ-1: плоский
@@ -745,7 +755,7 @@
 <div id="tv">
  <div id="tv-screen">
   <canvas id="game"></canvas>
-  <img id="channel-logo" alt="">
+  <div id="channel-logo" aria-label="Mukeka TV">MUKEKA TV</div>
   <div id="scoreboard"><span class="sb-mark" id="sb-home-mark"></span><span class="sb-team" id="sb-home">PDL</span><span id="sb-score">0:0</span><span class="sb-team" id="sb-away">IND</span><span class="sb-mark" id="sb-away-mark"></span><span id="sb-time">0'</span></div>
   <div id="goal-flash">GOL!</div>
   <div id="goal-card"><span class="gc-mark" id="gc-mark"></span><span class="gc-team" id="gc-team"></span><span class="gc-min" id="gc-min"></span></div>
@@ -766,11 +776,13 @@
     <h2>CONFIGURAÇÕES</h2>
 
     <h3 data-open="1">IMAGEM</h3>
+    <div class="row">
+      <label for="set-tv-preset">Estilo da transmissão:</label>
+      <select id="set-tv-preset" aria-label="Estilo da transmissão"></select>
+    </div>
     <div class="row" style="color:rgba(255,255,255,0.5)">
-      A imagem é ajustada no painel do televisor: <span class="key">CANAL</span>,
-      <span class="key">BRILHO</span>, <span class="key">CONTRASTE</span>,
-      <span class="key">COR</span>, <span class="key">NITIDEZ</span> e
-      <span class="key">GRAMADO</span>. As posições ficam salvas neste navegador.
+      Brilho, contraste, cor, nitidez e gramado continuam no painel do televisor.
+      O estilo da transmissão fica aqui para não parecer uma troca de canal.
     </div>
 
     <h3 data-open="1">JOGABILIDADE</h3>
@@ -911,7 +923,6 @@
  <!-- Панель телевизора: ручки живые, значения пишет src/tvset.js -->
  <div id="tv-panel">
   <div id="tv-brand">MUKEKA<span>·RETRO</span></div>
-  <div class="knob" id="knob-channel" data-name="Canal"></div>
   <div class="knob" id="knob-gain" data-name="Brilho"></div>
   <div class="knob" id="knob-contrast" data-name="Contraste"></div>
   <div class="knob" id="knob-color" data-name="Cor"></div>
