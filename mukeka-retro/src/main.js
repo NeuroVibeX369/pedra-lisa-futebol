@@ -416,7 +416,11 @@ window.addEventListener('keydown', (e) => {
 });
 // Браузер вышел из полноэкранного сам (Esc, свайп) — возвращаем корпус
 document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && document.body.classList.contains('tv-full')) setFullscreen(false);
+  if (document.fullscreenElement) return;
+  const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+  // No celular continuamos usando toda a viewport mesmo quando o navegador
+  // sai do fullscreen nativo por gesto do sistema.
+  if (!coarse && document.body.classList.contains('tv-full')) setFullscreen(false);
 });
 // Режим переживает перезапуск: снимать ролики удобнее без лишнего клика.
 // Настоящий полноэкранный режим браузера при загрузке не попросишь — он
@@ -425,6 +429,17 @@ if (localStorage.getItem('f98.fullscreen') === '1') setFullscreen(true, false);
 // No celular a moldura some desde o primeiro quadro. O fullscreen REAL ainda
 // depende de gesto e é solicitado na tela de som logo antes da partida.
 if (globalThis.matchMedia?.('(pointer: coarse)')?.matches) setFullscreen(true, false);
+
+// Alguns navegadores só aceitam fullscreen em pointerdown, não no click.
+// Tentamos nos primeiros gestos reais; se o sistema recusar, o jogo continua
+// ocupando 100% da viewport e o modo instalado usa o manifest fullscreen.
+let mobileFullscreenTries = 0;
+window.addEventListener('pointerdown', () => {
+  const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+  if (!coarse || document.fullscreenElement || mobileFullscreenTries >= 3) return;
+  mobileFullscreenTries += 1;
+  requestMobileImmersive();
+}, { capture: true, passive: true });
 
 // --- Клавиша НАСТРОЙКИ: меню на стекле ---
 const settingsPanel = document.getElementById('settings');
