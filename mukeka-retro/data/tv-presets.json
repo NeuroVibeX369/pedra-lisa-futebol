@@ -11,17 +11,21 @@
   "presets": [
     {
       "id": "tv98",
-      "name": "ТВ-эфир 98",
-      "comment": "Камертон проекта: телетрансляция конца 90-х. Яркость резкая, цветность размазана и отстаёт — цветные края фигур мягчеют, разметка остаётся острой",
+      "name": "TV 98",
+      "comment": "Transmissão de fim dos anos 90, com imagem nítida e crominância suavizada.",
       "curvature": 0.05,
       "scanline": 0.05,
       "noise": 0.022,
       "saturation": 1.197,
       "brightness": 0.95,
       "vignette": 0.34,
-      "jitter": 0.0,
-      "tint": [1.03, 1.0, 0.95],
-      "exposure": 1.0,
+      "jitter": 0,
+      "tint": [
+        1.03,
+        1,
+        0.95
+      ],
+      "exposure": 1,
       "bloom": 0.55,
       "contrast": 1.062,
       "lift": 0.028,
@@ -37,16 +41,20 @@
     },
     {
       "id": "efir98",
-      "name": "Антенна",
-      "comment": "Приём на обычную антенну: тёплый ламповый эфир, мягче и шумнее студийного сигнала, строчность видна",
+      "name": "Antena",
+      "comment": "Recepção por antena, mais quente, suave e com mais ruído.",
       "curvature": 0.1,
       "scanline": 0.16,
       "noise": 0.055,
       "saturation": 1.103,
       "brightness": 0.969,
       "vignette": 0.42,
-      "jitter": 0.0,
-      "tint": [1.05, 1.0, 0.92],
+      "jitter": 0,
+      "tint": [
+        1.05,
+        1,
+        0.92
+      ],
       "exposure": 1.03,
       "bloom": 0.68,
       "contrast": 0.99,
@@ -63,8 +71,8 @@
     },
     {
       "id": "vhs",
-      "name": "VHS-запись",
-      "comment": "Кассета, переписанная с эфира: цветность завалена вдвое сильнее эфирной, срывы строк, блёклый цвет, широкая рамка",
+      "name": "Gravação VHS",
+      "comment": "Visual de fita VHS com cor mais suave e pequenas distorções de linha.",
       "curvature": 0.12,
       "scanline": 0.12,
       "noise": 0.11,
@@ -72,7 +80,11 @@
       "brightness": 0.95,
       "vignette": 0.46,
       "jitter": 0.9,
-      "tint": [1.02, 0.99, 0.97],
+      "tint": [
+        1.02,
+        0.99,
+        0.97
+      ],
       "exposure": 0.97,
       "bloom": 0.8,
       "contrast": 0.882,
@@ -80,7 +92,7 @@
       "toe": 0.05,
       "warmth": 0.2,
       "chroma": 9.5,
-      "chromaLag": 4.0,
+      "chromaLag": 4,
       "detail": 0.25,
       "dotCrawl": 0.05,
       "persist": 0.34,
@@ -89,17 +101,21 @@
     },
     {
       "id": "rgb",
-      "name": "Чистый RGB",
-      "comment": "Подключение по RGB: яркость и цветность идут своими проводами, композитных артефактов почти нет — самый резкий канал",
-      "curvature": 0.0,
+      "name": "RGB Limpo",
+      "comment": "Imagem mais nítida, com poucos artefatos de vídeo composto.",
+      "curvature": 0,
       "scanline": 0.04,
       "noise": 0.01,
       "saturation": 1.218,
       "brightness": 0.95,
       "vignette": 0.2,
-      "jitter": 0.0,
-      "tint": [1.0, 1.0, 1.0],
-      "exposure": 1.0,
+      "jitter": 0,
+      "tint": [
+        1,
+        1,
+        1
+      ],
+      "exposure": 1,
       "bloom": 0.45,
       "contrast": 1.098,
       "lift": 0.02,
@@ -108,10 +124,10 @@
       "chroma": 1.6,
       "chromaLag": 0.6,
       "detail": 0.55,
-      "dotCrawl": 0.0,
+      "dotCrawl": 0,
       "persist": 0.12,
       "interlace": 0.06,
-      "matte": 0.0
+      "matte": 0
     }
   ]
 }
