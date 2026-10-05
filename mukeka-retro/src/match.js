@@ -2046,15 +2046,23 @@ export class Match {
   // Назначить стандарт: мяч мёртв, владение снято, исполнитель идёт к точке.
   // Свой аут/угловой человек исполняет сам (курсор на исполнителе), удар
   // от ворот всегда бьёт AI-кипер — как в старых футсимах.
-  beginRestart(type, team, x, z) {
+  beginRestart(type, team, x, z, opts = {}) {
     this.state = 'restart';
     this.stateTimer = 0;
     this.stoppage += CONFIG.match.stoppage.restart; // пауза стандарта — в добавку
     playWhistle(CONFIG.audio.field.whistleRestart); // мяч мёртв — короткий свисток
-    const taker = type === 'goalkick'
+    let taker = type === 'goalkick'
       ? team.keeper
       : this.nearestToPoint(team.fieldPlayers, x, z);
-    this.restart = { type, team, x, z, taker, phase: 'dead', t: 0 };
+    if (type === 'penalty') {
+      taker = team.fieldPlayers.slice().sort((a, b) =>
+        (b.overall || b.look?.overall || 0) - (a.overall || a.look?.overall || 0))[0] || taker;
+    }
+    this.restart = {
+      type, team, x, z, taker, phase: 'dead', t: 0,
+      indirect: !!opts.indirect,
+      label: opts.label || null,
+    };
 
     this.toucher = null;
     for (const p of this._all) p.isToucher = false;
@@ -2089,6 +2097,10 @@ export class Match {
       this.restart.routine = routine;
       team.armCornerAttack(this.restart, routine);
       this.otherTeam(team).armCornerDefend(this.restart);
+    } else if (type === 'freekick') {
+      this._arrangeFreeKick(this.restart);
+    } else if (type === 'penalty') {
+      this._arrangePenalty(this.restart);
     }
     if (this.controlled) {
       this.controlled.pendingStrike = null;
@@ -2097,8 +2109,14 @@ export class Match {
     }
     if (team === this.humanTeam && type !== 'goalkick') this.setControlled(taker, 1.0);
 
-    const label = { throwin: 'LATERAL', corner: 'ESCANTEIO', goalkick: 'TIRO DE META' };
-    this.hud.flash.textContent = label[type];
+    const label = {
+      throwin: 'LATERAL',
+      corner: 'ESCANTEIO',
+      goalkick: 'TIRO DE META',
+      freekick: this.restart.indirect ? 'IMPEDIMENTO' : 'FALTA',
+      penalty: 'PÊNALTI',
+    };
+    this.hud.flash.textContent = this.restart.label || label[type] || 'BOLA PARADA';
     this.hud.flash.classList.add('show');
     this.flashTimer = CONFIG.restart.flashTime;
   }
@@ -2112,6 +2130,8 @@ export class Match {
     if (r.type === 'corner') {
       return { x: r.x + Math.sign(r.x || 1) * 0.8, z: r.z + Math.sign(r.z || 1) * 0.8 };
     }
+    if (r.type === 'penalty') return { x: r.x - r.team.side * 2.25, z: r.z };
+    if (r.type === 'freekick') return { x: r.x - r.team.side * 1.25, z: r.z };
     return { x: r.x - r.team.side, z: r.z }; // удар от ворот: за мячом
   }
 
@@ -2120,6 +2140,9 @@ export class Match {
     const F = CONFIG.field;
     if (r.type === 'corner') return { x: r.team.side * (F.length / 2 - 11), z: 0 };
     if (r.type === 'goalkick') return { x: 0, z: 0 };
+    if (r.type === 'freekick' || r.type === 'penalty') {
+      return { x: r.team.attackGoalX, z: 0 };
+    }
     return { x: r.x + r.team.side * 12, z: r.z * 0.2 };
   }
 
@@ -2258,9 +2281,37 @@ export class Match {
       else if (pass !== null) this.executeRestartPass(r, 'pass', pass, aim);
       else if (through !== null) this.executeRestartPass(r, 'through', through, aim);
       else if (shot !== null) this.executeCorner(r, { charge: shot, taps: 3 }); // УДАР = прострел
+    } else if (r.type === 'freekick') {
+      if (pass !== null) this.executeRestartPass(r, 'pass', pass, aim);
+      else if (through !== null) this.executeRestartPass(r, 'through', through, aim);
+      else if (cross) {
+        r.taker.doCross(cross, this.input, this.ball);
+        this._finishRestart();
+      } else if (swipe) {
+        if (r.indirect) this.executeRestartPass(r, 'pass', Math.min(1.2, swipe.power || 0.7), swipe.dir);
+        else {
+          r.taker.swipeShot(swipe, this.input, this.ball);
+          this._finishRestart();
+        }
+      } else if (shot !== null) {
+        if (r.indirect) this.executeRestartPass(r, 'pass', Math.max(0.55, shot), aim);
+        else {
+          r.taker.shoot(Math.max(0.35, shot), this.input, this.ball);
+          this._finishRestart();
+        }
+      }
+    } else if (r.type === 'penalty') {
+      if (swipe) {
+        const shotSwipe = { ...swipe, kind: 'shot' };
+        r.taker.swipeShot(shotSwipe, this.input, this.ball);
+        this._finishRestart();
+      } else if (shot !== null || cross) {
+        const charge = shot !== null ? shot : cross.charge;
+        r.taker.shoot(Math.max(0.35, Math.min(1.15, charge)), this.input, this.ball);
+        this._finishRestart();
+      }
     } else {
-      // Аут: любая кнопка — бросок; ПАС с ассистом на ближнего, НА ХОД /
-      // НАВЕС — сильнее и на ход, свайп — по нарисованному направлению
+      // Aут: qualquer botão coloca a bola em jogo.
       if (pass !== null) this.executeThrowIn(r, 'pass', pass, aim);
       else if (through !== null) this.executeThrowIn(r, 'through', through, aim);
       else if (cross) this.executeThrowIn(r, 'through', cross.charge, aim);
@@ -2370,6 +2421,54 @@ export class Match {
     const AI = CONFIG.ai;
     const team = r.team;
     const taker = r.taker;
+
+    if (r.type === 'penalty') {
+      const goalX = team.attackGoalX;
+      const targetZ = (Math.random() < 0.5 ? -1 : 1) *
+        (CONFIG.goal.width * (0.22 + Math.random() * 0.22));
+      const targetY = 0.45 + Math.random() * 1.25;
+      const bp = this.ball.mesh.position;
+      const dx = goalX - bp.x;
+      const dz = targetZ - bp.z;
+      const dist = Math.hypot(dx, dz) || 1;
+      const power = 22 + Math.random() * 6;
+      const flight = dist / (power * 0.82);
+      const lift = Math.max(0.5, Math.min(9,
+        (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * CONFIG.ball.gravity * flight));
+      taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'shot');
+      this._finishRestart();
+      return;
+    }
+
+    if (r.type === 'freekick') {
+      const goalX = team.attackGoalX;
+      const bp = this.ball.mesh.position;
+      const goalDist = Math.hypot(goalX - bp.x, bp.z);
+      if (!r.indirect && goalDist <= 31) {
+        const targetZ = Math.max(-CONFIG.goal.width * 0.35,
+          Math.min(CONFIG.goal.width * 0.35, -bp.z * 0.12));
+        const dx = goalX - bp.x;
+        const dz = targetZ - bp.z;
+        const dist = Math.hypot(dx, dz) || 1;
+        const power = 24 + Math.min(6, goalDist * 0.12);
+        const lift = 5.4 + Math.min(3, goalDist * 0.06);
+        taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift,
+          (Math.random() - 0.5) * 0.7, 'shot');
+      } else {
+        const pass = team.choosePass(taker, this.ball);
+        if (pass) {
+          taker.aiKick(this.ball, pass.dir, pass.power, pass.lift, 0, 'setpiece');
+          team.commitPass(pass, taker);
+        } else {
+          const dl = Math.hypot(team.side, -Math.sign(bp.z || 1) * 0.25);
+          taker.aiKick(this.ball,
+            { x: team.side / dl, z: (-Math.sign(bp.z || 1) * 0.25) / dl },
+            18, 1.2, 0, 'setpiece');
+        }
+      }
+      this._finishRestart();
+      return;
+    }
 
     if (r.type === 'throwin') {
       const R = CONFIG.restart.throwIn;
