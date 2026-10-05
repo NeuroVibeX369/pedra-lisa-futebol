@@ -683,6 +683,7 @@ function simulateGroupRound(state) {
 function knockoutWinner(state, game, stage) {
   if (!game.played) simulateFixture(state, game, null, stage);
   if (game.homeGoals === game.awayGoals) {
+    if (game.penaltyWinner) return game.penaltyWinner;
     const hs = teamStrength(state, game.home);
     const as = teamStrength(state, game.away);
     const random = rng(`${state.season}-pens-${game.id}-${Math.random()}`);
@@ -871,6 +872,11 @@ function completePlayedMatch(state, score, report = null) {
   const goals = Array.isArray(report?.goals) ? report.goals : [];
   const substitutions = Array.isArray(report?.substitutions) ? report.substitutions : [];
   const cards = Array.isArray(report?.cards) ? report.cards : [];
+  const penalties = report?.penalties || null;
+  if (penalties && hg === ag) {
+    fixture.penalties = `${Number(penalties.home) || 0}–${Number(penalties.away) || 0}`;
+    fixture.penaltyWinner = Number(penalties.winnerTeamIndex) === 0 ? fixture.home : fixture.away;
+  }
   state.matchHistory = Array.isArray(state.matchHistory) ? state.matchHistory : [];
   state.matchHistory.unshift({
     season: state.season,
@@ -879,6 +885,7 @@ function completePlayedMatch(state, score, report = null) {
     away: fixture.away,
     homeGoals: hg,
     awayGoals: ag,
+    penalties: fixture.penalties || null,
     goals: goals.map((g) => ({
       teamIndex: Number(g.teamIndex) || 0,
       careerId: g.careerId || null,
@@ -923,6 +930,11 @@ function completePlayedMatch(state, score, report = null) {
     goals,
     substitutions,
     cards,
+    penalties: penalties ? {
+      home: Number(penalties.home) || 0,
+      away: Number(penalties.away) || 0,
+      winnerTeamIndex: Number(penalties.winnerTeamIndex) === 1 ? 1 : 0,
+    } : null,
   };
 }
 
@@ -1116,7 +1128,7 @@ export function setupMasterLeague() {
         `${c.card === 'red' ? '🟥' : '🟨'} ${c.name}${c.minute ? ` ${c.minute}'` : ''}`).join(' · ');
       return `
         <div class="ml-card">
-          <h3>${teamName(m.home)} ${m.homeGoals} × ${m.awayGoals} ${teamName(m.away)}</h3>
+          <h3>${teamName(m.home)} ${m.homeGoals} × ${m.awayGoals} ${teamName(m.away)}${m.penalties ? ` <small>(pên. ${m.penalties})</small>` : ''}</h3>
           <small>Temporada ${m.season} · ${scorerText || 'Sem gols'}${cardText ? `<br>${cardText}` : ''}</small>
         </div>`;
     }).join('');
