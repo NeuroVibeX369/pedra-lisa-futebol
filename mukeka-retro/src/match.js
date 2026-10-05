@@ -153,6 +153,18 @@ export class Match {
     this.score = [0, 0];
     this.clock = 0;           // игровые секунды (0..90×60 плюс добавка)
     this.stoppage = 0;        // копилка добавленного времени (игровые секунды)
+
+    // Arbitragem real de partida.
+    this.pendingFoul = null;
+    this.advantage = null;
+    this.cards = new Map();
+    this.cardEvents = [];
+    this.offsideSnapshot = null;
+
+    // Dois tempos de 45 minutos com troca de lado.
+    this.half = 1;
+    this.firstKickoffTeam = 0;
+    this.halftimeDone = false;
     this._possFrames = [0, 0]; // кадры владения — для плашки статистики
     // Статистика матча (Фаза 3: «баланс проверяем автосимуляцией, не на глаз»).
     // Индекс — номер команды в this.teams. Считать дёшево, а без чисел любой
@@ -379,6 +391,7 @@ export class Match {
       team.airGuardT = 0;
       team.defLineX = team.defLineTarget(this._centerBall); // линия сразу на месте
       for (const p of team.players) {
+        if (p.dismissed) continue;
         const home = team.homeTarget(p, this._centerBall);
         // Все за пределами центрального круга (форварды с defOff не в круге)
         const x = Math.min(team.side * home.x, -10) * team.side;
@@ -388,10 +401,12 @@ export class Match {
 
     // Разыгрывающая пара нападающих — к мячу
     const kt = this.teams[kickingIdx];
-    const st1 = kt.players[9];
-    const st2 = kt.players[10];
+    const kickers = kt.fieldPlayers.slice().sort((a, b) =>
+      (b.homeIdx || 0) - (a.homeIdx || 0));
+    const st1 = kickers[0] || kt.keeper;
+    const st2 = kickers[1] || st1;
     st1.reset(-kt.side * 1.1, 0.4, Math.atan2(kt.side, 0));
-    st2.reset(-kt.side * 3.0, -5, Math.atan2(kt.side, 0));
+    if (st2 !== st1) st2.reset(-kt.side * 3.0, -5, Math.atan2(kt.side, 0));
 
     this.possession = kt;
     this.toucher = null;
@@ -647,13 +662,286 @@ export class Match {
     if (ownerGap <= CONFIG.ai.defence.badTouchDist) p.cancelBallApproach();
   }
 
+  _showRefereeNotice(text, seconds = 1.4) {
+    if (!this.hud?.flash) return;
+    this.hud.flash.textContent = text;
+    this.hud.flash.classList.add('show');
+    this.flashTimer = Math.max(this.flashTimer || 0, seconds);
+  }
+
+  reportFoul(offender, victim, meta = {}) {
+    if (!offender || !victim || offender.dismissed || victim.dismissed) return;
+    if (this.state !== 'play' && this.state !== 'kickoff') return;
+    // Uma colisão pode ser detectada em mais de um frame; só vale a primeira.
+    if (this.pendingFoul || this.advantage) return;
+    const vp = victim.group.position;
+    this.pendingFoul = {
+      offender,
+      victim,
+      team: victim.team,
+      x: vp.x,
+      z: vp.z,
+      fromBehind: !!meta.fromBehind,
+      speed: Number(meta.speed) || 0,
+      kind: meta.kind || 'foul',
+      minute: Math.max(1, Math.floor(this.clock / 60) || 1),
+    };
+  }
+
+  _cardForFoul(foul) {
+    const p = foul.offender;
+    if (!p) return null;
+    const attack = foul.team;
+    const vp = foul.victim?.group?.position || { x: foul.x, z: foul.z };
+    const nearGoal = attack && attack.side * vp.x > CONFIG.field.length / 2 - 28;
+    const defendersAhead = attack
+      ? this.otherTeam(attack).players.filter((d) => !d.dismissed &&
+        attack.side * (d.group.position.x - vp.x) > 0).length
+      : 99;
+    const dogso = nearGoal && defendersAhead <= 1;
+    if ((foul.fromBehind && foul.speed >= 8.2) || (dogso && foul.fromBehind)) return 'red';
+    if (foul.fromBehind || foul.speed >= 6.2 || dogso) return 'yellow';
+    return null;
+  }
+
+  _dismissPlayer(player) {
+    if (!player || player.dismissed) return;
+    player.dismissed = true;
+    player.controlling = false;
+    player.isToucher = false;
+    player.hasBall = false;
+    player.group.visible = false;
+    player.group.position.set(0, -20, 0);
+    if (player.shadow) player.shadow.position.set(0, -20, 0);
+    if (this.controlled === player) {
+      this.controlled = null;
+      this.setControlled(this.nearestFieldPlayer(player.team), 0);
+    }
+    if (this.remoteControlled === player) {
+      this.remoteControlled = null;
+      if (this.remoteTeam === player.team) {
+        this.setRemoteControlled(this.nearestFieldPlayer(player.team), 0);
+      }
+    }
+  }
+
+  _applyCard(foul, forced = null) {
+    const player = foul?.offender;
+    if (!player || player.dismissed) return null;
+    let card = forced || this._cardForFoul(foul);
+    if (!card) return null;
+
+    const rec = this.cards.get(player) || { yellow: 0, red: false };
+    if (card === 'yellow') {
+      rec.yellow += 1;
+      if (rec.yellow >= 2) card = 'red';
+    }
+    if (card === 'red') rec.red = true;
+    this.cards.set(player, rec);
+
+    const event = {
+      minute: foul.minute || Math.max(1, Math.floor(this.clock / 60) || 1),
+      teamIndex: this.teams.indexOf(player.team),
+      careerId: player.careerId || player.look?.careerId || null,
+      name: player.name || 'JOGADOR',
+      card,
+    };
+    this.cardEvents.push(event);
+    if (card === 'red') this._dismissPlayer(player);
+    return card;
+  }
+
+  _isPenaltyFoul(team, x, z) {
+    if (!team) return false;
+    const F = CONFIG.field;
+    return team.side * x > F.length / 2 - 16.5 && Math.abs(z) < 20.16;
+  }
+
+  _awardFoul(foul) {
+    if (!foul?.team) return;
+    const card = this._applyCard(foul);
+    const penalty = this._isPenaltyFoul(foul.team, foul.x, foul.z);
+    const cardText = card === 'red' ? ' · CARTÃO VERMELHO'
+      : card === 'yellow' ? ' · CARTÃO AMARELO' : '';
+    this.beginRestart(
+      penalty ? 'penalty' : 'freekick',
+      foul.team,
+      penalty
+        ? foul.team.side * (CONFIG.field.length / 2 - 11)
+        : Math.max(-CONFIG.field.length / 2 + 2, Math.min(CONFIG.field.length / 2 - 2, foul.x)),
+      penalty ? 0 : Math.max(-CONFIG.field.width / 2 + 2, Math.min(CONFIG.field.width / 2 - 2, foul.z)),
+      { label: (penalty ? 'PÊNALTI' : 'FALTA') + cardText },
+    );
+    this.pendingFoul = null;
+    this.advantage = null;
+  }
+
+  _resolveRefereeEvents(dt) {
+    if (this.pendingFoul) {
+      const foul = this.pendingFoul;
+      this.pendingFoul = null;
+      const card = this._cardForFoul(foul);
+      const severe = card === 'red' || this._isPenaltyFoul(foul.team, foul.x, foul.z);
+      const keptBall = this.possession === foul.team || this.toucher?.team === foul.team;
+      if (!severe && keptBall && this.state === 'play') {
+        this.advantage = { foul, t: 2.2 };
+        this._showRefereeNotice('VANTAGEM', 1.0);
+      } else {
+        this._awardFoul(foul);
+      }
+    }
+
+    if (!this.advantage) return;
+    const a = this.advantage;
+    a.t -= dt;
+    // Se a equipe prejudicada perde a bola logo após a infração, voltamos
+    // à falta original. Se ela aproveita a jogada, o jogo segue.
+    if (this.state === 'restart' || this.state === 'goalpause') {
+      this._applyCard(a.foul);
+      this.advantage = null;
+      return;
+    }
+    const lost = this.possession && this.possession !== a.foul.team &&
+      (!this.toucher || this.toucher.team !== a.foul.team);
+    if (lost && a.t > 0) {
+      this._awardFoul(a.foul);
+      return;
+    }
+    if (a.t <= 0) {
+      this._applyCard(a.foul);
+      this.advantage = null;
+    }
+  }
+
+  _captureOffsideSnapshot(passer) {
+    if (!passer?.team || passer.isKeeper || passer.dismissed) {
+      this.offsideSnapshot = null;
+      return;
+    }
+    const team = passer.team;
+    const defending = this.otherTeam(team);
+    const defenders = defending.players
+      .filter((p) => !p.dismissed)
+      .map((p) => team.side * p.group.position.x)
+      .sort((a, b) => b - a);
+    if (defenders.length < 2) {
+      this.offsideSnapshot = null;
+      return;
+    }
+    const secondLast = defenders[1];
+    const ballLine = team.side * this.ball.mesh.position.x;
+    const line = Math.max(secondLast, ballLine);
+    const candidates = new Set();
+    for (const mate of team.fieldPlayers) {
+      if (mate === passer || mate.dismissed) continue;
+      const prog = team.side * mate.group.position.x;
+      if (prog > 0 && prog > line + 0.22) candidates.add(mate);
+    }
+    this.offsideSnapshot = {
+      team,
+      passer,
+      candidates,
+      t: this.clock,
+    };
+  }
+
+  _checkOffsideTouch(touch) {
+    const snap = this.offsideSnapshot;
+    if (!snap || !touch) return false;
+    // Um toque da defesa encerra a fase de impedimento deste passe.
+    if (touch.team !== snap.team) {
+      this.offsideSnapshot = null;
+      return false;
+    }
+    if (touch === snap.passer) return false;
+    if (!snap.candidates.has(touch)) {
+      this.offsideSnapshot = null;
+      return false;
+    }
+    const p = touch.group.position;
+    this.offsideSnapshot = null;
+    this.beginRestart('freekick', this.otherTeam(touch.team), p.x, p.z, {
+      indirect: true,
+      label: 'IMPEDIMENTO',
+    });
+    return true;
+  }
+
+  _arrangeFreeKick(r) {
+    if (!r || r.type !== 'freekick') return;
+    const defending = this.otherTeam(r.team);
+    const gx = r.team.attackGoalX;
+    const dx = gx - r.x;
+    const dz = -r.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const ux = dx / d;
+    const uz = dz / d;
+    const px = -uz;
+    const pz = ux;
+    const count = d < 31 ? 4 : (d < 39 ? 3 : 2);
+    const wall = defending.fieldPlayers.slice(0, count);
+    wall.forEach((p, i) => {
+      const spread = (i - (wall.length - 1) / 2) * 0.85;
+      const x = r.x + ux * 9.15 + px * spread;
+      const z = r.z + uz * 9.15 + pz * spread;
+      p.reset(x, z, Math.atan2(r.x - x, r.z - z));
+    });
+  }
+
+  _arrangePenalty(r) {
+    if (!r || r.type !== 'penalty') return;
+    const defending = this.otherTeam(r.team);
+    const goalX = r.team.attackGoalX;
+    defending.keeper.reset(goalX - r.team.side * 0.75, 0, Math.atan2(-r.team.side, 0));
+    const all = [
+      ...r.team.fieldPlayers.filter((p) => p !== r.taker),
+      ...defending.fieldPlayers,
+    ];
+    all.forEach((p, i) => {
+      const row = Math.floor(i / 8);
+      const col = i % 8;
+      const x = goalX - r.team.side * (18.5 + row * 1.8);
+      const z = (col - 3.5) * 3.2;
+      p.reset(x, z, Math.atan2(r.team.side, 0));
+    });
+  }
+
+  _halfExtraSec() {
+    const whole = Math.ceil(this.stoppage / 60) * 60;
+    return Math.max(0, Math.min(120, whole));
+  }
+
+  startHalftime() {
+    if (this.halftimeDone || this.state === 'halftime' || this.state === 'fulltime') return;
+    this.state = 'halftime';
+    this.stateTimer = 0;
+    this.restart = null;
+    this.pendingFoul = null;
+    this.advantage = null;
+    this._showRefereeNotice('INTERVALO', 3);
+    playWhistle(CONFIG.audio.field.whistleRestart);
+  }
+
+  startSecondHalf() {
+    for (const team of this.teams) team.side *= -1;
+    this.half = 2;
+    this.halftimeDone = true;
+    this.stoppage = 0;
+    this.offsideSnapshot = null;
+    this.hud.flash.classList.remove('show');
+    this.flashTimer = 0;
+    this.kickoff(1 - this.firstKickoffTeam);
+  }
+
   getSubstitutionState(teamIndex = this.humanTeamIndex) {
     const idx = teamIndex === 1 ? 1 : 0;
     const team = this.teams[idx];
     return {
       teamIndex: idx,
       teamName: team?.data?.name || `TIME ${idx + 1}`,
-      active: (team?.players || []).map((p, slot) => ({
+      active: (team?.players || []).map((p, slot) => ({ p, slot }))
+        .filter(({ p }) => !p.dismissed)
+        .map(({ p, slot }) => ({
         slot,
         name: p.name || `JOGADOR ${slot + 1}`,
         number: p.number || slot + 1,
@@ -688,7 +976,7 @@ export class Match {
     const bench = this.benches[idx] || [];
     const outgoing = team?.players?.[outgoingIndex];
     const look = bench[benchIndex];
-    if (!team || !outgoing || !look) {
+    if (!team || !outgoing || outgoing.dismissed || !look) {
       return { ok: false, reason: 'Escolha um titular e um reserva válidos.' };
     }
 
@@ -1062,12 +1350,26 @@ export class Match {
       return;
     }
 
+    if (this.state === 'halftime') {
+      if (this.stateTimer >= 2.6) this.startSecondHalf();
+      this.updateHUD();
+      return;
+    }
+
     // Игровые часы: 90 минут сжаты в realMinutes реальных.
     // На стандартах время идёт — как в настоящей трансляции
     if (this.state === 'kickoff' || this.state === 'play' || this.state === 'restart') {
       this.clock += dt * (M.gameMinutes / M.realMinutes);
-      // Свисток ждёт ДОБАВЛЕННОЕ время: копилка событий, зажатая 1–4 минутами
-      if (this.clock >= M.gameMinutes * 60 + this.extraSec()) this.fullTime();
+      // Primeiro tempo: acréscimos próprios e troca de lado. Segundo tempo:
+      // o relógio segue até 90 + acréscimos.
+      if (!this.halftimeDone && this.clock >= 45 * 60 + this._halfExtraSec()) {
+        this.startHalftime();
+        this.updateHUD();
+        return;
+      }
+      if (this.halftimeDone && this.clock >= M.gameMinutes * 60 + this.extraSec()) {
+        this.fullTime();
+      }
       // Владение для плашки статистики — по кадрам живой игры, как в sim.js
       if (this.possession) {
         this._possFrames[this.teams.indexOf(this.possession)]++;
@@ -1144,6 +1446,7 @@ export class Match {
 
     for (const team of this.teams) {
       for (const p of team.players) {
+        if (p.dismissed) continue;
         // Замыкание в одно касание: замах играет, мяч подлетает и
         // перенаправляется в момент контакта (до движения игрока)
         if (p.aerialStrike && !paused) p.updateAerialStrike(dt, this.ball);
@@ -1157,6 +1460,8 @@ export class Match {
         else updateFieldPlayer(p, dt, aiBall);
       }
     }
+
+    this._resolveRefereeEvents(dt);
 
     // Установленный мяч стандарта не сдвигают ни физика, ни чужие касания.
     // В замахе вбрасывания мяч живёт в руках над головой исполнителя.
@@ -1305,6 +1610,7 @@ export class Match {
     const touchReach = bp.y < P.kickMaxBallY ? P.kickRadius : P.aerial.reach;
     const touchable = bp.y < P.aerial.maxY;
     for (const p of this._all) {
+      if (p.dismissed) continue;
       const d = distToBall(p, this.ball);
       // ЛЕЖАЩИЙ И СКОЛЬЗЯЩИЙ МЯЧОМ НЕ ВЛАДЕЮТ (правка 28.07.2026).
       // Владельца выбирали ЧИСТО ПО ДИСТАНЦИИ, и подкат этого не менял: игрок
@@ -1350,6 +1656,7 @@ export class Match {
       let epiD = Infinity;
       let anyD = Infinity;
       for (const p of this._all) {
+        if (p.dismissed) continue;
         const d = distToBall(p, this.ball);
         if (d < anyD) anyD = d;
         if (p.ownEpisodeT > 0 && d < epiD) {
@@ -1409,6 +1716,8 @@ export class Match {
       }
     }
     if (touch) {
+      const newTouch = !this.touchLog.length || this.touchLog[this.touchLog.length - 1].p !== touch;
+      if (newTouch && this._checkOffsideTouch(touch)) return;
       this.lastTouch = touch;
       // Журнал последних касаний. Нужен для автора гола: в момент, когда мяч
       // пересекает линию, ближайшим к нему почти всегда оказывается ВРАТАРЬ
@@ -1417,6 +1726,7 @@ export class Match {
       if (!log.length || log[log.length - 1].p !== touch) {
         log.push({ p: touch, t: this.clock });
         if (log.length > 12) log.shift();
+        this._captureOffsideSnapshot(touch);
       }
     }
   }
