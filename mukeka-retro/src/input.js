@@ -206,8 +206,10 @@ export class Input {
       el.addEventListener('pointerleave', up);
     };
     bindHold('btn-pass', 'pass');
+    bindHold('btn-through', 'through');
+    bindHold('btn-cross', 'cross');
     bindHold('btn-sprint', 'sprint');
-    bindHold('btn-feint', 'feint');   // держать = техничный приём, нажать = финт
+    bindHold('btn-feint', 'feint');   // segurar = controle técnico; tocar = drible
 
     // Кнопка ⇄ — смена игрока: событие по касанию (как Q), не удержание
     const switchBtn = document.getElementById('btn-switch');
@@ -217,7 +219,9 @@ export class Input {
         this._switchQueued = true;
       });
     }
-    // Навесы и пас на ход на таче — только жестом-свайпом («как нарисовал, так и полетело»)
+    // O gesto avançado continua disponível na área direita para quem quiser
+    // direção/curva. Agora também existem ○ e △ dedicados para cruzamento e
+    // profundidade, o que deixa o controle móvel mais próximo da lógica clássica.
 
     this._initSwipe();
   }
