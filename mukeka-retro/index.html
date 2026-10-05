@@ -632,6 +632,95 @@
     #power-fill { height: 100%; width: 0%; background: #e8d44d; }
     #power-fill.over { background: #e04a30; } /* красная зона: передержка */
 
+    /* ================= MENU PRINCIPAL / LOBBY PRÉ-PARTIDA ================= */
+    #pregame-menu {
+      position: fixed; inset: 0; z-index: 110000;
+      display: grid; place-items: center;
+      padding: clamp(12px, 3vw, 28px);
+      background:
+        radial-gradient(80% 90% at 50% 35%, rgba(19,55,31,.90), rgba(2,8,5,.97) 72%);
+      font-family: var(--tv-font);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #pregame-menu.hidden { display: none; }
+    .pg-shell {
+      width: min(760px, 96%);
+      max-height: 92%;
+      overflow-y: auto;
+      padding: clamp(16px, 3vw, 28px);
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(5,15,9,.88);
+    }
+    .pg-brand {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 16px; padding-bottom: 12px; margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,.16);
+    }
+    .pg-logo {
+      color: #fff; font-weight: 900;
+      font-size: clamp(22px, 4vw, 42px); letter-spacing: 4px;
+    }
+    .pg-logo span { color: #8fe05a; }
+    .pg-sub {
+      color: rgba(255,255,255,.55); font-size: 10px;
+      letter-spacing: 2px; text-align: right;
+    }
+    .pg-title {
+      margin: 0 0 12px; color: #dfe9e0;
+      font-size: 12px; letter-spacing: 3px;
+    }
+    .pg-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+    }
+    .pg-mode {
+      min-height: 82px;
+      padding: 12px 14px;
+      text-align: left;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(17,35,24,.88);
+      color: #fff;
+      font-family: var(--tv-font);
+      cursor: pointer;
+    }
+    .pg-mode:hover, .pg-mode:focus-visible {
+      border-color: #8fe05a;
+      outline: none;
+    }
+    .pg-mode strong {
+      display: block; font-size: clamp(13px, 2vw, 18px);
+      letter-spacing: 2px; margin-bottom: 5px;
+    }
+    .pg-mode small {
+      display: block; color: rgba(255,255,255,.58);
+      line-height: 1.35; letter-spacing: .5px;
+    }
+    .pg-mode.primary {
+      border-color: rgba(143,224,90,.62);
+      background: rgba(23,70,37,.88);
+    }
+    .pg-mode[disabled] {
+      cursor: default; opacity: .52;
+      border-style: dashed;
+    }
+    .pg-tag {
+      display: inline-block; margin-top: 7px; padding: 2px 5px;
+      border: 1px solid rgba(255,255,255,.2);
+      color: #d9c95c; font-size: 8px; letter-spacing: 1.5px;
+    }
+    .pg-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; margin-top: 14px;
+      color: rgba(255,255,255,.42); font-size: 9px; letter-spacing: 1px;
+    }
+    @media (max-width: 580px) {
+      .pg-grid { grid-template-columns: 1fr; }
+      .pg-mode { min-height: 66px; }
+      .pg-brand { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .pg-sub { text-align: left; }
+    }
+
     /* ================= СТАРТОВЫЙ ВОПРОС ПРО ЗВУК =================
        Браузер разрешает звук только после нажатия, и разрешение живёт РОВНО
        ОДИН документ — после перезагрузки страницы всё заново. Пока вопроса
@@ -907,6 +996,58 @@
        жест, без которого браузер (особенно Safari на iPad) не отдаёт звук.
        Пока плашка висит, игровое время стоит: заставка не проскочит, пока
        читают вопрос. Механика — src/main.js. -->
+  <div id="pregame-menu">
+    <div class="pg-shell">
+      <div class="pg-brand">
+        <div class="pg-logo">MUKEKA <span>RETRO</span></div>
+        <div class="pg-sub">FUTEBOL BRASILEIRO · ESTILO 32-BIT</div>
+      </div>
+      <div class="pg-title">ESCOLHA COMO JOGAR</div>
+      <div class="pg-grid">
+        <button id="pg-friendly" class="pg-mode primary" type="button">
+          <strong>AMISTOSO × MÁQUINA</strong>
+          <small>Pedra Lisa × Independência. Partida rápida contra a CPU.</small>
+        </button>
+        <button id="pg-online" class="pg-mode primary" type="button">
+          <strong>ONLINE 1×1</strong>
+          <small>Crie uma sala e enfrente um amigo em outro aparelho.</small>
+        </button>
+        <button class="pg-mode" type="button" disabled>
+          <strong>MASTER LIGA</strong>
+          <small>Temporadas, elenco, evolução, tabela e mercado.</small>
+          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+        </button>
+        <button class="pg-mode" type="button" disabled>
+          <strong>COPA MUKEKA</strong>
+          <small>Mata-mata com chaveamento e campanha até a final.</small>
+          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+        </button>
+        <button class="pg-mode" type="button" disabled>
+          <strong>TREINO LIVRE</strong>
+          <small>Pratique passe, chute, drible, cruzamento e bola parada.</small>
+          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+        </button>
+        <button class="pg-mode" type="button" disabled>
+          <strong>DISPUTA DE PÊNALTIS</strong>
+          <small>Modo rápido para jogar só as cobranças decisivas.</small>
+          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+        </button>
+        <button id="pg-settings" class="pg-mode" type="button">
+          <strong>CONFIGURAÇÕES</strong>
+          <small>Imagem, jogabilidade, estádio, câmera e controles.</small>
+        </button>
+        <button id="pg-back" class="pg-mode" type="button">
+          <strong>VOLTAR AO MUKEKA GAMES</strong>
+          <small>Retorna ao catálogo principal com confirmação.</small>
+        </button>
+      </div>
+      <div class="pg-footer">
+        <span>MUKEKA TV</span>
+        <span>Mais modos serão liberados sem iniciar partida automaticamente.</span>
+      </div>
+    </div>
+  </div>
+
   <div id="retro-online-test" class="hidden">
     <div class="rot-card">
       <h2>MUKEKA RETRO · ONLINE</h2>
