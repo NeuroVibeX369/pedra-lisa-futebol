@@ -4,7 +4,7 @@
 // em cada modo de jogo.
 
 export const LOCAL_CLUBS = Object.freeze([
-  { id: 'pedra-lisa', name: 'PEDRA LISA', short: 'PDL', strength: 66, primary: '#178a3c', shorts: '#ffffff', gk: '#f2d43c', style: 'brazil98' },
+  { id: 'pedra-lisa', name: 'PEDRA LISA', short: 'PDL', strength: 84, primary: '#178a3c', shorts: '#ffffff', gk: '#f2d43c', style: 'brazil98' },
   { id: 'retiro', name: 'RETIRO', short: 'RET', strength: 63, primary: '#7a2323', shorts: '#ffffff', gk: '#f1c94a', style: 'neutral' },
   { id: 'jaburu', name: 'JABURU', short: 'JAB', strength: 62, primary: '#e1bd2f', shorts: '#151515', gk: '#3175b8', style: 'neutral' },
   { id: 'varzea-alegre', name: 'VÁRZEA ALEGRE', short: 'VAR', strength: 65, primary: '#2468a0', shorts: '#ffffff', gk: '#e79032', style: 'france98' },
