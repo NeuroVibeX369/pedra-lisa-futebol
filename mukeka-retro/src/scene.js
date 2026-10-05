@@ -600,14 +600,31 @@ function createBoardTexture() {
     ['#7b1717', '#ffffff', 'TOICINHOS FC'],
   ];
   const secW = c.width / ads.length;
+  const boardPad = 10; // respiro nas duas laterais de cada publicidade
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  // Cada nome recebe o maior tamanho que realmente cabe no seu espaço.
+  // Assim nomes longos, como MELODIA PERSONALIZADA, não são cortados,
+  // enquanto marcas curtas continuam grandes e legíveis.
+  const fitAdFont = (text) => {
+    const maxWidth = secW - boardPad * 2;
+    let size = 20;
+    while (size > 10) {
+      ctx.font = `bold ${size}px "Arial Narrow", Arial, sans-serif`;
+      if (ctx.measureText(text).width <= maxWidth) return size;
+      size -= 1;
+    }
+    return 10;
+  };
+
   ads.forEach(([bg, fg, text], i) => {
     ctx.fillStyle = bg;
     ctx.fillRect(i * secW, 0, secW, c.height);
     ctx.fillStyle = fg;
-    ctx.font = 'bold 22px "Arial Narrow", Arial, sans-serif';
-    ctx.fillText(text, i * secW + secW / 2, c.height / 2 + 2);
+    const size = fitAdFont(text);
+    ctx.font = `bold ${size}px "Arial Narrow", Arial, sans-serif`;
+    ctx.fillText(text, i * secW + secW / 2, c.height / 2 + 1);
   });
   const tex = configureColorTexture(new THREE.CanvasTexture(c), { anisotropy: 8 });
   // Для тонкой полосы щитов trilinear смешивал два mip-уровня и снова мыл
