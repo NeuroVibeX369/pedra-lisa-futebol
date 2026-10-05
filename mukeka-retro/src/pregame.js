@@ -14,6 +14,8 @@ export function setupPregame({ match } = {}) {
   const friendly = document.getElementById('pg-friendly');
   const online = document.getElementById('pg-online');
   const master = document.getElementById('pg-master');
+  const cup = document.getElementById('pg-cup');
+  const penalties = document.getElementById('pg-penalties');
   const settings = document.getElementById('pg-settings');
   const back = document.getElementById('pg-back');
   const grid = gate.querySelector('.pg-grid');
@@ -55,7 +57,7 @@ export function setupPregame({ match } = {}) {
     return groups.map(([label, clubs]) =>
       `<optgroup label="${label}">` +
       clubs.map((club) =>
-        `<option value="${club.id}" ${club.id === selectedId ? 'selected' : ''}>${club.name} · OVR ${club.strength}</option>`
+        `<option value="${club.id}" ${club.id === selectedId ? 'selected' : ''}>${club.name} · FORÇA ${club.strength}</option>`
       ).join('') +
       '</optgroup>'
     ).join('');
@@ -104,9 +106,9 @@ export function setupPregame({ match } = {}) {
       const a = CLUBS.find((c) => c.id === away.value);
       if (preview && h && a) {
         preview.innerHTML =
-          `<span style="border-color:${h.primary}"><b>${h.short}</b> OVR ${h.strength}</span>` +
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
           '<strong>×</strong>' +
-          `<span style="border-color:${a.primary}"><b>${a.short}</b> OVR ${a.strength}</span>`;
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
       }
     };
     home.addEventListener('change', () => sync(home));
@@ -119,6 +121,72 @@ export function setupPregame({ match } = {}) {
       next.searchParams.delete('online');
       next.searchParams.delete('room');
       next.searchParams.set('mode', 'friendly');
+      next.searchParams.set('home', home.value);
+      next.searchParams.set('away', away.value);
+      next.searchParams.set('side', 'home');
+      next.searchParams.set('start', '1');
+      location.href = next.toString();
+    });
+  }
+
+  function showPenaltySetup() {
+    hideFriendlySetup();
+    if (grid) grid.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (title) title.textContent = 'DISPUTA DE PÊNALTIS · ESCOLHA OS TIMES';
+
+    const box = document.createElement('div');
+    box.className = 'pg-friendly-setup';
+    box.innerHTML = `
+      <div class="pg-versus">
+        <label>
+          <span>SEU TIME</span>
+          <select id="pg-pens-home">${clubOptions(params.get('home') || 'pedra-lisa')}</select>
+        </label>
+        <b>×</b>
+        <label>
+          <span>ADVERSÁRIO</span>
+          <select id="pg-pens-away">${clubOptions(params.get('away') || 'independencia')}</select>
+        </label>
+      </div>
+      <div id="pg-pens-preview" class="pg-match-preview"></div>
+      <div class="pg-setup-actions">
+        <button id="pg-pens-back" type="button">← VOLTAR</button>
+        <button id="pg-pens-play" class="primary" type="button">IR PARA OS PÊNALTIS</button>
+      </div>
+      <div class="pg-setup-note">Cinco cobranças para cada lado. Persistindo o empate, a disputa segue em morte súbita.</div>
+    `;
+    footer?.before(box);
+
+    const home = box.querySelector('#pg-pens-home');
+    const away = box.querySelector('#pg-pens-away');
+    const preview = box.querySelector('#pg-pens-preview');
+
+    const sync = (changed) => {
+      if (home.value === away.value) {
+        const fallback = CLUBS.find((club) => club.id !== home.value);
+        if (changed === home && fallback) away.value = fallback.id;
+        else if (fallback) home.value = fallback.id;
+      }
+      const h = CLUBS.find((club) => club.id === home.value);
+      const a = CLUBS.find((club) => club.id === away.value);
+      if (preview && h && a) {
+        preview.innerHTML =
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
+          '<strong>×</strong>' +
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
+      }
+    };
+    home.addEventListener('change', () => sync(home));
+    away.addEventListener('change', () => sync(away));
+    sync();
+
+    box.querySelector('#pg-pens-back')?.addEventListener('click', openMenu);
+    box.querySelector('#pg-pens-play')?.addEventListener('click', () => {
+      const next = new URL(location.href);
+      next.searchParams.delete('online');
+      next.searchParams.delete('room');
+      next.searchParams.set('mode', 'penalties');
       next.searchParams.set('home', home.value);
       next.searchParams.set('away', away.value);
       next.searchParams.set('side', 'home');
@@ -170,9 +238,9 @@ export function setupPregame({ match } = {}) {
       const a = CLUBS.find((club) => club.id === away.value);
       if (preview && h && a) {
         preview.innerHTML =
-          `<span style="border-color:${h.primary}"><b>${h.short}</b> OVR ${h.strength}</span>` +
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> FORÇA ${h.strength}</span>` +
           '<strong>×</strong>' +
-          `<span style="border-color:${a.primary}"><b>${a.short}</b> OVR ${a.strength}</span>`;
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> FORÇA ${a.strength}</span>`;
       }
     };
     home.addEventListener('change', () => sync(home));
@@ -195,6 +263,12 @@ export function setupPregame({ match } = {}) {
 
   friendly?.addEventListener('click', showFriendlySetup);
   online?.addEventListener('click', showOnlineSetup);
+  penalties?.addEventListener('click', showPenaltySetup);
+
+  cup?.addEventListener('click', () => {
+    close();
+    document.dispatchEvent(new CustomEvent('mukeka:cup-open'));
+  });
 
   master?.addEventListener('click', () => {
     close();
@@ -202,6 +276,7 @@ export function setupPregame({ match } = {}) {
   });
 
   document.addEventListener('mukeka:master-close', () => openMenu());
+  document.addEventListener('mukeka:cup-close', () => openMenu());
 
   settings?.addEventListener('click', () => {
     document.body.classList.add('pregame-settings');

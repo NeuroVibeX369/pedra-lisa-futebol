@@ -150,6 +150,11 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+function q(v, scale = 100) {
+  const n = Number(v) || 0;
+  return Math.round(n * scale) / scale;
+}
+
 function cloneSwipe(s) {
   if (!s || !s.dir) return null;
   return {
@@ -233,7 +238,9 @@ function makeSnapshot(match, ball, seq) {
     t: 'retro-state',
     seq,
     state: match.state,
-    clock: match.clock,
+    clock: q(match.clock, 10),
+    half: match.half || 1,
+    halftimeDone: !!match.halftimeDone,
     score: [...match.score],
     kickoffTeam: match.kickoffTeam,
     possession,
@@ -242,17 +249,29 @@ function makeSnapshot(match, ball, seq) {
       playerIndex(match.teams[0], match.humanTeamIndex === 0 ? match.controlled : match.remoteControlled),
       playerIndex(match.teams[1], match.humanTeamIndex === 1 ? match.controlled : match.remoteControlled),
     ],
+    restart: match.restart ? {
+      type: match.restart.type,
+      team: match.teams.indexOf(match.restart.team),
+      x: q(match.restart.x),
+      z: q(match.restart.z),
+      phase: match.restart.phase || 'dead',
+      t0: q(match.restart.t || 0, 20),
+      indirect: !!match.restart.indirect,
+      label: match.restart.label || null,
+      taker: playerIndex(match.restart.team, match.restart.taker),
+    } : null,
     ball: {
-      p: [ball.mesh.position.x, ball.mesh.position.y, ball.mesh.position.z],
-      v: [ball.vel.x, ball.vel.y, ball.vel.z],
-      spin: Number(ball.spin) || 0,
+      p: [q(ball.mesh.position.x), q(ball.mesh.position.y), q(ball.mesh.position.z)],
+      v: [q(ball.vel.x), q(ball.vel.y), q(ball.vel.z)],
+      spin: q(ball.spin, 100),
     },
     teams: match.teams.map((team) => team.players.map((p) => ({
-      p: [p.group.position.x, p.group.position.y, p.group.position.z],
-      v: [p.vel?.x || 0, p.vel?.y || 0, p.vel?.z || 0],
-      r: Number(p.rot) || 0,
-      down: Number(p.downT) || 0,
-      tackle: Number(p.tackleT) || 0,
+      p: [q(p.group.position.x), q(p.group.position.y), q(p.group.position.z)],
+      v: [q(p.vel?.x || 0), q(p.vel?.y || 0), q(p.vel?.z || 0)],
+      r: q(p.rot, 100),
+      down: q(p.downT || 0, 20),
+      tackle: q(p.tackleT || 0, 20),
+      out: !!p.dismissed,
     }))),
   };
 }
@@ -266,8 +285,37 @@ function applySnapshot(match, ball, s) {
   }
   if (Number.isFinite(s.clock)) match.clock = s.clock;
   if (typeof s.state === 'string') match.state = s.state;
+  if (s.half === 1 || s.half === 2) match.half = s.half;
+  match.halftimeDone = !!s.halftimeDone;
   if (s.kickoffTeam === 0 || s.kickoffTeam === 1) match.kickoffTeam = s.kickoffTeam;
-  if (s.possession === 0 || s.possession === 1) match.possession = match.teams[s.possession];
+
+  if (s.restart && (s.restart.team === 0 || s.restart.team === 1)) {
+    const team = match.teams[s.restart.team];
+    const taker = team?.players?.[s.restart.taker] || team?.fieldPlayers?.[0] || team?.keeper;
+    match.restart = {
+      type: s.restart.type,
+      team,
+      x: Number(s.restart.x) || 0,
+      z: Number(s.restart.z) || 0,
+      taker,
+      phase: s.restart.phase || 'dead',
+      t: Number(s.restart.t0) || 0,
+      indirect: !!s.restart.indirect,
+      label: s.restart.label || null,
+    };
+  } else if (s.state !== 'restart') {
+    match.restart = null;
+  }
+
+  match.possession = (s.possession === 0 || s.possession === 1)
+    ? match.teams[s.possession] : null;
+
+  if (Array.isArray(s.toucher) && (s.toucher[0] === 0 || s.toucher[0] === 1)) {
+    match.toucher = match.teams[s.toucher[0]]?.players?.[s.toucher[1]] || null;
+  } else {
+    match.toucher = null;
+  }
+  for (const p of match.allPlayers || []) p.isToucher = p === match.toucher;
 
   if (s.ball?.p && s.ball?.v) {
     ball.mesh.position.set(s.ball.p[0], s.ball.p[1], s.ball.p[2]);
@@ -294,6 +342,9 @@ function applySnapshot(match, ball, s) {
       pos.z += dz * k;
       if (p.vel && sp.v) p.vel.set(sp.v[0], sp.v[1], sp.v[2]);
       if (Number.isFinite(sp.r)) p.rot = sp.r;
+      p.dismissed = !!sp.out;
+      p.group.visible = !p.dismissed;
+      if (p.shadow) p.shadow.visible = !p.dismissed;
     }
   }
 
@@ -326,6 +377,11 @@ export class RetroNetplay {
     this.lastStateAt = 0;
     this.latestSnapshot = null;
     this.lastAppliedSnapshot = -1;
+    this.lastSnapshotAt = performance.now();
+    this.remoteMobile = false;
+    this.lowPowerGuest = role === 'guest' && !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+    this.simAccum = 0;
+    this._staleShown = false;
 
     signal.on('retro-input', (m) => {
       if (this.role !== 'host' || !this.remoteInput) return;
@@ -335,39 +391,81 @@ export class RetroNetplay {
     signal.on('retro-state', (m) => {
       if (this.role !== 'guest') return;
       if (!Number.isFinite(m?.seq)) return;
+      this.lastSnapshotAt = performance.now();
       if (!this.latestSnapshot || m.seq > this.latestSnapshot.seq) this.latestSnapshot = m;
+    });
+
+    signal.on('retro-profile', (m) => {
+      if (this.role !== 'host') return;
+      this.remoteMobile = !!m?.mobile;
     });
   }
 
   setConnected(value) {
     this.connected = !!value;
+    this.simAccum = 0;
     if (this.role === 'host' && this.match && this.remoteInput) {
       if (this.connected) this.match.setRemoteController?.(1, this.remoteInput);
       else this.match.setRemoteController?.(-1, null);
     }
+    if (this.connected && this.role === 'guest') {
+      this.signal.send({
+        t: 'retro-profile',
+        mobile: !!globalThis.matchMedia?.('(pointer: coarse)')?.matches,
+        mem: Number(globalThis.navigator?.deviceMemory) || 0,
+      });
+    }
+  }
+
+  simulationDt(dt) {
+    if (!this.connected || this.role !== 'guest' || !this.lowPowerGuest || dt <= 0) return dt;
+    this.simAccum += dt;
+    if (this.simAccum < 1 / 30) return null;
+    const out = Math.min(this.simAccum, 1 / 20);
+    this.simAccum = 0;
+    return out;
   }
 
   beforeSimulation(now = performance.now()) {
     if (!this.connected || this.role !== 'guest' || !this.signal || !this.input) return;
     const packet = captureInput(this.input, ++this.inputSeq);
-    if (!hasEdge(packet) && now - this.lastInputAt < 33) return;
+    const edge = hasEdge(packet);
+    const interval = this.lowPowerGuest ? 40 : 33;
+    if (!edge && now - this.lastInputAt < interval) return;
     this.lastInputAt = now;
-    this.signal.send(packet);
+    if (edge) this.signal.send(packet);
+    else this.signal.sendRealtime?.(packet, 24 * 1024);
   }
 
   afterSimulation(now = performance.now()) {
     if (!this.connected) return;
     if (this.role === 'host') {
-      if (!this.match || !this.ball || now - this.lastStateAt < 50) return;
+      const interval = this.remoteMobile ? 90 : 60;
+      if (!this.match || !this.ball || now - this.lastStateAt < interval) return;
       this.lastStateAt = now;
-      this.signal.send(makeSnapshot(this.match, this.ball, ++this.stateSeq));
+      this.signal.sendRealtime?.(makeSnapshot(this.match, this.ball, ++this.stateSeq), 64 * 1024);
       return;
     }
 
-    if (this.role === 'guest' && this.latestSnapshot &&
-        this.latestSnapshot.seq > this.lastAppliedSnapshot) {
-      applySnapshot(this.match, this.ball, this.latestSnapshot);
-      this.lastAppliedSnapshot = this.latestSnapshot.seq;
+    if (this.role === 'guest') {
+      const stale = now - this.lastSnapshotAt > 2200;
+      if (stale && !this._staleShown) {
+        this._staleShown = true;
+        const hint = this.match?.hud?.hint;
+        if (hint) {
+          hint.classList.remove('dim');
+          hint.textContent = 'CONEXÃO INSTÁVEL — TENTANDO SINCRONIZAR';
+        }
+      } else if (!stale && this._staleShown) {
+        this._staleShown = false;
+        const hint = this.match?.hud?.hint;
+        if (hint) hint.classList.add('dim');
+      }
+
+      if (this.latestSnapshot && this.latestSnapshot.seq > this.lastAppliedSnapshot) {
+        applySnapshot(this.match, this.ball, this.latestSnapshot);
+        this.lastAppliedSnapshot = this.latestSnapshot.seq;
+      }
     }
   }
 }

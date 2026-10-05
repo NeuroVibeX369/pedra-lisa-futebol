@@ -15,9 +15,10 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
-import { setupRetroOnlineTest } from './online.js?v=20261005f';
-import { setupPregame } from './pregame.js?v=20261005c';
+import { setupRetroOnlineTest } from './online.js?v=20261005g';
+import { setupPregame } from './pregame.js?v=20261005d';
 import { setupMasterLeague } from './master-league.js?v=20261005c';
+import { setupMukekaCup } from './cup.js?v=20261005b';
 import { setupPauseMenu } from './pause-menu.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
@@ -416,12 +417,30 @@ window.addEventListener('keydown', (e) => {
 });
 // Браузер вышел из полноэкранного сам (Esc, свайп) — возвращаем корпус
 document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && document.body.classList.contains('tv-full')) setFullscreen(false);
+  if (document.fullscreenElement) return;
+  const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+  // No celular continuamos usando toda a viewport mesmo quando o navegador
+  // sai do fullscreen nativo por gesto do sistema.
+  if (!coarse && document.body.classList.contains('tv-full')) setFullscreen(false);
 });
 // Режим переживает перезапуск: снимать ролики удобнее без лишнего клика.
 // Настоящий полноэкранный режим браузера при загрузке не попросишь — он
 // требует жеста пользователя, поэтому восстанавливаем только спрятанный корпус.
 if (localStorage.getItem('f98.fullscreen') === '1') setFullscreen(true, false);
+// No celular a moldura some desde o primeiro quadro. O fullscreen REAL ainda
+// depende de gesto e é solicitado na tela de som logo antes da partida.
+if (globalThis.matchMedia?.('(pointer: coarse)')?.matches) setFullscreen(true, false);
+
+// Alguns navegadores só aceitam fullscreen em pointerdown, não no click.
+// Tentamos nos primeiros gestos reais; se o sistema recusar, o jogo continua
+// ocupando 100% da viewport e o modo instalado usa o manifest fullscreen.
+let mobileFullscreenTries = 0;
+window.addEventListener('pointerdown', () => {
+  const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+  if (!coarse || document.fullscreenElement || mobileFullscreenTries >= 3) return;
+  mobileFullscreenTries += 1;
+  requestMobileImmersive();
+}, { capture: true, passive: true });
 
 // --- Клавиша НАСТРОЙКИ: меню на стекле ---
 const settingsPanel = document.getElementById('settings');
@@ -577,6 +596,7 @@ const soundGate = document.getElementById('sound-gate');
 let gateOpen = !!soundGate;
 
 const masterLeague = setupMasterLeague();
+const mukekaCup = setupMukekaCup();
 const pregame = setupPregame({ match });
 const pauseMenu = setupPauseMenu({ match, pack: PACK });
 
@@ -603,17 +623,47 @@ if (startupParams.get('masterHub') === '1') {
   clean.searchParams.delete('masterHub');
   history.replaceState(null, '', clean);
 }
+if (startupParams.get('cupHub') === '1') {
+  pregame.close();
+  mukekaCup.openHub();
+  const clean = new URL(location.href);
+  clean.searchParams.delete('cupHub');
+  history.replaceState(null, '', clean);
+}
+if (startupParams.get('mode') === 'penalties' && match) {
+  pregame.close();
+  match.startShootout();
+}
 
 let masterResultCommitted = false;
+let cupResultCommitted = false;
 function showMasterResult(result) {
   if (!result || document.getElementById('master-result-return')) return;
   const overlay = document.createElement('div');
   overlay.id = 'master-result-return';
+
+  const goals = (result.goals || []).map((g) =>
+    `<div class="mrr-event"><span>${g.minute || '—'}'</span><b>${g.name || 'GOL'}</b><small>${Number(g.teamIndex) === 0 ? result.homeName : result.awayName}</small></div>`
+  ).join('');
+  const substitutions = (result.substitutions || []).map((x) =>
+    `<div class="mrr-sub"><span>${x.minute || '—'}'</span><b>${x.outName}</b><i>↓</i><b>${x.inName}</b><i>↑</i></div>`
+  ).join('');
+  const cards = (result.cards || []).map((x) =>
+    `<div class="mrr-card-event"><span>${x.minute || '—'}'</span><b>${x.name}</b><small>${x.card === 'red' ? 'VERMELHO' : 'AMARELO'}</small></div>`
+  ).join('');
+
   overlay.innerHTML = `
     <div class="mrr-card">
-      <h2>MASTER LIGA · RESULTADO REGISTRADO</h2>
-      <div>${result.homeName} × ${result.awayName}</div>
+      <h2>FIM DE JOGO</h2>
+      <div class="mrr-clubs">${result.homeName} × ${result.awayName}</div>
       <div class="mrr-score">${result.homeGoals} × ${result.awayGoals}</div>
+      ${result.penalties ? `<div class="mrr-penalties">PÊNALTIS · ${result.penalties.home} × ${result.penalties.away}</div>` : ''}
+      <div class="mrr-events">
+        <h3>GOLS</h3>
+        ${goals || '<div class="mrr-empty">SEM GOLS</div>'}
+        ${substitutions ? `<h3>SUBSTITUIÇÕES</h3>${substitutions}` : ''}
+        ${cards ? `<h3>CARTÕES</h3>${cards}` : ''}
+      </div>
       <button type="button">VOLTAR À MASTER LIGA</button>
     </div>
   `;
@@ -621,7 +671,7 @@ function showMasterResult(result) {
   overlay.querySelector('button')?.addEventListener('click', (e) => {
     e.stopPropagation();
     const next = new URL(location.href);
-    for (const key of ['start', 'mode', 'home', 'away', 'side', 'masterMatch', 'online', 'room']) {
+    for (const key of ['start', 'mode', 'home', 'away', 'side', 'masterMatch', 'masterStage', 'online', 'room']) {
       next.searchParams.delete(key);
     }
     next.searchParams.set('masterHub', '1');
@@ -910,7 +960,7 @@ function frame() {
   // темпа игры, а не как пауза всему кадру.
   pauseMenu.update?.();
   const settingsOpen = settingsPanel?.classList.contains('show');
-  const gdt = (gateOpen || pregame.open || masterLeague.open || pauseMenu.open ||
+  const gdt = (gateOpen || pregame.open || masterLeague.open || mukekaCup.open || pauseMenu.open ||
     settingsOpen || retroOnline.paused) ? 0 : dt * CONFIG.gameSpeed;
   // Часы ветра в футболках — ОДИН объект на весь матч. Все 22 материала
   // формы держат на него ссылку, поэтому это присваивание заменяет
@@ -921,8 +971,14 @@ function frame() {
   input.update(gdt);
   // O convidado envia os comandos antes da simulação; no host eles alimentam
   // o segundo jogador humano sem substituir a IA dos outros dez atletas.
-  retroOnline.beforeSimulation?.(performance.now());
-  if (match) match.update(gdt); // 22 jogadores: humano(s) + IA
+  const netNow = performance.now();
+  retroOnline.beforeSimulation?.(netNow);
+  // Em celular convidado a renderização continua fluida, mas física/IA rodam
+  // a 30 Hz. Isso corta quase pela metade o custo que antes podia congelar o
+  // aparelho quando chegavam snapshots ao mesmo tempo que a simulação local.
+  const simDt = retroOnline.simulationDt?.(gdt) ?? gdt;
+  const runSim = simDt !== null;
+  if (match && runSim) match.update(simDt); // 22 jogadores: humano(s) + IA
 
   // Em partidas iniciadas pela Master Liga, o placar final volta para a
   // carreira uma única vez. A rodada/tabela/receita são atualizadas pelo
@@ -932,17 +988,40 @@ function frame() {
     masterResultCommitted = true;
     const result = masterLeague.completePlayedMatch?.(match.score, {
       goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
+      substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
+      cards: Array.isArray(match.cardEvents) ? match.cardEvents : [],
+      penalties: match.shootoutResult || null,
     });
     if (result) showMasterResult(result);
+  }
+
+  if (!cupResultCommitted && match?.state === 'fulltime' &&
+      new URLSearchParams(location.search).get('mode') === 'cup') {
+    cupResultCommitted = true;
+    const result = mukekaCup.completePlayedMatch?.(match.score, {
+      goals: Array.isArray(match.goalEvents) ? match.goalEvents : [],
+      substitutions: Array.isArray(match.substitutionEvents) ? match.substitutionEvents : [],
+      cards: Array.isArray(match.cardEvents) ? match.cardEvents : [],
+      penalties: match.shootoutResult || null,
+    });
+    if (result) {
+      const next = new URL(location.href);
+      for (const key of ['start','mode','home','away','side','cupRound','online','room']) {
+        next.searchParams.delete(key);
+      }
+      next.searchParams.set('cupHub', '1');
+      location.href = next.toString();
+      return;
+    }
   }
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
   const replaying = !!(match && (match.state === 'replay' || match.state === 'celebration'));
-  const event = replaying ? null : ball.update(gdt);
+  const event = (replaying || !runSim) ? null : ball.update(simDt);
   // Сетка знает и про мяч, и про ТЕЛА: игроки её тянут, она их держит.
   // Игроки уже сходили свой шаг в match.update, поэтому барьер правит
   // конечную позицию кадра — до отрисовки и до постановки теней.
-  if (!replaying) goals.update(gdt, match ? match.allPlayers : null);
+  if (!replaying && runSim) goals.update(simDt, match ? match.allPlayers : null);
   // Атмосфера: веер теней ставится ПОСЛЕ движения игроков, вспышки живут сами
   if (scene.userData.shadows) scene.userData.shadows.update();
   if (scene.userData.flashes) scene.userData.flashes.update(dt);
@@ -961,7 +1040,7 @@ function frame() {
   if (event === 'goal' && match) match.onGoal();
   // O host publica o estado autoritativo depois de física/gol. No convidado,
   // o snapshot corrige a previsão local e limita divergências causadas pela IA.
-  retroOnline.afterSimulation?.(performance.now());
+  retroOnline.afterSimulation?.(netNow);
   commentator.update(match);
   radar.draw(match, dt); // mini-mapa: 23 pontos em canvas 2D
 
@@ -1013,6 +1092,21 @@ function frame() {
     C.distance - C.farApproach * far01 - C.attackApproach * atk01,
   );
   camLookTarget.set(fx * 0.8, C.lookHeight, fz * C.followZ);
+
+  // Pênalti: câmera atrás do cobrador, como nos futsims clássicos. Ela vale
+  // tanto na cobrança normal quanto na disputa e permanece alguns instantes
+  // após o chute para o voo da bola não sofrer um corte seco.
+  const pr = match?.restart?.type === 'penalty' ? match.restart : null;
+  const pv = pr
+    ? { side: pr.team.side, x: pr.x, goalX: pr.team.attackGoalX }
+    : (match?.penaltyViewT > 0 ? match.penaltyView : null);
+  if (pv) {
+    const side = pv.side || 1;
+    const spotX = pv.x;
+    camPos.set(spotX - side * 8.6, 4.15, 0);
+    camLookTarget.set(pv.goalX - side * 0.8, 1.15, 0);
+  }
+
   // Приоритет камер: повтор → празднование → ТВ-заставка → живая ТВ-камера.
   // У повтора и празднования камеры свои и уже плавные, поэтому обычное
   // сглаживание тут только смазало бы кадр.

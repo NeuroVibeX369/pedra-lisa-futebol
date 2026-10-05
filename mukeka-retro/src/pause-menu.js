@@ -57,22 +57,74 @@ export function setupPauseMenu({ match, pack } = {}) {
     }));
   }
 
+  function renderFormation(message = '') {
+    if (!formationView) return;
+    const idx = match?.humanTeamIndex === 1 ? 1 : 0;
+    const info = match?.getSubstitutionState?.(idx);
+    const fallback = pack?.teams?.[idx]?.squad || [];
+    const active = info?.active || fallback.map((p, slot) => ({
+      slot,
+      name: p.name || 'JOGADOR',
+      number: p.number || '—',
+      position: p.position || '',
+      overall: p.overall || null,
+    }));
+    const bench = info?.bench || [];
+    const remaining = info?.remaining ?? 0;
+    const qs = new URLSearchParams(location.search);
+    const online = qs.get('mode') === 'online' || qs.get('online') === '1';
+
+    const starters = active.map((p) =>
+      `<div class="pause-lineup-player"><span>${p.number || '—'}</span><b>${p.name}</b><small>${p.position || ''}${p.overall ? ` · FORÇA ${p.overall}` : ''}</small></div>`
+    ).join('');
+
+    let substitutions = '';
+    if (!online && bench.length) {
+      const outOptions = active.map((p) =>
+        `<option value="${p.slot}">${p.number || '—'} · ${p.name}${p.overall ? ` · ${p.overall}` : ''}</option>`
+      ).join('');
+      const inOptions = bench.map((p) =>
+        `<option value="${p.benchIndex}">${p.number || '—'} · ${p.name}${p.position ? ` · ${p.position}` : ''}${p.overall ? ` · ${p.overall}` : ''}</option>`
+      ).join('');
+
+      substitutions = `
+        <div class="pause-sub-box">
+          <div class="pause-sub-title">SUBSTITUIÇÕES <span>${remaining}/${info?.max || 3}</span></div>
+          ${remaining > 0 ? `
+            <label>SAI<select id="pause-sub-out">${outOptions}</select></label>
+            <label>ENTRA<select id="pause-sub-in">${inOptions}</select></label>
+            <button id="pause-sub-confirm" type="button">CONFIRMAR TROCA</button>
+          ` : '<div class="pause-sub-status">As três substituições já foram usadas.</div>'}
+          ${message ? `<div class="pause-sub-status">${message}</div>` : ''}
+        </div>`;
+    }
+
+    formationView.innerHTML = `
+      <b>ESCALAÇÃO · 4-4-2</b>
+      <div class="pause-lineup-list">${starters || '<span>Escalação indisponível.</span>'}</div>
+      ${substitutions}
+    `;
+    formationView.classList.add('show');
+
+    formationView.querySelector('#pause-sub-confirm')?.addEventListener('click', () => {
+      const out = Number(formationView.querySelector('#pause-sub-out')?.value);
+      const inn = Number(formationView.querySelector('#pause-sub-in')?.value);
+      const result = match?.substitutePlayer?.(idx, out, inn);
+      if (!result?.ok) {
+        renderFormation(result?.reason || 'Não foi possível fazer a substituição.');
+        return;
+      }
+      renderFormation(`${result.event.outName} SAI · ${result.event.inName} ENTRA · ${result.event.minute}'`);
+    });
+  }
+
   function showFormation() {
     if (!formationView) return;
     if (formationView.classList.contains('show')) {
       formationView.classList.remove('show');
       return;
     }
-    const idx = match?.humanTeamIndex === 1 ? 1 : 0;
-    const team = pack?.teams?.[idx];
-    const squad = team?.squad || [];
-    formationView.innerHTML =
-      '<b>FORMAÇÃO ATUAL · 4-4-2</b><br>' +
-      (squad.length
-        ? squad.map((p) => `${p.number || '—'} · ${p.name || 'JOGADOR'} · OVR ${p.overall || '—'}`).join('<br>')
-        : 'Escalação indisponível.') +
-      '<br><br>Na Master Liga, trocas de titulares são feitas na tela ESCALAÇÃO antes da partida.';
-    formationView.classList.add('show');
+    renderFormation();
   }
 
   function leaveMatch() {
@@ -84,11 +136,15 @@ export function setupPauseMenu({ match, pack } = {}) {
     }
 
     const next = new URL(location.href);
-    const master = next.searchParams.get('mode') === 'master';
-    for (const key of ['start','mode','home','away','side','masterMatch','online','room']) {
+    const mode = next.searchParams.get('mode');
+    const master = mode === 'master';
+    const cup = mode === 'cup';
+    for (const key of ['start','mode','home','away','side','masterMatch','masterStage',
+      'cupRound','online','room']) {
       next.searchParams.delete(key);
     }
     if (master) next.searchParams.set('masterHub', '1');
+    else if (cup) next.searchParams.set('cupHub', '1');
     location.href = next.toString();
   }
 

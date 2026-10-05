@@ -238,6 +238,7 @@ export class Player {
     this.shadow.position.y = 0.02;
 
     this.vel = new THREE.Vector3();
+    this.dismissed = false;   // expulso: permanece no elenco, mas sai da partida
     this.rot = 0;            // угол поворота (0 = смотрит в +Z)
     this.hasBall = false;
     this.controlling = false; // гистерезис дриблинга: подобрал вплотную — ведёт до keepRadius
@@ -1361,18 +1362,27 @@ export class Player {
     return new THREE.Vector3(Math.sin(this.rot), 0, Math.cos(this.rot));
   }
 
-  // Середина кистей скелета в мировых координатах — точка «мяч в руках».
-  // null, пока модель не загрузилась (остаёмся на капсуле-фолбэке)
-  handsWorldPoint(out) {
+  // Posições reais das duas mãos do esqueleto. Além do goleiro segurando
+  // a bola, o árbitro usa estas coordenadas para uma regra de mão conservadora:
+  // só existe infração quando a bola realmente encontra uma das mãos.
+  handWorldPoints(outL, outR) {
     if (!this.model) return null;
     if (this._handL === undefined) {
       this._handL = this.model.getObjectByName('mixamorigLeftHand') || null;
       this._handR = this.model.getObjectByName('mixamorigRightHand') || null;
     }
     if (!this._handL || !this._handR) return null;
-    this._handL.getWorldPosition(_handA);
-    this._handR.getWorldPosition(_handB);
-    return out.copy(_handA).add(_handB).multiplyScalar(0.5);
+    this._handL.getWorldPosition(outL);
+    this._handR.getWorldPosition(outR);
+    return { left: outL, right: outR };
+  }
+
+  // Середина кистей скелета в мировых координатах — точка «мяч в руках».
+  // null, пока модель не загрузилась (остаёмся на капсуле-фолбэке)
+  handsWorldPoint(out) {
+    const pts = this.handWorldPoints(_handA, _handB);
+    if (!pts) return null;
+    return out.copy(pts.left).add(pts.right).multiplyScalar(0.5);
   }
 
   // Точка удара в мировых координатах: носок бьющей ноги (клип `kick` бьёт
@@ -5556,6 +5566,14 @@ export class Player {
           // а вот трибуна реагирует уже сейчас: свист и улюлюканье
           o.startFall(TK.victimDown);
           this.tackleFoul = true;
+          // O árbitro decide vantagem, cartão e tipo de cobrança fora da
+          // física do carrinho. Assim a colisão continua simples e o Match
+          // concentra todas as regras.
+          m.reportFoul?.(this, o, {
+            fromBehind,
+            speed: this.tackleSpeed || Math.hypot(this.vel.x, this.vel.z),
+            kind: 'tackle',
+          });
           crowdJeer();
         }
         break;

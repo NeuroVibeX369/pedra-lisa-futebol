@@ -163,11 +163,11 @@ export class Team {
   }
 
   get fieldPlayers() {
-    return this.players.slice(1);
+    return this.players.slice(1).filter((p) => !p.dismissed);
   }
 
   get opponents() {
-    return this.match.otherTeam(this).players;
+    return this.match.otherTeam(this).players.filter((p) => !p.dismissed);
   }
 
   // Чужие ворота (куда забиваем) и свои
@@ -328,6 +328,7 @@ export class Team {
     }
     // Кулдаун рывка у каждого: рывки не должны идти сплошным потоком
     for (const p of this.players) {
+      if (p.dismissed) continue;
       if (p.runCd > 0) p.runCd -= dt;
     }
 
@@ -729,7 +730,7 @@ export class Team {
     // fieldplayer.js стоят ВЫШЕ boxRuns, и назначенная точка просто пропадала.
     // А вот догоняющего (chaser) исключать нельзя: при мяче у партнёра его
     // ветка всё равно не работает, а игрока из штрафной он забирал
-    const pool = this.players.slice(5)
+    const pool = this.players.slice(5).filter((p) => !p.dismissed)
       .filter((p) => p !== this.match.toucher && p !== this.match.controlled &&
         p !== this.receiver && p !== this.shortRunner && p !== this.supporter &&
         p !== this.runner && p !== this.overlapper);
@@ -805,6 +806,7 @@ export class Team {
     let best = null;
     let bestD = Infinity;
     for (const p of this.players) {
+      if (p.dismissed) continue;
       if (p === owner || p.isKeeper) continue;
       if (p === this.match.controlled || p === this.runner ||
           p === this.overlapper || p === this.receiver) continue;
@@ -874,7 +876,7 @@ export class Team {
     // Третий — свободный атакующий, не занятый другой ролью
     let best = null;
     let bestD = Infinity;
-    for (const p of this.players.slice(5)) {
+    for (const p of this.players.slice(5).filter((p) => !p.dismissed)) {
       if (p === a || p === b || p.runCd > 0) continue;
       if (p === this.receiver || p === this.runner || p === this.overlapper ||
           p === this.shortRunner || p === this.match.controlled) continue;
@@ -925,7 +927,7 @@ export class Team {
 
     let best = null;
     let bestD = Infinity;
-    for (const p of this.players.slice(5)) {
+    for (const p of this.players.slice(5).filter((p) => !p.dismissed)) {
       if (p === main || p.runCd > 0 || p === this.match.toucher) continue;
       if (p === this.receiver || p === this.shortRunner ||
           p === this.match.controlled || this.boxRuns.has(p)) continue;
@@ -978,7 +980,7 @@ export class Team {
     if (foe && foe.onCrossDefend) foe.onCrossDefend(ball, land);
 
     // Кандидаты: врывающиеся + вся атакующая шестёрка (позиции 5..10)
-    const pool = [...this.boxRuns.keys(), ...this.players.slice(5)]
+    const pool = [...this.boxRuns.keys(), ...this.players.slice(5).filter((p) => !p.dismissed)]
       .filter((p, i, arr) => arr.indexOf(p) === i &&
         p !== this.match.toucher && !p.isKeeper);
     if (!pool.length) return null;
@@ -1029,7 +1031,7 @@ export class Team {
     if (depth > G.range) return;
 
     const spd = CONFIG.player.speed * CONFIG.player.sprintFactor * CONFIG.ai.speedFactor;
-    const pool = this.players.filter((p) =>
+    const pool = this.players.filter((p) => !p.dismissed &&
       !p.isKeeper && p !== this.match.controlled && p.downT <= 0 && p.tackleT <= 0);
     const cand = [];
     for (const p of pool) {
@@ -1094,7 +1096,7 @@ export class Team {
 
     let runner = null;
     let bd = Infinity;
-    for (const p of this.players.slice(5)) {
+    for (const p of this.players.slice(5).filter((p) => !p.dismissed)) {
       if (p === owner || p === this.receiver || p === this.supporter ||
           p === this.match.controlled) continue;
       // Ролевая фора: рывок за спину — самое сильное отличие ролей в футболе
@@ -1172,6 +1174,7 @@ export class Team {
     let best = null;
     let bestScore = -Infinity;
     for (const p of this.players) {
+      if (p.dismissed) continue;
       if (p === passer || p.isKeeper || p === this.match.controlled) continue;
       if (p.downT > 0 || p.tackleT > 0) continue;
       const mp = p.group.position;
@@ -1383,7 +1386,7 @@ export class Team {
         Math.hypot(a.group.position.x - gx, a.group.position.z) -
         Math.hypot(b.group.position.x - gx, b.group.position.z));
     // Защитники (индексы 1–4), не занятые прессингом/страховкой/человеком
-    const free = this.players.slice(1, 5).filter((p) =>
+    const free = this.players.slice(1, 5).filter((p) => !p.dismissed).filter((p) =>
       p !== this.chaser && p !== this.coverer && p !== this.match.controlled);
     // ГИСТЕРЕЗИС ОПЕКИ (31.07.2026). Карта разбора пересобиралась С НУЛЯ на
     // каждом такте тренера (4–6 раз в секунду), и два защитника с почти равной
@@ -1446,7 +1449,7 @@ export class Team {
 
     // Свободные игроки оборонительных линий (форварды назад не возвращаются —
     // они и есть выход из обороны)
-    const free = this.players.slice(1).filter((p) =>
+    const free = this.players.slice(1).filter((p) => !p.dismissed &&
       !this.marks.has(p) && p !== this.chaser && p !== this.coverer &&
       p !== this.match.controlled && p.downT <= 0 &&
       CONFIG.formation.roles[p.homeIdx].defOff <= 12);
@@ -1539,7 +1542,7 @@ export class Team {
     let best = null;
     let bestD = Infinity;
     // Открываются атакующие роли (полузащита и нападение — индексы 5..10)
-    for (const p of this.players.slice(5)) {
+    for (const p of this.players.slice(5).filter((p) => !p.dismissed)) {
       if (p === this.match.controlled || p === this.chaser ||
           p === this.receiver || p === this.runner) continue;
       // Ролевая фора «поддержка сзади и рывок вперёд»: у челнока она есть,
@@ -1684,6 +1687,7 @@ export class Team {
 
     const options = [];
     for (const mate of this.players) {
+      if (mate.dismissed) continue;
       if (mate === from) continue;
       if (mate.downT > 0 || mate.tackleT > 0) continue;
       // Обманщик мяч НЕ просит: получи он пас — и весь смысл ложного рывка
@@ -2006,6 +2010,7 @@ export class Team {
     // 0.415 с ним. То есть механика «пас под пас» работала как «отдай назад,
     // потом тебе вернут»
     for (const m of this.players) {
+      if (m.dismissed) continue;
       if (m === o.mate || m === from || m.isKeeper) continue;
       const mp = m.group.position;
       const px = mp.x + m.vel.x * t;

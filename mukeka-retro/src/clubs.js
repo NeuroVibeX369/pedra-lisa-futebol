@@ -90,6 +90,13 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const attr01 = (overall, random, bias = 0) =>
   clamp(0.28 + (overall - 50) / 70 + bias + (random() - .5) * .12, .25, .99);
 
+const PEDRA_LISA_NAMES = [
+  'OLAVO LOBÃO', 'NETO', 'DJHA', 'BASTIAOZÃO REI', 'BRUNO', 'MANOEL',
+  'RONILTON', 'LUCIANO', 'HÉLIO', 'BASTIAOZINHO', 'RICARDO',
+  'JARDEL', 'LORIVAL', 'NATANAEL', 'THEO LUCCA', 'ISAAC', 'ARTHUR', 'DAVI',
+];
+const PEDRA_LISA_OVR = [83,80,82,84,81,82,83,90,85,92,84,70,72,70,72,73,74,72];
+
 const INDEPENDENCIA_NAMES = [
   'JUNIOR PAREDÃO', 'NETO', 'ABERLADO', 'ZÉ NETO', 'EDIMAR', 'MANINHO',
   'AURISTÊNIO', 'CHICO BAIÃO', 'CLODOALDO', 'VALDEKE MATTOS', 'ALEX',
@@ -176,6 +183,7 @@ export function buildClubCareerSquad(clubOrId) {
     const last = LAST[Math.floor(random() * LAST.length)];
     let overall = minOvr + Math.floor(random() * (maxOvr - minOvr + 1));
 
+    if (club.id === 'pedra-lisa') overall = PEDRA_LISA_OVR[i] || 78;
     if (club.id === 'independencia') overall = INDEPENDENCIA_OVR[i] || 84;
     if (club.id === FINAL_CLUB.id) {
       // Distribuição controlada para o adversário final ficar entre 95 e 99.
@@ -186,9 +194,11 @@ export function buildClubCareerSquad(clubOrId) {
     const skill = attr01(overall, random);
     const player = {
       id: club.id + '-' + i,
-      name: club.id === 'independencia'
-        ? INDEPENDENCIA_NAMES[i]
-        : (first + ' ' + last).toUpperCase(),
+      name: club.id === 'pedra-lisa'
+        ? PEDRA_LISA_NAMES[i]
+        : club.id === 'independencia'
+          ? INDEPENDENCIA_NAMES[i]
+          : (first + ' ' + last).toUpperCase(),
       number: NUMBERS[i],
       position,
       overall,
@@ -277,6 +287,7 @@ export function careerPlayerToMatchLook(player, slot = -1) {
     careerId: player.id || null,
     name: player.name || 'JOGADOR',
     number: player.number || NUMBERS[Math.max(0, slot)] || (slot + 1),
+    position,
     overall,
     height: player.height || Math.round(
       (position === 'GOL' || position === 'ZAG' || position === 'ATA' ? 178 : 169) + random() * 10
@@ -351,6 +362,13 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
     selected.push(extra);
   }
 
+  const starters = selected.slice(0, 11);
+  const starterIds = new Set(starters.map((p) => p.id));
+  const bench = squad
+    .filter((p) => !starterIds.has(p.id))
+    .sort((a, b) => (b.overall || 0) - (a.overall || 0))
+    .slice(0, 7);
+
   return {
     id: club.id,
     name: club.name,
@@ -358,7 +376,8 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
     strength: club.strength,
     colors: { primary: club.primary, shorts: club.shorts, gk: club.gk },
     kits: { home: null, goalkeeper: null },
-    squad: selected.slice(0, 11).map((p, slot) => careerPlayerToMatchLook(p, slot)),
+    squad: starters.map((p, slot) => careerPlayerToMatchLook(p, slot)),
+    bench: bench.map((p) => careerPlayerToMatchLook(p, -1)),
     style: club.style || 'neutral',
     _comentario_mukeka: 'Equipe carregada do save da Master Liga.',
   };
@@ -367,6 +386,15 @@ export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
 export function buildClubTeam(clubOrId) {
   const club = typeof clubOrId === 'string' ? clubById(clubOrId) : clubOrId;
   if (!club) return null;
+
+  const full = buildClubCareerSquad(club);
+  const toMatch = (p, slot = -1) => {
+    const look = careerPlayerToMatchLook(p, slot);
+    // Amistoso não precisa gravar estatísticas de carreira, mas manter o ID
+    // permite que a mesma lógica de substituição funcione em todos os modos.
+    return look;
+  };
+
   return {
     id: club.id,
     name: club.name,
@@ -378,13 +406,8 @@ export function buildClubTeam(clubOrId) {
       gk: club.gk,
     },
     kits: { home: null, goalkeeper: null },
-    squad: buildClubCareerSquad(club).slice(0, 11).map((p) => {
-      const {
-        id, position, teamId, goals, mvp, appearances,
-        ...matchPlayer
-      } = p;
-      return matchPlayer;
-    }),
+    squad: full.slice(0, 11).map((p, slot) => toMatch(p, slot)),
+    bench: full.slice(11, 18).map((p) => toMatch(p, -1)),
     style: club.style || 'neutral',
     _comentario_mukeka: 'Equipe gerada do catálogo único Mukeka Retro.',
   };

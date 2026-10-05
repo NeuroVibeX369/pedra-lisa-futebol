@@ -360,17 +360,17 @@ export class CRTPipeline {
     // Если железо не тянет — падаем на прежний байтовый буфер, всё остальное
     // продолжает работать.
     const gl = renderer.getContext();
-    // Alguns GPUs de celular anunciam half-float mas, em render targets maiores,
-    // devolvem blocos pretos/tiles corrompidos. Em telefone usamos o caminho
-    // de 8 bits, muito mais estável; tablets/desktop continuam com HDR.
-    const coarse = globalThis.matchMedia?.('(pointer: coarse)')?.matches;
-    const shortSide = Math.min(globalThis.innerWidth || 9999, globalThis.innerHeight || 9999);
-    const phoneSafe = !!coarse && shortSide <= 700;
-    const canHDR = !phoneSafe && CONFIG.render.hdr !== false && !!(
+    // Alguns drivers anunciam render target half-float como suportado e mesmo
+    // assim mostram tiles/quadrados pretos intermitentes. Como estabilidade
+    // vale mais que um pequeno ganho de faixa luminosa, a partida pública usa
+    // o caminho 8-bit em todos os aparelhos. HDR continua disponível só para
+    // teste explícito com ?hdr=1, sem afetar o jogador comum.
+    const forceHDR = new URLSearchParams(location.search).get('hdr') === '1';
+    const canHDR = forceHDR && CONFIG.render.hdr !== false && !!(
       gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float')
     );
     this.hdr = canHDR;
-    this.phoneSafe = phoneSafe;
+    this.phoneSafe = !canHDR;
     const sceneOpts = {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
