@@ -198,6 +198,7 @@ function newState() {
     stats: {},
     titles: { local: 0, regional: 0, champions: 0 },
     history: [],
+    matchHistory: [],
     notice: 'A Master Liga começou. O objetivo inicial é terminar entre os 2 primeiros.',
   };
 }
@@ -348,6 +349,60 @@ function recordPlayerMatch(state, teamId, goals, won, seed) {
       scorer.mvp = (scorer.mvp || 0) + 2.1;
     }
   }
+}
+
+function recordPlayedTeam(state, teamId, won, lineupIds, events, expectedGoals, seed) {
+  const random = rng(seed);
+  const squad = state.squads[teamId] || [];
+  const ids = Array.isArray(lineupIds) && lineupIds.length
+    ? lineupIds
+    : defaultLineupIds(squad);
+  const starters = ids.map((id) => squad.find((p) => p.id === id)).filter(Boolean);
+
+  for (const p of starters) {
+    p.appearances = (p.appearances || 0) + 1;
+    p.mvp = (p.mvp || 0) + (won ? .8 : .3) + random() * .45 + p.overall / 260;
+  }
+
+  let credited = 0;
+  for (const event of events || []) {
+    let scorer = event.careerId ? squad.find((p) => p.id === event.careerId) : null;
+    if (!scorer && event.name) {
+      scorer = squad.find((p) => String(p.name).toUpperCase() === String(event.name).toUpperCase());
+    }
+    if (!scorer) continue;
+    scorer.goals = (scorer.goals || 0) + 1;
+    scorer.mvp = (scorer.mvp || 0) + 2.2;
+    credited += 1;
+  }
+
+  // Proteção para autogol/evento sem identificação: o placar nunca pode
+  // divergir da artilharia total da partida por falha de identificação.
+  for (let i = credited; i < expectedGoals; i++) {
+    const scorer = choosePlayer(state, teamId, random, true);
+    if (scorer) {
+      scorer.goals = (scorer.goals || 0) + 1;
+      scorer.mvp = (scorer.mvp || 0) + 1.8;
+    }
+  }
+}
+
+function recordRealMatch(state, fixture, hg, ag, report) {
+  const goals = Array.isArray(report?.goals) ? report.goals : [];
+  const homeEvents = goals.filter((g) => Number(g.teamIndex) === 0);
+  const awayEvents = goals.filter((g) => Number(g.teamIndex) === 1);
+
+  const homeIds = fixture.home === state.clubId
+    ? state.lineup
+    : defaultLineupIds(state.squads[fixture.home] || []);
+  const awayIds = fixture.away === state.clubId
+    ? state.lineup
+    : defaultLineupIds(state.squads[fixture.away] || []);
+
+  recordPlayedTeam(state, fixture.home, hg > ag, homeIds, homeEvents, hg,
+    `real-${state.season}-${fixture.id}-home`);
+  recordPlayedTeam(state, fixture.away, ag > hg, awayIds, awayEvents, ag,
+    `real-${state.season}-${fixture.id}-away`);
 }
 
 function simulateScore(state, home, away, seed) {
@@ -696,7 +751,7 @@ function findPendingFixture(state, pending) {
     f.home === pending.home && f.away === pending.away) || null;
 }
 
-function completePlayedMatch(state, score) {
+function completePlayedMatch(state, score, report = null) {
   const pending = pendingMatch();
   const fixture = findPendingFixture(state, pending);
   if (!fixture || fixture.played || !Array.isArray(score) || score.length < 2) {
@@ -710,7 +765,32 @@ function completePlayedMatch(state, score) {
   if (state.stage === 'local') table = state.table;
   else if (state.stage === 'regional-groups') table = state.groupTables[fixture.group];
 
-  applyFixtureScore(state, fixture, table, state.stage, hg, ag);
+  // Resultado real: tabela e finanças usam o mesmo caminho da simulação,
+  // mas os gols/participações vêm dos jogadores que realmente estiveram em campo.
+  fixture.played = true;
+  fixture.homeGoals = hg;
+  fixture.awayGoals = ag;
+  if (table) updateTable(table, fixture.home, fixture.away, hg, ag);
+  recordRealMatch(state, fixture, hg, ag, report);
+  payForUserMatch(state, fixture.home, fixture.away, hg, ag, state.stage);
+
+  const goals = Array.isArray(report?.goals) ? report.goals : [];
+  state.matchHistory = Array.isArray(state.matchHistory) ? state.matchHistory : [];
+  state.matchHistory.unshift({
+    season: state.season,
+    stage: state.stage,
+    home: fixture.home,
+    away: fixture.away,
+    homeGoals: hg,
+    awayGoals: ag,
+    goals: goals.map((g) => ({
+      teamIndex: Number(g.teamIndex) || 0,
+      careerId: g.careerId || null,
+      name: g.name || 'GOL',
+      minute: Number(g.minute) || null,
+    })),
+  });
+  state.matchHistory = state.matchHistory.slice(0, 40);
 
   // Depois do jogo real, os demais confrontos da mesma rodada continuam
   // sendo simulados pelo motor da carreira. O confronto do usuário já está
@@ -729,6 +809,7 @@ function completePlayedMatch(state, score) {
     awayName: teamName(pending.away),
     homeGoals: hg,
     awayGoals: ag,
+    goals,
   };
 }
 
@@ -905,13 +986,27 @@ export function setupMasterLeague() {
   }
 
   function renderHistory() {
-    if (!state.history.length) return '<div class="ml-card">A primeira temporada ainda está em andamento.</div>';
-    return state.history.map((h) => `
-      <div class="ml-card">
-        <h3>TEMPORADA ${h.season}</h3>
-        <p>${h.summary}</p>
-        <small>Artilheiro: ${h.topScorer} · Melhor jogador: ${h.bestPlayer} · Caixa final: ${money(h.money)}</small>
-      </div>`).join('');
+    const seasons = state.history?.length
+      ? state.history.map((h) => `
+        <div class="ml-card">
+          <h3>TEMPORADA ${h.season}</h3>
+          <p>${h.summary}</p>
+          <small>Artilheiro: ${h.topScorer} · Melhor jogador: ${h.bestPlayer} · Caixa final: ${money(h.money)}</small>
+        </div>`).join('')
+      : '<div class="ml-card">A primeira temporada ainda está em andamento.</div>';
+
+    const matches = (state.matchHistory || []).slice(0, 10).map((m) => {
+      const scorerText = (m.goals || []).map((g) =>
+        `${g.name}${g.minute ? ` ${g.minute}'` : ''}`).join(' · ');
+      return `
+        <div class="ml-card">
+          <h3>${teamName(m.home)} ${m.homeGoals} × ${m.awayGoals} ${teamName(m.away)}</h3>
+          <small>Temporada ${m.season} · ${scorerText || 'Sem gols'}</small>
+        </div>`;
+    }).join('');
+
+    return `<h3>PARTIDAS JOGADAS</h3>${matches || '<div class="ml-card">Nenhuma partida 3D registrada ainda.</div>'}
+      <h3 style="margin-top:18px">TEMPORADAS</h3>${seasons}`;
   }
 
   function render() {
@@ -1084,9 +1179,9 @@ export function setupMasterLeague() {
     openHub,
     closeHub,
     get state() { return state; },
-    completePlayedMatch(score) {
+    completePlayedMatch(score, report = null) {
       if (!state) return null;
-      const result = completePlayedMatch(state, score);
+      const result = completePlayedMatch(state, score, report);
       if (result) {
         state = loadState() || state;
         tab = 'overview';
