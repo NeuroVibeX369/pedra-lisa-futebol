@@ -1362,18 +1362,27 @@ export class Player {
     return new THREE.Vector3(Math.sin(this.rot), 0, Math.cos(this.rot));
   }
 
-  // Середина кистей скелета в мировых координатах — точка «мяч в руках».
-  // null, пока модель не загрузилась (остаёмся на капсуле-фолбэке)
-  handsWorldPoint(out) {
+  // Posições reais das duas mãos do esqueleto. Além do goleiro segurando
+  // a bola, o árbitro usa estas coordenadas para uma regra de mão conservadora:
+  // só existe infração quando a bola realmente encontra uma das mãos.
+  handWorldPoints(outL, outR) {
     if (!this.model) return null;
     if (this._handL === undefined) {
       this._handL = this.model.getObjectByName('mixamorigLeftHand') || null;
       this._handR = this.model.getObjectByName('mixamorigRightHand') || null;
     }
     if (!this._handL || !this._handR) return null;
-    this._handL.getWorldPosition(_handA);
-    this._handR.getWorldPosition(_handB);
-    return out.copy(_handA).add(_handB).multiplyScalar(0.5);
+    this._handL.getWorldPosition(outL);
+    this._handR.getWorldPosition(outR);
+    return { left: outL, right: outR };
+  }
+
+  // Середина кистей скелета в мировых координатах — точка «мяч в руках».
+  // null, пока модель не загрузилась (остаёмся на капсуле-фолбэке)
+  handsWorldPoint(out) {
+    const pts = this.handWorldPoints(_handA, _handB);
+    if (!pts) return null;
+    return out.copy(pts.left).add(pts.right).multiplyScalar(0.5);
   }
 
   // Точка удара в мировых координатах: носок бьющей ноги (клип `kick` бьёт
