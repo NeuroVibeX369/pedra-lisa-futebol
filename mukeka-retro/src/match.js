@@ -981,6 +981,80 @@ export class Match {
     });
   }
 
+  _takeHumanPenalty(r, charge = 0.72, swipe = null) {
+    if (!r?.taker) return false;
+    const team = r.team;
+    const bp = this.ball.mesh.position;
+    const G = CONFIG.goal;
+    const B = CONFIG.ball;
+
+    const aim = swipe?.dir || this.input.shotAim || this.input.move || { x: 0, z: 0 };
+    const lateral = Math.max(-1, Math.min(1, Number(aim.x) || 0));
+    const vertical = Math.max(-1, Math.min(1, -(Number(aim.z) || 0)));
+    const skill = Math.max(0.55, Math.min(0.98,
+      (r.taker.overall || r.taker.look?.overall || 80) / 100));
+
+    const c = Math.max(0.28, Math.min(1.2, Number(charge) || 0.72));
+    const side = team.side || 1;
+    let targetZ = lateral * side * (G.width / 2 - 0.38);
+    let targetY = 1.18 + vertical * 0.88;
+
+    // Carga excessiva e cobrador menos técnico aumentam o erro sem transformar
+    // pênalti em loteria.
+    const error = (1 - skill) * 0.62 + Math.max(0, c - 1) * 0.45;
+    targetZ += (Math.random() - 0.5) * 2 * error;
+    targetY += (Math.random() - 0.5) * 1.25 * error;
+
+    const goalX = team.attackGoalX;
+    const dx = goalX - bp.x;
+    const dz = targetZ - bp.z;
+    const dist = Math.hypot(dx, dz) || 1;
+    const power = 19.5 + c * 9.0;
+    const flight = dist / Math.max(8, power * 0.82);
+    const lift = Math.max(-1.2, Math.min(10.5,
+      (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * B.gravity * flight));
+
+    r.taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'penalty');
+    return true;
+  }
+
+  _updateHumanPenaltyKeeper(dt, r) {
+    if (!r?.team) return false;
+    const defending = this.otherTeam(r.team);
+    if (defending !== this.humanTeam) return false;
+    const keeper = defending.keeper;
+    if (!keeper || keeper.dismissed) return false;
+
+    const side = r.team.side || 1;
+    const horizontal = Math.max(-1, Math.min(1, Number(this.input.move?.x) || 0));
+    const face = Math.atan2(r.x - keeper.group.position.x, -keeper.group.position.z);
+
+    if (keeper.diveT <= 0 && keeper.downT <= 0) {
+      keeper.aiUpdate(dt, { x: 0, z: horizontal * side * 0.52 }, { face });
+      const maxZ = CONFIG.goal.width / 2 - 0.48;
+      keeper.group.position.z = Math.max(-maxZ, Math.min(maxZ, keeper.group.position.z));
+      keeper.group.position.x = r.team.attackGoalX - side * 0.75;
+      if (keeper.shadow) {
+        keeper.shadow.position.x = keeper.group.position.x;
+        keeper.shadow.position.z = keeper.group.position.z;
+      }
+    }
+
+    const shot = this.input.shot.consume();
+    const pass = this.input.pass.consume();
+    const through = this.input.through.consume();
+    const cross = this.input.consumeCross();
+    const divePressed = shot !== null || pass !== null || through !== null || !!cross;
+    if (divePressed && keeper.diveT <= 0 && Math.abs(horizontal) > 0.12) {
+      const dz = Math.sign(horizontal) * side;
+      keeper.startKeeperDive(0, dz, {
+        speed: CONFIG.ai.keeper.diveSpeed * 1.04,
+        face,
+      });
+    }
+    return true;
+  }
+
   _halfExtraSec() {
     const whole = Math.ceil(this.stoppage / 60) * 60;
     return Math.max(0, Math.min(120, whole));
@@ -1172,17 +1246,18 @@ export class Match {
         const cross = this.input.consumeCross();
         const swipe = this.input.consumeSwipe();
         if (swipe) {
-          taker.swipeShot({ ...swipe, kind: 'shot' }, this.input, this.ball);
+          this._takeHumanPenalty(r, swipe.power || 0.72, swipe);
           s.phase = 'flight';
           s.timer = 0;
         } else if (shot !== null || cross) {
           const charge = shot !== null ? shot : cross.charge;
-          taker.shoot(Math.max(0.35, Math.min(1.15, charge)), this.input, this.ball);
+          this._takeHumanPenalty(r, charge);
           s.phase = 'flight';
           s.timer = 0;
         }
-      } else if (s.timer >= 1.05) {
-        this._shootoutAIPenalty();
+      } else {
+        this._updateHumanPenaltyKeeper(dt, r);
+        if (s.timer >= 1.05) this._shootoutAIPenalty();
       }
       return;
     }
@@ -1192,7 +1267,12 @@ export class Match {
         if (p.dismissed || p === keeper) continue;
         p.aiUpdate(dt, { x: 0, z: 0 }, {});
       }
-      if (keeper && !keeper.dismissed) updateKeeper(keeper, dt, this.ball);
+      if (keeper && !keeper.dismissed) {
+        if (keeper.team === this.humanTeam && this.restart) {
+          this._updateHumanPenaltyKeeper(dt, this.restart);
+        }
+        updateKeeper(keeper, dt, this.ball);
+      }
 
       const bp = this.ball.mesh.position;
       const speed = this.ball.vel.length();
@@ -2425,9 +2505,10 @@ export class Match {
       freekick: this.restart.indirect ? 'IMPEDIMENTO' : 'FALTA',
       penalty: 'PÊNALTI',
     };
-    this.hud.flash.textContent = this.restart.label || label[type] || 'BOLA PARADA';
-    this.hud.flash.classList.add('show');
-    this.flashTimer = CONFIG.restart.flashTime;
+    const notice = this.restart.label || label[type] || 'BOLA PARADA';
+    const kind = type === 'penalty' ? 'penalty'
+      : (type === 'freekick' && this.restart.indirect ? 'offside' : '');
+    this._showRefereeNotice(notice, CONFIG.restart.flashTime, kind);
   }
 
   // Точка, где стоит исполнитель: чуть снаружи от мяча
@@ -2621,12 +2702,11 @@ export class Match {
       }
     } else if (r.type === 'penalty') {
       if (swipe) {
-        const shotSwipe = { ...swipe, kind: 'shot' };
-        r.taker.swipeShot(shotSwipe, this.input, this.ball);
+        this._takeHumanPenalty(r, swipe.power || 0.72, swipe);
         this._finishRestart();
       } else if (shot !== null || cross) {
         const charge = shot !== null ? shot : cross.charge;
-        r.taker.shoot(Math.max(0.35, Math.min(1.15, charge)), this.input, this.ball);
+        this._takeHumanPenalty(r, charge);
         this._finishRestart();
       }
     } else {
