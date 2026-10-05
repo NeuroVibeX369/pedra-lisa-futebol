@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Pedra Lisa Futebol</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#12331d">
+  <!-- Installed to the home screen, the page opens without any browser chrome.
+       On an iPhone that is the only way to be rid of Safari's bars. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pedra Lisa Futebol">
+  <link rel="apple-touch-icon" href="../icons/icon-180.png">
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="900" height="620" tabindex="0"></canvas>
+
+    <div id="touch" class="hidden">
+      <button id="btnPause" type="button" aria-label="Pausar">II</button>
+      <div id="stick"><div id="knob"></div></div>
+      <div id="touchButtons">
+        <button id="btnSwap" type="button">TROCAR</button>
+        <button id="btnKick" type="button">CHUTAR</button>
+      </div>
+    </div>
+
+    <div id="rotate">Vire o celular de lado para jogar</div>
+
+    <div id="menu" class="overlay">
+      <div class="panel">
+        <a class="hubBack" href="/" aria-label="Voltar para Mukeka Games">← MUKЕKA GAMES</a>
+        <h1>PEDRA <span>LISA</span></h1>
+        <p class="tag">Futebol arcade &middot; local e online</p>
+
+        <div class="row">
+          <label>Modo</label>
+          <div class="btns">
+            <button data-mode="1" class="active">1 jogador</button>
+            <button data-mode="2">2 jogadores</button>
+            <button data-mode="online">Online</button>
+          </div>
+        </div>
+
+        <div class="row" id="difficultyRow">
+          <label>Dificuldade da CPU</label>
+          <div class="btns">
+            <button data-difficulty="easy">Fácil</button>
+            <button data-difficulty="normal" class="active">Normal</button>
+            <button data-difficulty="hard">Difícil</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Som</label>
+          <div class="btns">
+            <button data-music="on" class="active">Ligado</button>
+            <button data-music="off">Desligado</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Narração</label>
+          <div class="btns">
+            <button data-commentary="on" class="active">Ligado</button>
+            <button data-commentary="off">Desligado</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Impedimento</label>
+          <div class="btns">
+            <button data-offside="on" class="active">Ligado</button>
+            <button data-offside="off">Desligado</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="duration">Duração da partida</label>
+          <select id="duration">
+            <option value="60">Curta (2 &times; 1 min)</option>
+            <option value="120" selected>Normal (2 &times; 2 min)</option>
+            <option value="240">Longa (2 &times; 4 min)</option>
+          </select>
+        </div>
+
+        <details id="controlsBox">
+        <summary>Controles</summary>
+        <table class="keys" id="keysTable">
+          <thead>
+            <tr><th></th><th>Jogador 1 (Pedra Lisa)</th><th id="p2head">Jogador 2 (Independência)</th></tr>
+          </thead>
+          <tbody id="keysBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>Predefinições</td>
+              <td><select data-preset="0" class="preset"></select></td>
+              <td><select data-preset="1" class="preset"></select></td>
+            </tr>
+          </tfoot>
+        </table>
+        <p id="bindHint" class="status">Clique em uma tecla para alterá-la.</p>
+        </details>
+
+        <details id="lineupBox">
+          <summary>Formação <span id="lineupShape" class="shape">4-3-3</span></summary>
+          <div class="row" id="lineupTeamRow">
+            <label>Time</label>
+            <div class="btns">
+              <button data-lineupteam="0" class="active">Pedra Lisa</button>
+              <button data-lineupteam="1">Independência</button>
+            </div>
+          </div>
+          <div class="btns wrap" id="lineupPresets"></div>
+          <div class="pitchWrap">
+            <canvas id="lineupPitch" width="220" height="300"></canvas>
+          </div>
+          <p id="lineupNote" class="status"></p>
+          <p class="fineprint">
+            Arraste qualquer jogador, menos o goleiro. A posição no campo define
+            como ele joga: ao adiantar um meio-campista, ele passa a recuar menos
+            e a se aproximar mais dos atacantes.
+          </p>
+        </details>
+
+        <details id="scoresBox">
+          <summary>Melhores resultados <span id="scoresLevel" class="shape"></span></summary>
+          <table class="scores">
+            <tbody id="scoresBody"></tbody>
+          </table>
+          <p id="scoresNote" class="fineprint"></p>
+        </details>
+
+        <p id="iosHint" class="fineprint hidden"></p>
+
+        <div id="localSetup">
+
+          <details>
+          <summary>Como jogar</summary>
+          <ul class="hints">
+            <li><b>Toque</b> para passe rasteiro; <b>segure</b> para uma bola mais forte ou levantada.</li>
+            <li><b>Efeito:</b> continue direcionando após o chute para curvar a bola; para frente levanta, para trás faz a bola cair.</li>
+            <li>O botão <b>sem a bola</b> executa um carrinho.</li>
+            <li>Você controla automaticamente o jogador mais próximo da bola.</li>
+            <li>Controles também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
+            <li><b>Esc</b> pausa o jogo.</li>
+          </ul>
+          </details>
+
+        </div>
+
+        <div id="onlineSetup" class="hidden">
+          <p class="explain">
+            Escolha como você quer aparecer no modo online. Depois disso, você verá
+            quem está conectado e poderá convidar alguém para jogar sem sair do jogo.
+          </p>
+
+          <div id="onlineIdentity" class="onlineIdentity">
+            <label for="onlineName">Seu nome</label>
+            <div class="joinrow">
+              <input id="onlineName" maxlength="20" placeholder="SEU NOME" autocomplete="nickname" spellcheck="false">
+              <button id="saveOnlineName">ENTRAR NO ONLINE</button>
+            </div>
+            <p id="onlineNameHint" class="status">Na primeira vez, escolha um nome. Ele ficará salvo neste navegador.</p>
+          </div>
+
+          <div id="onlineLobby" class="hidden">
+            <div class="lobbyTitle">
+              <strong>JOGADORES ONLINE</strong>
+              <span id="onlineCount" class="shape">0</span>
+              <button id="editOnlineName" type="button">Editar nome</button>
+            </div>
+            <div id="onlinePlayers" class="onlinePlayers"></div>
+
+            <div id="inviteBox" class="inviteBox hidden">
+              <p id="inviteText" class="status"></p>
+              <div class="btns">
+                <button id="acceptInvite" class="primary inlinePrimary">ACEITAR</button>
+                <button id="declineInvite">RECUSAR</button>
+              </div>
+            </div>
+
+            <p id="onlineStatus" class="status"></p>
+
+            <details id="codeFallback">
+              <summary>Entrar por código (opção alternativa)</summary>
+              <p class="fineprint">
+                O convite direto é a forma principal. O código continua disponível como plano B.
+              </p>
+              <div id="roomCode" class="code hidden"></div>
+              <div class="joinrow">
+                <input id="joinCode" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+                <button id="join">ENTRAR</button>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="panelFooter">
+          <button id="start" class="primary">INICIAR PARTIDA</button>
+          <button id="host" class="primary hidden">CRIAR PARTIDA POR CÓDIGO</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="hiscore" class="overlay hidden">
+      <div class="panel small">
+        <h2>NOVO RECORDE</h2>
+        <p id="hiscoreLine" class="status"></p>
+        <div class="picker">
+          <div id="hiscoreUp" class="letterRow"></div>
+          <div id="hiscoreLetters" class="letters"></div>
+          <div id="hiscoreDown" class="letterRow"></div>
+        </div>
+        <button id="hiscoreOk" class="primary">OK</button>
+        <p class="fineprint">
+          Toque nas setas ou use o direcional: para cima e para baixo troca a letra;
+          esquerda e direita muda a posição; chute confirma. Também é possível digitar.
+        </p>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="panel small">
+        <h2>PAUSADO</h2>
+        <button id="resume" class="primary">Continuar</button>
+        <button id="quit">Voltar ao menu</button>
+      </div>
+    </div>
+
+    <div id="netend" class="overlay hidden">
+      <div class="panel small">
+        <h2 id="netendTitle">CONEXÃO PERDIDA</h2>
+        <p id="netendText" class="status"></p>
+        <button id="netendQuit" class="primary">Voltar ao menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../src/main.js"></script>
+</body>
+</html>
