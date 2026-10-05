@@ -30,4 +30,7 @@ jobs:
           node --check mukeka-retro/src/main.js
           node --check mukeka-retro/src/crt.js
           node --check mukeka-retro/src/match.js
+          node --check mukeka-retro/src/sfx.js
+          node --check mukeka-retro/src/ai/fieldplayer.js
+          node --check mukeka-retro/src/ai/team.js
           node --check mukeka-retro/src/scene.js
