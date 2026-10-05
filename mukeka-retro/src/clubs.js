@@ -161,7 +161,13 @@ export function buildClubTeam(clubOrId) {
       gk: club.gk,
     },
     kits: { home: null, goalkeeper: null },
-    squad: buildClubCareerSquad(club).slice(0, 11),
+    squad: buildClubCareerSquad(club).slice(0, 11).map((p) => {
+      const {
+        id, position, teamId, goals, mvp, appearances,
+        ...matchPlayer
+      } = p;
+      return matchPlayer;
+    }),
     style: club.style || 'neutral',
     _comentario_mukeka: 'Equipe gerada do catálogo único Mukeka Retro.',
   };
