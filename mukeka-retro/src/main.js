@@ -130,12 +130,12 @@ const WEARS = [0, 25, 50, 75, 100];
 let wearIdx = 2;
 
 function wearLabel(v) {
-  if (v === 50) return 'середина';
-  if (v <= 15) return 'ухожен';
-  if (v <= 35) return 'лёгкий';
-  if (v <= 65) return 'умерен.';
-  if (v <= 85) return 'поношен';
-  return 'вытоптан';
+  if (v === 50) return 'médio';
+  if (v <= 15) return 'bem cuidado';
+  if (v <= 35) return 'leve';
+  if (v <= 65) return 'moderado';
+  if (v <= 85) return 'desgastado';
+  return 'muito gasto';
 }
 
 function applyPitchWear(value, save = false) {
@@ -358,7 +358,7 @@ for (const head of [...settingsPanel.querySelectorAll('h3')]) {
 
 function syncFoldBtn() {
   const anyOpen = sections.some((s) => !s.head.classList.contains('folded'));
-  foldBtn.textContent = anyOpen ? 'СВЕРНУТЬ ВСЁ' : 'РАЗВЕРНУТЬ ВСЁ';
+  foldBtn.textContent = anyOpen ? 'RECOLHER TUDO' : 'ABRIR TUDO';
 }
 
 foldBtn.addEventListener('click', (e) => {
@@ -379,8 +379,8 @@ syncFoldBtn();
 const tempoSlider = document.getElementById('set-tempo');
 const tempoVal = document.getElementById('set-tempo-val');
 const TEMPO_LABEL = {
-  70: 'очень размеренный', 80: 'размеренный', 90: 'спокойный',
-  95: 'чуть спокойнее', 100: 'обычный', 110: 'быстрый',
+  70: 'bem cadenciado', 80: 'cadenciado', 90: 'tranquilo',
+  95: 'um pouco mais lento', 100: 'normal', 110: 'rápido',
 };
 // Ключ с индексом ПОКОЛЕНИЯ, как у GRADE_BASE в грейдинге. Первая редакция
 // ставила темп 80 %, и это оказалось слишком вязким; у того, кто уже трогал
@@ -400,7 +400,7 @@ tempoSlider.addEventListener('input', () => {
 // трибуна, и в эфире он слышен всегда, как бы ни был выведен зал.
 const crowdSlider = document.getElementById('set-crowd');
 const crowdVal = document.getElementById('set-crowd-val');
-const CROWD_LABEL = { 0: 'выкл', 30: 'тише', 55: 'фоном', 80: 'как в эфире', 100: 'громко' };
+const CROWD_LABEL = { 0: 'desligada', 30: 'baixa', 55: 'ambiente', 80: 'transmissão', 100: 'alta' };
 // Штатная громкость из CONFIG — снимаем ДО того, как её перекроет сохранённое
 // значение: к ней возвращается ответ «ДА, СО ЗВУКОМ» в стартовом вопросе, если
 // в прошлый раз зал был выведен в ноль.
@@ -476,7 +476,7 @@ if (soundGate) {
       const hint = document.getElementById('hint');
       if (hint) {
         hint.classList.remove('dim');
-        hint.textContent = 'ЗВУК НЕ ВКЛЮЧИЛСЯ — КОСНИСЬ ЭКРАНА ЕЩЁ РАЗ';
+        hint.textContent = 'O SOM NÃO FOI ATIVADO — TOQUE NA TELA MAIS UMA VEZ';
       }
     });
     closeGate();
@@ -606,7 +606,7 @@ if (diffSelect) {
 // Само значение уже прочитано и применено выше, до создания матча.
 const pyroSlider = document.getElementById('set-pyro');
 const pyroVal = document.getElementById('set-pyro-val');
-const PYRO_LABEL = { 0: 'выкл', 50: 'редко', 100: 'как в эфире', 150: 'вовсю' };
+const PYRO_LABEL = { 0: 'desligada', 50: 'leve', 100: 'normal', 150: 'intensa' };
 
 function applyPyro(v, save = false) {
   pyroSlider.value = v;
