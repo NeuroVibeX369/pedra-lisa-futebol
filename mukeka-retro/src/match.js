@@ -1821,12 +1821,17 @@ export class Match {
         if (p.aerialStrike && !paused) p.updateAerialStrike(dt, this.ball);
         if (this.restart && p === this.restart.taker) this.updateTaker(p, dt);
         else if (this.restart?.type === 'penalty') {
-          const look = this.restart.team === p.team
-            ? this.restart.team.attackGoalX
-            : this.restart.x;
-          p.aiUpdate(dt, { x: 0, z: 0 }, {
-            face: Math.atan2(look - p.group.position.x, -p.group.position.z),
-          });
+          const defending = this.otherTeam(this.restart.team);
+          if (p === defending.keeper && defending === this.humanTeam) {
+            this._updateHumanPenaltyKeeper(dt, this.restart);
+          } else {
+            const look = this.restart.team === p.team
+              ? this.restart.team.attackGoalX
+              : this.restart.x;
+            p.aiUpdate(dt, { x: 0, z: 0 }, {
+              face: Math.atan2(look - p.group.position.x, -p.group.position.z),
+            });
+          }
         }
         else if (this.restart?.type === 'freekick' && this.restart.wall?.includes(p)) {
           p.aiUpdate(dt, { x: 0, z: 0 }, {
