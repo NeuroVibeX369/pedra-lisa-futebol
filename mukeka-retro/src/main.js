@@ -78,18 +78,10 @@ const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, 16 / 9, 0.5, 400);
 camera.position.set(0, CONFIG.camera.height, CONFIG.camera.distance);
 camera.lookAt(0, 1, 0);
 
-// --- Жучок телеканала в левом верхнем углу ---
-// Картинку назначает ПАК атрибутики: у своей сборки реальный УТ-1, у публичной
-// вымышленный УГ-1 (правило лицензионного слоя — брендов в коде нет).
-// Пак без логотипа — блок молча не показывается.
+// Marca fixa da transmissão no canto superior esquerdo.
+// Não depende mais do pacote visual nem muda junto com os filtros de imagem.
 const channelLogo = document.getElementById('channel-logo');
-if (channelLogo && PACK.textures.channelLogo) {
-  channelLogo.addEventListener('load', () => channelLogo.classList.add('show'));
-  channelLogo.addEventListener('error', () => {
-    console.warn('Не загрузился логотип канала:', PACK.textures.channelLogo);
-  });
-  channelLogo.src = PACK.textures.channelLogo;
-}
+if (channelLogo) channelLogo.textContent = 'MUKEKA TV';
 
 // ===== Панель телевизора =====
 // Настройки картинки живут на КОРПУСЕ, а не в меню: канал, яркость, контраст
@@ -248,34 +240,41 @@ for (const [key, id, min, max] of KNOBS) {
 }
 crt.setKnobs({ gain: knobs.gain.value, contrast: knobs.contrast.value, color: knobs.color.value });
 
-// --- Ручка КАНАЛ: перебор ТВ-пресетов ---
-// Стартовая картинка — чистый RGB («оригинал»): пусть игрок сам решит, когда
-// накинуть эфирный шум или VHS. Какой пресет стартовый — решают ДАННЫЕ
-// (tv-presets.json → "default"), а выбор игрока переживает перезапуск.
-// Пресеты с "hidden": true остаются в файле, но в переборе не участвуют.
+// --- Estilo da transmissão ---
+// O efeito visual saiu da antiga ручка "CANAL": Antena/VHS/RGB são estilos
+// de imagem, não canais de TV. A marca MUKEKA TV permanece fixa.
 let presets = [];
-let channelKnob = null;
+const tvPresetSelect = document.getElementById('set-tv-preset');
 
 fetch('./data/tv-presets.json')
   .then((r) => r.json())
   .then((data) => {
     presets = data.presets.filter((p) => !p.hidden);
-    if (!presets.length) throw new Error('в tv-presets.json не осталось видимых пресетов');
+    if (!presets.length) throw new Error('nenhum estilo de transmissão disponível');
     const saved = localStorage.getItem('f98.tvPreset');
     const savedIdx = presets.findIndex((p) => p.id === saved);
     const defIdx = presets.findIndex((p) => p.id === data.default);
     const start = savedIdx >= 0 ? savedIdx : Math.max(0, defIdx);
-    channelKnob = new Knob(document.getElementById('knob-channel'), {
-      min: 0, max: presets.length - 1, step: 1, def: Math.max(0, defIdx), value: start,
-      format: (i) => presets[i].name,
-      onChange: (i) => {
-        crt.setPreset(presets[i]);
-        remember('f98.tvPreset', presets[i].id);
-      },
-    });
+
+    if (tvPresetSelect) {
+      tvPresetSelect.innerHTML = '';
+      presets.forEach((preset, i) => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        option.selected = i === start;
+        tvPresetSelect.appendChild(option);
+      });
+      tvPresetSelect.addEventListener('change', () => {
+        const preset = presets.find((p) => p.id === tvPresetSelect.value) || presets[0];
+        crt.setPreset(preset);
+        remember('f98.tvPreset', preset.id);
+      });
+    }
+
     crt.setPreset(presets[start]);
   })
-  .catch((e) => console.error('Не удалось загрузить ТВ-пресеты:', e));
+  .catch((e) => console.error('Não foi possível carregar os estilos de transmissão:', e));
 
 // --- Клавиша ВО ВЕСЬ ЭКРАН ---
 // Панель ручек уезжает, рамка корпуса схлопывается, картинка занимает всё окно.
