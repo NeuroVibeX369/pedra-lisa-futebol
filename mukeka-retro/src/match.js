@@ -748,6 +748,12 @@ export class Match {
     };
     this.cardEvents.push(event);
     if (card === 'red') this._dismissPlayer(player);
+    this._showRefereeNotice(
+      card === 'red'
+        ? `CARTÃO VERMELHO · ${player.name || 'JOGADOR'}`
+        : `CARTÃO AMARELO · ${player.name || 'JOGADOR'}`,
+      1.8,
+    );
     return card;
   }
 
@@ -880,6 +886,7 @@ export class Match {
     const pz = ux;
     const count = d < 31 ? 4 : (d < 39 ? 3 : 2);
     const wall = defending.fieldPlayers.slice(0, count);
+    r.wall = wall;
     wall.forEach((p, i) => {
       const spread = (i - (wall.length - 1) / 2) * 0.85;
       const x = r.x + ux * 9.15 + px * spread;
@@ -1451,6 +1458,20 @@ export class Match {
         // перенаправляется в момент контакта (до движения игрока)
         if (p.aerialStrike && !paused) p.updateAerialStrike(dt, this.ball);
         if (this.restart && p === this.restart.taker) this.updateTaker(p, dt);
+        else if (this.restart?.type === 'penalty') {
+          const look = this.restart.team === p.team
+            ? this.restart.team.attackGoalX
+            : this.restart.x;
+          p.aiUpdate(dt, { x: 0, z: 0 }, {
+            face: Math.atan2(look - p.group.position.x, -p.group.position.z),
+          });
+        }
+        else if (this.restart?.type === 'freekick' && this.restart.wall?.includes(p)) {
+          p.aiUpdate(dt, { x: 0, z: 0 }, {
+            face: Math.atan2(this.restart.x - p.group.position.x,
+              this.restart.z - p.group.position.z),
+          });
+        }
         else if (p.isKeeper && p.ai && p.ai.holding) this.updateKeeperHold(p, dt);
         else if (p === this.controlled) p.update(dt, this.input, this.ball);
         else if (p === this.remoteControlled && this.remoteInput) {
@@ -1715,6 +1736,10 @@ export class Match {
         }
       }
     }
+    if (best && best === this.lastTouch && !best.isKeeper) {
+      this._captureOffsideSnapshot(best);
+    }
+
     if (touch) {
       const newTouch = !this.touchLog.length || this.touchLog[this.touchLog.length - 1].p !== touch;
       if (newTouch && this._checkOffsideTouch(touch)) return;
@@ -3000,7 +3025,7 @@ export class Match {
     const h = this.hud;
     if (!h.plate) return;
     const quiet = this.state === 'intro' || this.state === 'replay' ||
-      this.state === 'celebration' || this.state === 'fulltime';
+      this.state === 'celebration' || this.state === 'halftime' || this.state === 'fulltime';
     const p = quiet ? null : this.controlled;
     const key = p ? `${p.name}|${p.number}|${this.teams.indexOf(p.team)}` : '';
     const now = performance.now();
@@ -3036,15 +3061,21 @@ export class Match {
       document.body.dataset.phase = phase;
     }
 
-    // После 90-й табло показывает «90+X'» — добавленное время эпохи уже было
     const rawMin = Math.floor(this.clock / 60);
-    const min = Math.min(90, rawMin);
-    const extra = rawMin > 90 ? rawMin - 90 : 0;
-    const key = `${this.score[0]}:${this.score[1]}|${min}+${extra}`;
+    let timeText;
+    if (!this.halftimeDone && rawMin > 45) {
+      timeText = `45+${rawMin - 45}'`;
+    } else if (rawMin > 90) {
+      timeText = `90+${rawMin - 90}'`;
+    } else {
+      timeText = `${Math.min(90, rawMin)}'`;
+    }
+    if (this.state === 'halftime') timeText = 'INTERVALO';
+    const key = `${this.score[0]}:${this.score[1]}|${timeText}`;
     if (key === this._hudCache) return;
     this._hudCache = key;
     this.hud.score.textContent = `${this.score[0]}:${this.score[1]}`;
-    this.hud.time.textContent = extra > 0 ? `90+${extra}'` : `${min}'`;
+    this.hud.time.textContent = timeText;
   }
 
   // Добавленное время: копилка событий, округлённая вверх до целой минуты
