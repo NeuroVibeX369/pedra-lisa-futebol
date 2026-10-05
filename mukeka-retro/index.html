@@ -1323,6 +1323,117 @@
       color: #071109; background: #b8ff52; border: 0;
       font: 700 12px var(--tv-font); letter-spacing: 2px; cursor: pointer;
     }
+    #master-result-return .mrr-clubs {
+      color:#c8d8cb;
+      letter-spacing:1.4px;
+    }
+    #master-result-return .mrr-events {
+      margin:14px 0 18px;
+      padding:10px;
+      text-align:left;
+      background:#08140d;
+      border:1px solid #294632;
+    }
+    #master-result-return .mrr-events h3 {
+      margin:7px 0;
+      color:#e7f46e;
+      font-size:11px;
+      letter-spacing:2px;
+    }
+    #master-result-return .mrr-event,
+    #master-result-return .mrr-sub {
+      display:grid;
+      grid-template-columns:42px minmax(0,1fr) minmax(0,1fr);
+      gap:7px;
+      align-items:center;
+      padding:6px 4px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      font-size:10px;
+    }
+    #master-result-return .mrr-event span,
+    #master-result-return .mrr-sub span { color:#e7f46e; }
+    #master-result-return .mrr-event small { color:#92a596; text-align:right; }
+    #master-result-return .mrr-sub {
+      grid-template-columns:42px minmax(0,1fr) 16px minmax(0,1fr) 16px;
+    }
+    #master-result-return .mrr-sub i { font-style:normal; text-align:center; }
+    #master-result-return .mrr-empty { color:#8ca090; padding:5px 3px; }
+
+    .ml-result-screen {
+      padding: clamp(18px,4vw,36px);
+      text-align:center;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(194,224,88,.08), transparent 46%),
+        linear-gradient(180deg,#102719,#08160e);
+      border:1px solid rgba(105,153,113,.75);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .ml-result-stage {
+      color:#a8baa9;
+      letter-spacing:1.5px;
+    }
+    .ml-result-screen > h3 {
+      margin:8px 0 14px;
+      color:#e7f46e;
+      letter-spacing:3px;
+    }
+    .ml-result-clubs {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      gap:14px;
+      align-items:center;
+      margin:10px auto 16px;
+      max-width:760px;
+      font-size:clamp(14px,2.3vw,22px);
+      font-weight:900;
+      letter-spacing:1px;
+    }
+    .ml-result-clubs strong {
+      color:#fff;
+      font-size:clamp(32px,6vw,64px);
+      white-space:nowrap;
+      text-shadow:0 3px 0 rgba(0,0,0,.35);
+    }
+    .ml-result-pens {
+      margin:-7px 0 15px;
+      color:#e7f46e;
+      letter-spacing:1.5px;
+    }
+    .ml-goal-list, .ml-round-results {
+      width:min(760px,100%);
+      margin:12px auto;
+      padding:10px 12px;
+      text-align:left;
+      background:rgba(3,12,7,.55);
+      border:1px solid rgba(78,124,86,.62);
+    }
+    .ml-goal-list h4, .ml-round-results h4 {
+      margin:0 0 8px;
+      color:#bacbbd;
+      font-size:10px;
+      letter-spacing:2px;
+    }
+    .ml-goal-event {
+      display:grid;
+      grid-template-columns:46px minmax(0,1fr) minmax(0,1fr);
+      gap:8px;
+      padding:7px 4px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      font-size:11px;
+    }
+    .ml-goal-event span { color:#e7f46e; }
+    .ml-goal-event small { color:#8ea091; text-align:right; }
+    .ml-result-row {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      gap:10px;
+      padding:7px 4px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      font-size:11px;
+    }
+    .ml-result-row span:last-child { text-align:right; }
+    .ml-result-row b { color:#e7f46e; white-space:nowrap; }
+    .ml-no-goals { padding:7px 4px; color:#849889; font-size:10px; letter-spacing:1px; }
     @media (max-width: 640px) {
       .ml-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .ml-row { grid-template-columns:minmax(120px,2fr) .55fr .55fr 1fr; font-size:10px; }
