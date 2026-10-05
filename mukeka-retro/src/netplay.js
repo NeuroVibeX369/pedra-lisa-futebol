@@ -306,7 +306,16 @@ function applySnapshot(match, ball, s) {
   } else if (s.state !== 'restart') {
     match.restart = null;
   }
-  if (s.possession === 0 || s.possession === 1) match.possession = match.teams[s.possession];
+
+  match.possession = (s.possession === 0 || s.possession === 1)
+    ? match.teams[s.possession] : null;
+
+  if (Array.isArray(s.toucher) && (s.toucher[0] === 0 || s.toucher[0] === 1)) {
+    match.toucher = match.teams[s.toucher[0]]?.players?.[s.toucher[1]] || null;
+  } else {
+    match.toucher = null;
+  }
+  for (const p of match.allPlayers || []) p.isToucher = p === match.toucher;
 
   if (s.ball?.p && s.ball?.v) {
     ball.mesh.position.set(s.ball.p[0], s.ball.p[1], s.ball.p[2]);
