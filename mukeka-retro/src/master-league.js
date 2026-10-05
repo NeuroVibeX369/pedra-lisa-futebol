@@ -354,6 +354,7 @@ function choosePlayer(state, teamId, random, scorer = false, pool = null) {
 function recordPlayerMatch(state, teamId, goals, won, seed) {
   const random = rng(seed);
   const starters = startingPlayers(state, teamId);
+  const events = [];
   for (const p of starters) {
     p.appearances = (p.appearances || 0) + 1;
     p.mvp = (p.mvp || 0) + (won ? .8 : .3) + random() * .7 + p.overall / 250;
@@ -363,11 +364,18 @@ function recordPlayerMatch(state, teamId, goals, won, seed) {
     if (scorer) {
       scorer.goals = (scorer.goals || 0) + 1;
       scorer.mvp = (scorer.mvp || 0) + 2.1;
+      events.push({
+        careerId: scorer.id || null,
+        name: scorer.name || 'GOL',
+        minute: 2 + Math.floor(random() * 88),
+      });
     }
   }
+  events.sort((a, b) => a.minute - b.minute);
+  return events;
 }
 
-function recordPlayedTeam(state, teamId, won, lineupIds, events, expectedGoals, seed) {
+function recordPlayedTeam(state, teamId, won, lineupIds, events, expectedGoals, seed, extraAppearanceIds = []) {
   const random = rng(seed);
   const squad = state.squads[teamId] || [];
   const ids = Array.isArray(lineupIds) && lineupIds.length
@@ -378,6 +386,15 @@ function recordPlayedTeam(state, teamId, won, lineupIds, events, expectedGoals, 
   for (const p of starters) {
     p.appearances = (p.appearances || 0) + 1;
     p.mvp = (p.mvp || 0) + (won ? .8 : .3) + random() * .45 + p.overall / 260;
+  }
+
+  const starterSet = new Set(starters.map((p) => p.id));
+  for (const id of new Set(extraAppearanceIds || [])) {
+    if (!id || starterSet.has(id)) continue;
+    const p = squad.find((x) => x.id === id);
+    if (!p) continue;
+    p.appearances = (p.appearances || 0) + 1;
+    p.mvp = (p.mvp || 0) + (won ? .42 : .18) + random() * .25 + p.overall / 340;
   }
 
   let credited = 0;
@@ -415,10 +432,20 @@ function recordRealMatch(state, fixture, hg, ag, report) {
     ? state.lineup
     : defaultLineupIds(state.squads[fixture.away] || []);
 
+  const substitutions = Array.isArray(report?.substitutions) ? report.substitutions : [];
+  const homeSubs = substitutions
+    .filter((x) => Number(x.teamIndex) === 0)
+    .map((x) => x.inCareerId)
+    .filter(Boolean);
+  const awaySubs = substitutions
+    .filter((x) => Number(x.teamIndex) === 1)
+    .map((x) => x.inCareerId)
+    .filter(Boolean);
+
   recordPlayedTeam(state, fixture.home, hg > ag, homeIds, homeEvents, hg,
-    `real-${state.season}-${fixture.id}-home`);
+    `real-${state.season}-${fixture.id}-home`, homeSubs);
   recordPlayedTeam(state, fixture.away, ag > hg, awayIds, awayEvents, ag,
-    `real-${state.season}-${fixture.id}-away`);
+    `real-${state.season}-${fixture.id}-away`, awaySubs);
 }
 
 function simulateScore(state, home, away, seed) {
@@ -467,11 +494,34 @@ function applyFixtureScore(state, fixture, table, stage, hg, ag) {
   fixture.homeGoals = Math.max(0, Number(hg) || 0);
   fixture.awayGoals = Math.max(0, Number(ag) || 0);
   if (table) updateTable(table, fixture.home, fixture.away, fixture.homeGoals, fixture.awayGoals);
-  recordPlayerMatch(state, fixture.home, fixture.homeGoals, fixture.homeGoals > fixture.awayGoals,
-    `${fixture.id}-home-${state.season}`);
-  recordPlayerMatch(state, fixture.away, fixture.awayGoals, fixture.awayGoals > fixture.homeGoals,
-    `${fixture.id}-away-${state.season}`);
+
+  const homeEvents = recordPlayerMatch(
+    state, fixture.home, fixture.homeGoals, fixture.homeGoals > fixture.awayGoals,
+    `${fixture.id}-home-${state.season}`,
+  ).map((g) => ({ ...g, teamIndex: 0 }));
+  const awayEvents = recordPlayerMatch(
+    state, fixture.away, fixture.awayGoals, fixture.awayGoals > fixture.homeGoals,
+    `${fixture.id}-away-${state.season}`,
+  ).map((g) => ({ ...g, teamIndex: 1 }));
+  fixture.goals = [...homeEvents, ...awayEvents].sort((a, b) => a.minute - b.minute);
+
   payForUserMatch(state, fixture.home, fixture.away, fixture.homeGoals, fixture.awayGoals, stage);
+
+  if (fixture.home === state.clubId || fixture.away === state.clubId) {
+    state.matchHistory = Array.isArray(state.matchHistory) ? state.matchHistory : [];
+    state.matchHistory.unshift({
+      season: state.season,
+      stage,
+      home: fixture.home,
+      away: fixture.away,
+      homeGoals: fixture.homeGoals,
+      awayGoals: fixture.awayGoals,
+      simulated: true,
+      goals: fixture.goals.map((g) => ({ ...g })),
+    });
+    state.matchHistory = state.matchHistory.slice(0, 40);
+  }
+
   return fixture;
 }
 
@@ -706,12 +756,40 @@ function simulateChampions(state) {
   }
 }
 
+function fixtureResult(fixture) {
+  if (!fixture) return null;
+  return {
+    id: fixture.id,
+    home: fixture.home,
+    away: fixture.away,
+    homeName: teamName(fixture.home),
+    awayName: teamName(fixture.away),
+    homeGoals: fixture.homeGoals,
+    awayGoals: fixture.awayGoals,
+    penalties: fixture.penalties || null,
+    goals: Array.isArray(fixture.goals) ? fixture.goals.map((g) => ({ ...g })) : [],
+  };
+}
+
 function simulateNext(state) {
+  const stageLabel = currentStageLabel(state);
+  const focus = nextUserFixture(state);
+  let games = [];
+  if (state.stage === 'local') games = [...currentLocalRound(state)];
+  else if (state.stage === 'regional-groups') games = [...currentGroupRound(state)];
+  else if (state.knockout) games = state.knockout.fixtures.filter((f) => !f.played);
+
   if (state.stage === 'local') simulateLocalRound(state);
   else if (state.stage === 'regional-groups') simulateGroupRound(state);
   else if (state.stage.startsWith('knockout-')) advanceKnockout(state);
   else if (state.stage === 'champions') simulateChampions(state);
+
   saveState(state);
+  return {
+    stageLabel,
+    focus: fixtureResult(focus),
+    results: games.map(fixtureResult).filter(Boolean),
+  };
 }
 
 function currentStageLabel(state) {
@@ -846,6 +924,7 @@ export function setupMasterLeague() {
   let open = false;
   let state = loadState();
   let tab = 'overview';
+  let simulationResult = null;
 
   const body = document.getElementById('ml-body');
   const title = document.getElementById('ml-title');
@@ -871,8 +950,8 @@ export function setupMasterLeague() {
         <p class="ml-next-match">${fixture ? `${teamName(fixture.home)} × ${teamName(fixture.away)}` : 'Próximo adversário em definição.'}</p>
         <small>${currentStageLabel(state)}</small>
         ${fixture ? '<button id="ml-play" class="ml-main" type="button">JOGAR PARTIDA</button>' : ''}
-        <button id="ml-next" class="ml-main" type="button">SIMULAR RODADA</button>
-        <p class="ml-note">Entre em campo com o Pedra Lisa ou simule a rodada completa.</p>
+        <button id="ml-next" class="ml-main" type="button">${fixture ? 'SIMULAR PARTIDA' : 'AVANÇAR'}</button>
+        <p class="ml-note">Jogue a partida ou simule para ver o placar, autores dos gols e os demais resultados da rodada.</p>
       </div>
       <div class="ml-card">
         <h3>OBJETIVO DA TEMPORADA</h3>
@@ -1025,6 +1104,47 @@ export function setupMasterLeague() {
       <h3 style="margin-top:18px">TEMPORADAS</h3>${seasons}`;
   }
 
+  function renderSimulationResult(result) {
+    const focus = result?.focus;
+    if (!focus) {
+      return `
+        <div class="ml-result-screen">
+          <h3>RODADA CONCLUÍDA</h3>
+          <p>Os resultados foram registrados.</p>
+          <button id="ml-result-continue" class="ml-main" type="button">CONTINUAR</button>
+        </div>`;
+    }
+
+    const goalLine = (focus.goals || []).map((g) =>
+      `<div class="ml-goal-event"><span>${g.minute || '—'}'</span><b>${g.name || 'GOL'}</b><small>${Number(g.teamIndex) === 0 ? focus.homeName : focus.awayName}</small></div>`
+    ).join('');
+
+    const other = (result.results || []).map((g) =>
+      `<div class="ml-result-row"><span>${g.homeName}</span><b>${g.homeGoals} × ${g.awayGoals}${g.penalties ? ` <small>(pên. ${g.penalties})</small>` : ''}</b><span>${g.awayName}</span></div>`
+    ).join('');
+
+    return `
+      <div class="ml-result-screen">
+        <small class="ml-result-stage">${result.stageLabel || ''}</small>
+        <h3>RESULTADO</h3>
+        <div class="ml-result-clubs">
+          <span>${focus.homeName}</span>
+          <strong>${focus.homeGoals} × ${focus.awayGoals}</strong>
+          <span>${focus.awayName}</span>
+        </div>
+        ${focus.penalties ? `<div class="ml-result-pens">PÊNALTIS · ${focus.penalties}</div>` : ''}
+        <div class="ml-goal-list">
+          <h4>GOLS</h4>
+          ${goalLine || '<div class="ml-no-goals">SEM GOLS</div>'}
+        </div>
+        <div class="ml-round-results">
+          <h4>RESULTADOS DA RODADA</h4>
+          ${other || '<div class="ml-no-goals">Rodada concluída.</div>'}
+        </div>
+        <button id="ml-result-continue" class="ml-main" type="button">CONTINUAR</button>
+      </div>`;
+  }
+
   function render() {
     if (!state) {
       title.textContent = 'MASTER LIGA';
@@ -1045,6 +1165,16 @@ export function setupMasterLeague() {
 
     title.textContent = 'MASTER LIGA · PEDRA LISA';
     meta.textContent = `${currentStageLabel(state)} · ${money(state.money)}`;
+
+    if (simulationResult) {
+      body.innerHTML = renderSimulationResult(simulationResult);
+      document.getElementById('ml-result-continue')?.addEventListener('click', () => {
+        simulationResult = null;
+        tab = 'overview';
+        render();
+      });
+      return;
+    }
 
     const tabs = {
       overview: 'VISÃO GERAL',
@@ -1116,7 +1246,7 @@ export function setupMasterLeague() {
 
     document.getElementById('ml-next')?.addEventListener('click', () => {
       clearPendingMatch();
-      simulateNext(state);
+      simulationResult = simulateNext(state);
       render();
     });
 
