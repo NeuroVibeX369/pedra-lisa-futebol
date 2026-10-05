@@ -2,7 +2,7 @@ import { Signal } from '../../src/net/signal.js';
 import { relayFor } from '../../src/config.js';
 import { RetroNetplay } from './netplay.js';
 
-export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
+export function setupRetroOnlineTest({ onRole, onExitOnline, match, ball, input } = {}) {
   const gate = document.getElementById('retro-online-test');
   if (!gate) {
     return {
@@ -228,6 +228,7 @@ export function setupRetroOnlineTest({ onRole, match, ball, input } = {}) {
     gate.classList.add('hidden');
     setOnlineUrl(false);
     if (match) match.setHumanTeamIndex?.(0);
+    onExitOnline?.();
   });
 
   // Um link de convite abre a sala e entra automaticamente, sem pedir para
