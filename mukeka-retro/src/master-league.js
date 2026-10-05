@@ -104,8 +104,9 @@ function money(v) {
 }
 
 function playerValue(p) {
-  const ageF = p.age <= 23 ? 1.28 : p.age >= 31 ? 0.74 : 1;
-  return Math.max(3500, Math.round((p.overall ** 2) * 18 * ageF / 1000) * 1000);
+  // Estilo Master Liga clássica: valor depende do OVR, não de idade.
+  // Os jogadores não envelhecem, não perdem OVR e não se aposentam.
+  return Math.max(3500, Math.round((p.overall ** 2) * 18 / 1000) * 1000);
 }
 
 function generatedSquad(team) {
@@ -122,7 +123,6 @@ function generatedSquad(team) {
       name: `${first.toUpperCase()} ${last.toUpperCase()}`,
       position,
       overall,
-      age: 18 + Math.floor(random() * 15),
       teamId: team.id,
       goals: 0,
       mvp: 0,
@@ -132,9 +132,9 @@ function generatedSquad(team) {
 }
 
 function pedraLisaSquad() {
-  return PEDRA_LISA.map(([name, position, overall, age], i) => ({
+  return PEDRA_LISA.map(([name, position, overall], i) => ({
     id: `pedra-lisa-${i}`,
-    name, position, overall, age, teamId: 'pedra-lisa',
+    name, position, overall, teamId: 'pedra-lisa',
     goals: 0, mvp: 0, appearances: 0,
   }));
 }
@@ -192,17 +192,18 @@ function roundRobin(ids) {
     })));
 }
 
-function createMarket(season) {
-  const random = rng(`market-${season}`);
-  return Array.from({ length: 14 }, (_, i) => {
+function createMarket() {
+  // Mercado fechado e permanente: não nasce uma geração nova a cada temporada.
+  // Assim a Master Liga pode durar indefinidamente com o mesmo universo de
+  // jogadores, como nos jogos clássicos.
+  const random = rng('master-market-fixed');
+  return Array.from({ length: 24 }, (_, i) => {
     const overall = 59 + Math.floor(random() * 21);
-    const age = 18 + Math.floor(random() * 13);
     const p = {
-      id: `market-${season}-${i}`,
+      id: `market-fixed-${i}`,
       name: `${FIRST[Math.floor(random() * FIRST.length)].toUpperCase()} ${LAST[Math.floor(random() * LAST.length)].toUpperCase()}`,
       position: POSITIONS[1 + Math.floor(random() * (POSITIONS.length - 1))],
       overall,
-      age,
       teamId: null,
       goals: 0,
       mvp: 0,
@@ -228,7 +229,7 @@ function newState() {
     localRound: 1,
     money: 80000,
     squads,
-    market: createMarket(1),
+    market: createMarket(),
     fixtures: roundRobin(ids),
     table: emptyTable(ids),
     groups: null,
@@ -386,16 +387,20 @@ function seasonAwards(state) {
   return { scorer, mvp };
 }
 
-function ageAndDevelop(state) {
+function resetSeasonStats(state) {
+  // O elenco é atemporal: ninguém envelhece, se aposenta ou sofre queda
+  // automática de OVR entre temporadas. Apenas os números da temporada zeram.
   for (const squad of Object.values(state.squads)) {
     for (const p of squad) {
-      p.age += 1;
-      if (p.age <= 22 && Math.random() < .55) p.overall = clamp(p.overall + 1, 50, 95);
-      if (p.age >= 33 && Math.random() < .38) p.overall = clamp(p.overall - 1, 50, 95);
       p.goals = 0;
       p.mvp = 0;
       p.appearances = 0;
     }
+  }
+  for (const p of state.market || []) {
+    p.goals = 0;
+    p.mvp = 0;
+    p.appearances = 0;
   }
 }
 
@@ -409,7 +414,7 @@ function startNextSeason(state, summary) {
     money: state.money,
   });
   state.history = state.history.slice(0, 12);
-  ageAndDevelop(state);
+  resetSeasonStats(state);
   state.season += 1;
   state.stage = 'local';
   state.localRound = 1;
@@ -421,7 +426,8 @@ function startNextSeason(state, summary) {
   state.groupTables = {};
   state.groupRound = 1;
   state.knockout = null;
-  state.market = createMarket(state.season);
+  // O mercado continua com os mesmos jogadores disponíveis; não criamos
+  // atletas novos automaticamente ao virar a temporada.
   state.notice = `Temporada ${state.season} iniciada. ${summary}`;
 }
 
@@ -722,7 +728,7 @@ export function setupMasterLeague() {
   function renderMarket() {
     return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>OVR</span><span>PREÇO</span></div>` +
       renderRows(state.market, (p) => [
-        `${p.name} <small>${p.age} anos</small>`,
+        p.name,
         p.position,
         `<b>${p.overall}</b>`,
         `${money(p.price)} <button class="ml-buy" data-id="${p.id}" type="button">COMPRAR</button>`,
@@ -846,7 +852,13 @@ export function setupMasterLeague() {
         const [p] = squad.splice(idx, 1);
         const value = Math.round(playerValue(p) * .68 / 1000) * 1000;
         state.money += value;
-        state.notice = `${p.name} vendido por ${money(value)}.`;
+        p.teamId = null;
+        p.price = Math.max(value, Math.round(playerValue(p) * .9 / 1000) * 1000);
+        p.goals = 0;
+        p.mvp = 0;
+        p.appearances = 0;
+        state.market.push(p);
+        state.notice = `${p.name} vendido por ${money(value)}. Ele volta ao mercado e continua no universo da Master Liga.`;
         persist();
         render();
       });
