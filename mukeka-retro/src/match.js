@@ -1563,6 +1563,18 @@ export class Match {
       this.flashTimer -= dt;
       if (this.flashTimer <= 0) this.hud.flash.classList.remove('show');
     }
+    if (this.refTimer > 0) {
+      this.refTimer -= dt;
+      if (this.refTimer <= 0 && this.hud.refBanner) {
+        this.hud.refBanner.className = '';
+      }
+    }
+    if (this.refCardTimer > 0) {
+      this.refCardTimer -= dt;
+      if (this.refCardTimer <= 0 && this.hud.refCard) {
+        this.hud.refCard.className = '';
+      }
+    }
     // Плашка автора гола висит дольше крика — как титр в трансляции
     if (this.goalCardTimer > 0) {
       this.goalCardTimer -= dt;
@@ -1752,6 +1764,7 @@ export class Match {
       }
     }
 
+    this._checkHandball();
     this._resolveRefereeEvents(dt);
 
     // Установленный мяч стандарта не сдвигают ни физика, ни чужие касания.
