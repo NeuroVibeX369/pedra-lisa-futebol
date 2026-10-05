@@ -1103,7 +1103,9 @@ export class Match {
 
   _isMasterKnockout() {
     const p = new URLSearchParams(location.search);
-    if (p.get('mode') !== 'master') return false;
+    const mode = p.get('mode');
+    if (mode === 'cup') return true;
+    if (mode !== 'master') return false;
     const stage = p.get('masterStage') || '';
     return stage.startsWith('knockout-') || stage === 'champions';
   }
