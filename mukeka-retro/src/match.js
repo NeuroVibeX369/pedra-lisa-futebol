@@ -136,6 +136,11 @@ export class Match {
     this.maxSubstitutions = 3;
     this.substitutionCount = [0, 0];
     this.substitutionEvents = [];
+    // O adversário também administra o banco. As trocas são pedidas por
+    // faixa de minuto e só entram em bola parada/saída de centro, para não
+    // existir jogador "teletransportando" no meio de uma jogada.
+    this.cpuSubStage = [0, 0];
+    this.cpuSubMinutes = [60, 72, 82];
 
     this.controlled = null;   // игрок под управлением человека
     this.possession = this.teams[0];
@@ -672,7 +677,7 @@ export class Match {
 
   substitutePlayer(teamIndex, outgoingIndex, benchIndex) {
     const idx = teamIndex === 1 ? 1 : 0;
-    if (this.state !== 'play' && this.state !== 'kickoff') {
+    if (this.state !== 'play' && this.state !== 'kickoff' && this.state !== 'restart') {
       return { ok: false, reason: 'Aguarde a bola voltar ao jogo.' };
     }
     if ((this.substitutionCount[idx] || 0) >= this.maxSubstitutions) {
@@ -768,6 +773,82 @@ export class Match {
       event,
       remaining: Math.max(0, this.maxSubstitutions - this.substitutionCount[idx]),
     };
+  }
+
+  _positionGroup(position) {
+    const p = String(position || '').toUpperCase();
+    if (p === 'GOL') return 'GK';
+    if (['LE','LD','ZAG'].includes(p)) return 'DEF';
+    if (['VOL','MC','MEI'].includes(p)) return 'MID';
+    return 'ATT';
+  }
+
+  _pickCpuSubstitution(teamIndex, stage) {
+    const info = this.getSubstitutionState(teamIndex);
+    if (!info || !info.bench.length || info.remaining <= 0) return null;
+
+    const scoreDiff = (this.score[teamIndex] || 0) - (this.score[1 - teamIndex] || 0);
+    const wantedGroups = scoreDiff < 0
+      ? (stage >= 1 ? ['ATT','MID','DEF'] : ['MID','ATT','DEF'])
+      : scoreDiff > 0
+        ? ['MID','DEF','ATT']
+        : ['MID','ATT','DEF'];
+
+    const field = info.active.filter((p) => this._positionGroup(p.position) !== 'GK');
+    const bench = info.bench.filter((p) => this._positionGroup(p.position) !== 'GK');
+    if (!field.length || !bench.length) return null;
+
+    for (const group of wantedGroups) {
+      const inGroup = bench
+        .filter((p) => this._positionGroup(p.position) === group)
+        .sort((a, b) => (b.overall || 0) - (a.overall || 0));
+      if (!inGroup.length) continue;
+
+      const outGroup = field
+        .filter((p) => this._positionGroup(p.position) === group)
+        .sort((a, b) => (a.overall || 0) - (b.overall || 0));
+      if (!outGroup.length) continue;
+
+      // Se houver alguém da mesma posição natural, preferimos essa troca.
+      // Caso contrário, o grupo (defesa/meio/ataque) mantém a estrutura.
+      const incoming = inGroup[0];
+      const samePos = outGroup.filter((p) =>
+        String(p.position || '') === String(incoming.position || ''));
+      const outgoing = samePos.length ? samePos[0] : outGroup[0];
+      return { outgoingIndex: outgoing.slot, benchIndex: incoming.benchIndex };
+    }
+
+    // Fallback: reserva de linha mais forte pelo titular de linha mais fraco.
+    const incoming = [...bench].sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
+    const outgoing = [...field].sort((a, b) => (a.overall || 0) - (b.overall || 0))[0];
+    return incoming && outgoing
+      ? { outgoingIndex: outgoing.slot, benchIndex: incoming.benchIndex }
+      : null;
+  }
+
+  updateCpuSubstitutions() {
+    // No online o adversário é humano; não existe treinador automático.
+    if (this.remoteTeam) return;
+    if (this.state !== 'restart' && this.state !== 'kickoff') return;
+
+    const minute = this.clock / 60;
+    for (let idx = 0; idx < this.teams.length; idx++) {
+      if (idx === this.humanTeamIndex) continue;
+      const stage = this.cpuSubStage[idx] || 0;
+      if (stage >= this.cpuSubMinutes.length) continue;
+      if (minute < this.cpuSubMinutes[stage]) continue;
+
+      const pick = this._pickCpuSubstitution(idx, stage);
+      if (!pick) {
+        this.cpuSubStage[idx] = stage + 1;
+        continue;
+      }
+
+      const result = this.substitutePlayer(idx, pick.outgoingIndex, pick.benchIndex);
+      if (result?.ok) {
+        this.cpuSubStage[idx] = stage + 1;
+      }
+    }
   }
 
   setHumanTeamIndex(index) {
@@ -1039,6 +1120,10 @@ export class Match {
     // Стандарты (Фаза 2): мяч полностью пересёк линию — аут/угловой/от ворот
     if (this.state === 'play') this.checkOutOfPlay();
     if (this.state === 'restart' && this.restart) this.updateRestart(dt);
+
+    // Treinador adversário: as trocas acontecem somente em bola parada ou
+    // saída de centro, normalmente aos 60', 72' e 82', conforme o placar.
+    this.updateCpuSubstitutions();
 
     // На паузах AI строится к центру (настоящий мяч лежит в сетке)
     const paused = this.state === 'goalpause' || this.state === 'fulltime';
