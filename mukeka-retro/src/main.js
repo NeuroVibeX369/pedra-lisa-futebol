@@ -453,6 +453,9 @@ const soundGate = document.getElementById('sound-gate');
 let gateOpen = !!soundGate;
 
 const retroOnline = setupRetroOnlineTest({
+  match,
+  ball,
+  input,
   onRole: ({ localTeam, code, role }) => {
     if (match) match.setHumanTeamIndex(localTeam);
     const next = new URL(location.href);
@@ -723,7 +726,10 @@ function frame() {
   const t = clock.elapsedTime;
 
   input.update(gdt);
-  if (match) match.update(gdt); // 22 игрока: человек + AI-мозги
+  // O convidado envia os comandos antes da simulação; no host eles alimentam
+  // o segundo jogador humano sem substituir a IA dos outros dez atletas.
+  retroOnline.beforeSimulation(performance.now());
+  if (match) match.update(gdt); // 22 jogadores: humano(s) + IA
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
   const replaying = !!(match && (match.state === 'replay' || match.state === 'celebration'));
@@ -748,7 +754,10 @@ function frame() {
   // отношения не имеет — это та же трибуна, что и волна с дымом
   updateCrowd(dt);
   if (event === 'goal' && match) match.onGoal();
-  radar.draw(match, dt); // мини-карта: 23 точки на 2D-canvas, цена — ноль
+  // O host publica o estado autoritativo depois de física/gol. No convidado,
+  // o snapshot corrige a previsão local e limita divergências causadas pela IA.
+  retroOnline.afterSimulation(performance.now());
+  radar.draw(match, dt); // mini-mapa: 23 pontos em canvas 2D
 
   // Шкала замаха видна, пока держится любая кнопка действия.
   // Больше 100% — красная зона: передержка, исполнение уйдёт сильнее задуманного.
