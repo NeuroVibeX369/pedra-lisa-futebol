@@ -1258,6 +1258,191 @@
       .ml-lineup-row { grid-template-columns: 58px minmax(0,1fr); }
       .ml-lineup-row > span:last-child { grid-column: 1 / -1; text-align: left; }
     }
+
+    /* ================= MASTER LIGA · EXPERIÊNCIA PREMIUM ================= */
+    #master-league {
+      background:
+        radial-gradient(circle at 50% -15%, rgba(101,156,83,.20), transparent 42%),
+        linear-gradient(180deg, rgba(2,8,5,.985), rgba(1,5,3,.995));
+    }
+    .ml-shell {
+      position: relative;
+      width: min(1120px, 97%);
+      max-height: 94%;
+      background:
+        linear-gradient(180deg, rgba(17,38,24,.98), rgba(6,18,11,.99) 38%, rgba(4,13,8,.99));
+      border: 1px solid rgba(134,188,143,.72);
+      box-shadow:
+        0 34px 90px rgba(0,0,0,.72),
+        inset 0 0 0 1px rgba(255,255,255,.035);
+    }
+    .ml-shell::before {
+      content: "";
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: block;
+      height: 3px;
+      background: linear-gradient(90deg, #cce95c, #f0d56a 46%, #8fd55a);
+      box-shadow: 0 0 20px rgba(207,234,92,.22);
+    }
+    .ml-top {
+      padding: 18px 20px 16px;
+      background:
+        linear-gradient(180deg, rgba(25,61,37,.98), rgba(12,31,19,.98));
+      border-bottom: 1px solid rgba(125,177,133,.55);
+      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    }
+    .ml-top h2 {
+      color: #f7fbf4;
+      font-size: clamp(19px,2.6vw,30px);
+      letter-spacing: 4px;
+      text-shadow: 0 2px 0 rgba(0,0,0,.35);
+    }
+    #ml-meta {
+      color: #c4d5c6;
+      font-size: 11px;
+      letter-spacing: 1.4px;
+    }
+    #ml-close {
+      border-color: rgba(158,205,164,.7);
+      background: linear-gradient(180deg,#1c3c26,#112819);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    #ml-body { padding: 16px 18px 20px; }
+    .ml-tabs {
+      gap: 7px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(130,171,136,.24);
+    }
+    .ml-tabs button {
+      min-height: 42px;
+      padding: 8px 13px;
+      color: #d8e6da;
+      background: linear-gradient(180deg,#173421,#102519);
+      border: 1px solid rgba(92,140,101,.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .ml-tabs button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(190,226,111,.85);
+    }
+    .ml-tabs button.active {
+      color: #101707;
+      background: linear-gradient(180deg,#edf58b,#b7dc58);
+      border-color: #edf58b;
+      box-shadow: 0 6px 18px rgba(183,220,88,.16), inset 0 1px 0 rgba(255,255,255,.42);
+    }
+    .ml-kpis {
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .ml-kpis div {
+      min-height: 94px;
+      padding: 15px 16px;
+      background:
+        linear-gradient(145deg, rgba(27,61,38,.96), rgba(13,34,21,.96));
+      border: 1px solid rgba(93,142,101,.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 22px rgba(0,0,0,.14);
+    }
+    .ml-kpis b {
+      font-size: clamp(21px,2.8vw,31px);
+      color: #fbfff9;
+      letter-spacing: .5px;
+    }
+    .ml-kpis small {
+      display: block;
+      margin-top: 6px;
+      color: #b9cdbd;
+      letter-spacing: 1.3px;
+    }
+    .ml-card {
+      position: relative;
+      padding: 16px 18px;
+      background:
+        linear-gradient(145deg, rgba(24,54,34,.96), rgba(11,29,18,.98));
+      border: 1px solid rgba(81,128,90,.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 10px 28px rgba(0,0,0,.12);
+    }
+    .ml-card h3 {
+      margin-bottom: 10px;
+      color: #e7f46e;
+      font-size: 14px;
+      letter-spacing: 2.4px;
+    }
+    .ml-card p { color: #edf5ee; }
+    .ml-next-match {
+      margin: 9px 0 3px !important;
+      font-size: clamp(18px,2.8vw,30px);
+      font-weight: 900;
+      letter-spacing: 1.1px;
+      color: #ffffff !important;
+      text-transform: uppercase;
+    }
+    .ml-note, .ml-card small { color: #a7b9aa; }
+    .ml-main {
+      min-height: 47px;
+      padding: 10px 16px;
+      color: #111708;
+      background: linear-gradient(180deg,#eff781,#b9dd56);
+      border: 1px solid #eaf47b;
+      box-shadow: 0 7px 18px rgba(190,222,86,.14), inset 0 1px 0 rgba(255,255,255,.45);
+      transition: transform .12s ease, filter .12s ease;
+    }
+    .ml-main:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    .ml-main + .ml-main {
+      margin-left: 8px;
+      color: #eaf3eb;
+      background: linear-gradient(180deg,#23452e,#173522);
+      border-color: rgba(105,153,113,.86);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .ml-row {
+      min-height: 42px;
+      background: rgba(255,255,255,.022);
+      border-bottom-color: rgba(255,255,255,.07);
+    }
+    .ml-row:nth-child(even) { background: rgba(125,175,132,.035); }
+    .ml-head {
+      color: #c5d5c7;
+      background: linear-gradient(180deg,#193a25,#132d1d);
+      border-top: 1px solid rgba(104,149,112,.5);
+      border-bottom: 1px solid rgba(104,149,112,.5);
+    }
+    .ml-row b { color: #e5f36c; }
+    .ml-buy, .ml-sell {
+      border-color: rgba(113,165,123,.78);
+      background: linear-gradient(180deg,#244a30,#183722);
+    }
+    .ml-lineup-row, .ml-bench span {
+      background: linear-gradient(180deg,#163321,#102619);
+      border-color: rgba(79,125,87,.72);
+    }
+    .ml-lineup-row select {
+      background: #09160e;
+      border-color: rgba(101,148,109,.78);
+    }
+    .ml-titles span {
+      background: linear-gradient(180deg,#173622,#102619);
+      border-color: rgba(87,132,95,.72);
+    }
+    .ml-titles b { color: #f0d56a; }
+    .ml-notice {
+      border-left: 4px solid #d8e96a;
+      color: #f3f7e6;
+    }
+    @media (max-width: 640px) {
+      .ml-shell { width: 98%; max-height: 96%; }
+      #ml-body { padding: 12px; }
+      .ml-top { padding: 15px 14px 13px; }
+      .ml-tabs { gap: 5px; }
+      .ml-tabs button { min-height: 40px; padding: 7px 8px; }
+      .ml-main + .ml-main { margin-left: 0; }
+      .ml-main { width: 100%; }
+    }
+
 </style>
 </head>
 <body>
@@ -1456,7 +1641,7 @@
       <div class="pg-grid">
         <button id="pg-friendly" class="pg-mode primary" type="button">
           <strong>AMISTOSO × MÁQUINA</strong>
-          <small>Pedra Lisa × Independência. Partida rápida contra a CPU.</small>
+          <small>Pedra Lisa × Independência. Entre em campo para um clássico imediato.</small>
         </button>
         <button id="pg-online" class="pg-mode primary" type="button">
           <strong>ONLINE 1×1</strong>
@@ -1517,7 +1702,7 @@
       <p>Jogue 1×1 com um amigo pela internet usando os clubes escolhidos no menu. Quem cria controla o time da esquerda; quem entra controla o time da direita.</p>
       <div class="rot-actions">
         <button id="retro-online-host" type="button">CRIAR SALA</button>
-        <button id="retro-online-solo" type="button">VOLTAR AO SOLO</button>
+        <button id="retro-online-solo" type="button">VOLTAR AO MENU</button>
       </div>
       <div id="retro-online-room" class="hidden"></div>
       <div id="retro-online-invite"></div>
@@ -1537,7 +1722,7 @@
   <div id="sound-gate">
     <div class="sg-card">
       <div class="sg-title">ATIVAR O SOM?</div>
-      <div class="sg-sub">O NAVEGADOR PRECISA DE UM TOQUE PARA LIBERAR O ÁUDIO</div>
+      <div class="sg-sub">TOQUE PARA ATIVAR O SOM DA PARTIDA</div>
       <div class="sg-row">
         <button id="sg-yes" class="sg-btn sg-main">SIM, COM SOM</button>
         <button id="sg-no" class="sg-btn">SEM SOM</button>
