@@ -1699,6 +1699,88 @@
       .ml-main { width: 100%; }
     }
 
+
+    /* ================= COPA MUKEKA ================= */
+    #mukeka-cup {
+      position: fixed; inset: 0; z-index: 45;
+      display: flex; align-items: center; justify-content: center;
+      padding: clamp(8px,2vw,24px); box-sizing: border-box;
+      background: rgba(1,8,4,.94);
+      font-family: var(--tv-font);
+    }
+    #mukeka-cup.hidden { display: none; }
+    .cup-shell {
+      width: min(980px, 98vw); max-height: 94dvh; overflow: auto;
+      color: #edf5ee;
+      background: linear-gradient(180deg,#173b24,#091a10 44%,#06120b);
+      border: 1px solid rgba(123,181,132,.78);
+      box-shadow: 0 28px 90px rgba(0,0,0,.65);
+    }
+    .cup-top {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:18px 20px 15px;
+      border-bottom:1px solid rgba(126,178,135,.5);
+      background:linear-gradient(180deg,#1e4a2d,#153821);
+    }
+    .cup-top h2 { margin:0; font-size:clamp(22px,3vw,34px); letter-spacing:4px; }
+    .cup-top small { color:#adc0b0; letter-spacing:1.5px; }
+    .cup-top button {
+      width:48px; height:48px; color:#fff; background:#173a24;
+      border:1px solid #6b9673; font-size:26px; cursor:pointer;
+    }
+    .cup-body { padding:18px; }
+    .cup-hero, .cup-round, .cup-next, .cup-finish {
+      margin-bottom:14px; padding:17px;
+      background:linear-gradient(145deg,rgba(25,57,36,.96),rgba(10,28,17,.98));
+      border:1px solid rgba(84,134,94,.72);
+    }
+    .cup-hero h3, .cup-round h3 { margin:0 0 10px; color:#e7f46e; letter-spacing:2px; }
+    .cup-hero p { color:#bbcbbd; line-height:1.5; }
+    .cup-hero select {
+      width:100%; min-height:46px; padding:9px 11px; margin:8px 0 12px;
+      color:#fff; background:#0a1b10; border:1px solid #557b5e;
+      font:700 13px var(--tv-font);
+    }
+    .cup-notice {
+      margin-bottom:14px; padding:10px 13px;
+      color:#eff5d9; background:rgba(217,235,97,.08);
+      border-left:4px solid #dbe961;
+    }
+    .cup-game {
+      display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      gap:12px; align-items:center; min-height:46px; padding:6px 10px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+    }
+    .cup-game span:last-child { text-align:right; }
+    .cup-game b { color:#e7f46e; white-space:nowrap; font-size:15px; }
+    .cup-game.played { background:rgba(255,255,255,.02); }
+    .cup-next small { display:block; color:#9eb2a1; letter-spacing:1.8px; }
+    .cup-next strong {
+      display:block; margin:7px 0 13px; color:#fff;
+      font-size:clamp(19px,3vw,30px); letter-spacing:1px;
+    }
+    .cup-next > div { display:flex; gap:8px; flex-wrap:wrap; }
+    .cup-main, #cup-sim, .cup-danger {
+      min-height:44px; padding:9px 16px; cursor:pointer;
+      font:700 12px var(--tv-font); letter-spacing:1.5px;
+    }
+    .cup-main { color:#101707; background:#e7f46e; border:1px solid #f0f78d; }
+    #cup-sim { color:#edf5ee; background:#1c4129; border:1px solid #5c8966; }
+    .cup-danger {
+      color:#d8e2d9; background:#0b1b11; border:1px solid #4f6855;
+      opacity:.78;
+    }
+    .cup-finish { text-align:center; }
+    .cup-finish strong {
+      display:block; margin-bottom:14px; color:#f0d56a;
+      font-size:clamp(22px,4vw,40px); letter-spacing:2px;
+    }
+    @media (max-width:620px) {
+      .cup-body { padding:11px; }
+      .cup-game { grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:6px; font-size:10px; }
+      .cup-next > div button { flex:1 1 100%; }
+    }
+
 </style>
 </head>
 <body>
@@ -1908,18 +1990,18 @@
         </button>
         <button id="pg-master" class="pg-mode primary" type="button">
           <strong>MASTER LIGA</strong>
-          <small>Liga de Independência, Regional, mercado, rankings e temporadas infinitas.</small>
-          <span class="pg-tag">BASE JOGÁVEL</span>
+          <small>Liga de Independência, Regional, mercado, elenco e temporadas infinitas.</small>
+          <span class="pg-tag">CARREIRA</span>
         </button>
-        <button class="pg-mode" type="button" disabled>
+        <button id="pg-cup" class="pg-mode primary" type="button">
           <strong>COPA MUKEKA</strong>
-          <small>Mata-mata com chaveamento e campanha até a final.</small>
-          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+          <small>Oito clubes, mata-mata em jogo único e campanha até a grande final.</small>
+          <span class="pg-tag">MATA-MATA</span>
         </button>
-        <button class="pg-mode" type="button" disabled>
+        <button id="pg-penalties" class="pg-mode primary" type="button">
           <strong>DISPUTA DE PÊNALTIS</strong>
-          <small>Modo rápido para jogar só as cobranças decisivas.</small>
-          <span class="pg-tag">EM DESENVOLVIMENTO</span>
+          <small>Escolha os times e vá direto para as cobranças decisivas.</small>
+          <span class="pg-tag">PÊNALTIS</span>
         </button>
         <button id="pg-settings" class="pg-mode" type="button">
           <strong>CONFIGURAÇÕES</strong>
