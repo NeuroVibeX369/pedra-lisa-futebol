@@ -15,6 +15,7 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
+import { setupRetroOnlineTest } from './online.js';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
 } from './difficulty.js';
@@ -450,6 +451,16 @@ crowdSlider.addEventListener('input', () => {
 // кинескопа живут — то же деление кадра надвое, что у темпа игры.
 const soundGate = document.getElementById('sound-gate');
 let gateOpen = !!soundGate;
+
+const retroOnline = setupRetroOnlineTest({
+  onRole: ({ localTeam, code, role }) => {
+    if (match) match.setHumanTeamIndex(localTeam);
+    const next = new URL(location.href);
+    next.searchParams.set('side', localTeam === 1 ? 'away' : 'home');
+    history.replaceState(null, '', next);
+    console.info('[Mukeka Retro online]', role, code, localTeam === 1 ? 'Independência' : 'Pedra Lisa');
+  },
+});
 
 function closeGate() {
   if (!gateOpen) return;
