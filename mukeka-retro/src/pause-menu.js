@@ -136,11 +136,15 @@ export function setupPauseMenu({ match, pack } = {}) {
     }
 
     const next = new URL(location.href);
-    const master = next.searchParams.get('mode') === 'master';
-    for (const key of ['start','mode','home','away','side','masterMatch','masterStage','online','room']) {
+    const mode = next.searchParams.get('mode');
+    const master = mode === 'master';
+    const cup = mode === 'cup';
+    for (const key of ['start','mode','home','away','side','masterMatch','masterStage',
+      'cupRound','online','room']) {
       next.searchParams.delete(key);
     }
     if (master) next.searchParams.set('masterHub', '1');
+    else if (cup) next.searchParams.set('cupHub', '1');
     location.href = next.toString();
   }
 
