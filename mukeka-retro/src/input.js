@@ -122,6 +122,10 @@ export class Input {
     this._padMove = { x: 0, z: 0 };
     this._pad = { pass: false, shot: false, cross: false, through: false, sprint: false };
     this._touch = { pass: false, shot: false, sprint: false, cross: false, through: false, feint: false };
+    this.touchDevice = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+    // No celular, levar o analógico virtual quase até o limite significa
+    // "quero correr". O Player ainda decide se é seguro acelerar com a bola.
+    this.touchAutoSprint = false;
     this._swipeEvent = null; // свайп-удар с тача: {dir, power, curl}
 
     // Смена управляемого игрока (Фаза 2): Q / LB — событие-«фронт», не удержание.
@@ -464,8 +468,12 @@ export class Input {
     // Навес: полоска → окно тапов → событие {charge, taps}
     this._feedCross(dt, this.keys.has('KeyA') || this._pad.cross || this._touch.cross);
 
-    // Спринт — простое удержание
+    // Sprint manual continua no teclado/gamepad. No celular, R2 não ocupa
+    // mais a tela: analógico virtual quase no limite vira intenção de correr.
     this.sprint = this.keys.has('KeyE') || this._pad.sprint || this._touch.sprint;
+    const stickPower = Math.hypot(this._stick.x, this._stick.y);
+    this.touchAutoSprint = this.touchDevice && stickPower > 0.84 &&
+      !this._touch.feint && !this.shot.held && this._cross.state !== 'charging';
 
     // ФИНТ. Фронт нажатия ставится в очередь и живёт до тех пор, пока его не
     // заберут: заказ финта, как и заказ удара, не имеет права сгореть в том же
