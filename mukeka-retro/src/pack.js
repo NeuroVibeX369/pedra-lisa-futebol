@@ -2,7 +2,7 @@
 // O pack ainda guarda texturas/estádio-base, mas os dois times da partida
 // agora podem vir do catálogo único através de ?home=<id>&away=<id>.
 
-import { buildClubTeam, buildCareerTeam, clubById, defaultLineupIds } from './clubs.js';
+import { buildClubTeam, buildCareerTeam, buildClubCareerSquad, careerPlayerToMatchLook, clubById, defaultLineupIds } from './clubs.js';
 
 const REGISTRY = './data/packs.json';
 
@@ -22,12 +22,17 @@ const fetchJSON = (url) => fetch(url).then((r) => {
 
 function withClubMeta(team, club) {
   if (!team || !club) return team;
+  const generated = buildClubCareerSquad(club);
+  const bench = Array.isArray(team.bench) && team.bench.length
+    ? team.bench
+    : generated.slice(11, 18).map((p) => careerPlayerToMatchLook(p, -1));
   return {
     ...team,
     id: club.id,
     name: club.name,
     short: club.short,
     strength: club.strength,
+    bench,
     colors: {
       primary: club.primary,
       shorts: club.shorts,
