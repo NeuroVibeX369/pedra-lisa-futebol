@@ -715,11 +715,68 @@
       gap: 12px; margin-top: 14px;
       color: rgba(255,255,255,.42); font-size: 9px; letter-spacing: 1px;
     }
+    .pg-friendly-setup, .pg-online-setup {
+      padding: 14px 0 4px;
+    }
+    .pg-versus {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+      align-items: end;
+      gap: 12px;
+    }
+    .pg-versus label span {
+      display: block; margin-bottom: 6px;
+      color: rgba(255,255,255,.62);
+      font-size: 10px; letter-spacing: 2px;
+    }
+    .pg-versus select {
+      width: 100%; min-height: 44px;
+      padding: 8px 10px;
+      color: #fff; background: #102319;
+      border: 1px solid #45634b;
+      font: 700 12px var(--tv-font);
+    }
+    .pg-versus > b {
+      padding-bottom: 10px;
+      color: var(--tv-gold); font-size: 22px;
+    }
+    .pg-match-preview {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; margin: 18px 0 14px;
+    }
+    .pg-match-preview span {
+      min-width: 112px; padding: 8px 10px;
+      text-align: center;
+      background: rgba(255,255,255,.035);
+      border: 1px solid rgba(255,255,255,.2);
+      border-left-width: 5px;
+      font-size: 11px; letter-spacing: 1px;
+    }
+    .pg-match-preview b { color: #fff; }
+    .pg-setup-actions {
+      display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+    }
+    .pg-setup-actions button {
+      min-height: 44px; padding: 8px 16px;
+      color: #eaf5ec; background: #12271a;
+      border: 1px solid #42664b;
+      font: 700 11px var(--tv-font); letter-spacing: 1.5px;
+      cursor: pointer;
+    }
+    .pg-setup-actions button.primary {
+      color: #071109; background: #8fe05a; border-color: #8fe05a;
+    }
+    .pg-setup-note {
+      margin-top: 12px; text-align: center;
+      color: rgba(255,255,255,.45); font-size: 9px; letter-spacing: 1px;
+    }
     @media (max-width: 580px) {
       .pg-grid { grid-template-columns: 1fr; }
       .pg-mode { min-height: 66px; }
       .pg-brand { align-items: flex-start; flex-direction: column; gap: 4px; }
       .pg-sub { text-align: left; }
+      .pg-versus { grid-template-columns: 1fr; align-items: stretch; }
+      .pg-versus > b { text-align: center; padding: 0; line-height: 1; }
     }
 
     /* ================= СТАРТОВЫЙ ВОПРОС ПРО ЗВУК =================
