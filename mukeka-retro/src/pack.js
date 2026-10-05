@@ -2,7 +2,7 @@
 // O pack ainda guarda texturas/estádio-base, mas os dois times da partida
 // agora podem vir do catálogo único através de ?home=<id>&away=<id>.
 
-import { buildClubTeam, clubById } from './clubs.js';
+import { buildClubTeam, buildCareerTeam, clubById, defaultLineupIds } from './clubs.js';
 
 const REGISTRY = './data/packs.json';
 
@@ -37,6 +37,39 @@ function withClubMeta(team, club) {
   };
 }
 
+function readMasterState() {
+  try {
+    const raw = localStorage.getItem('mukeka.masterLiga.v1');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeKnownAppearance(team, source) {
+  if (!team?.squad || !source?.squad) return team;
+  const byName = new Map(source.squad.map((p) => [String(p.name || '').toUpperCase(), p]));
+  team.squad = team.squad.map((p) => {
+    const known = byName.get(String(p.name || '').toUpperCase());
+    if (!known) return p;
+    const visual = {};
+    for (const key of ['height','build','skin','hair','hairColor','beard','gloves','glovesCuff','head']) {
+      if (known[key] != null) visual[key] = known[key];
+    }
+    return { ...p, ...visual };
+  });
+  return team;
+}
+
+function masterTeam(club, state, knownAppearance = null) {
+  const squad = state?.squads?.[club?.id];
+  if (!club || !Array.isArray(squad) || !squad.length) return null;
+  const ids = club.id === state.clubId
+    ? (Array.isArray(state.lineup) && state.lineup.length ? state.lineup : defaultLineupIds(squad))
+    : defaultLineupIds(squad);
+  return mergeKnownAppearance(buildCareerTeam(club, squad, ids), knownAppearance);
+}
+
 async function loadPack() {
   const registry = await fetchJSON(REGISTRY);
   const params = new URLSearchParams(location.search);
@@ -68,8 +101,18 @@ async function loadPack() {
 
   const homeClub = clubById(homeId);
   const awayClub = clubById(awayId);
-  const home = custom[homeId] || buildClubTeam(homeClub);
-  const away = custom[awayId] || buildClubTeam(awayClub);
+
+  const masterState = params.get('mode') === 'master' ? readMasterState() : null;
+  const homeKnown = homeId === 'pedra-lisa' ? pedraLisa : homeId === 'independencia' ? independencia : null;
+  const awayKnown = awayId === 'pedra-lisa' ? pedraLisa : awayId === 'independencia' ? independencia : null;
+
+  // Em partida de Master Liga, o campo 3D usa exatamente os jogadores do
+  // save: escalação, compras, vendas e OVR. Fora da carreira mantém o catálogo
+  // normal de Amistoso/Online.
+  const home = masterTeam(homeClub, masterState, homeKnown) ||
+    custom[homeId] || buildClubTeam(homeClub);
+  const away = masterTeam(awayClub, masterState, awayKnown) ||
+    custom[awayId] || buildClubTeam(awayClub);
 
   return {
     id,
