@@ -295,11 +295,21 @@ function userSquad(state) {
   return state.squads[state.clubId] || [];
 }
 
+function startingPlayers(state, teamId) {
+  const squad = state.squads[teamId] || [];
+  if (!squad.length) return [];
+  const ids = teamId === state.clubId && Array.isArray(state.lineup) && state.lineup.length
+    ? state.lineup
+    : defaultLineupIds(squad);
+  const starters = ids.map((id) => squad.find((p) => p.id === id)).filter(Boolean);
+  if (starters.length >= 11) return starters.slice(0, 11);
+  return [...squad].sort((a, b) => (b.overall || 0) - (a.overall || 0)).slice(0, 11);
+}
+
 function teamStrength(state, id) {
-  const squad = state.squads[id];
-  if (!squad?.length) return TEAM_BY_ID.get(id)?.strength || 60;
-  const starters = [...squad].sort((a, b) => b.overall - a.overall).slice(0, 11);
-  return starters.reduce((sum, p) => sum + p.overall, 0) / Math.max(1, starters.length);
+  const starters = startingPlayers(state, id);
+  if (!starters.length) return TEAM_BY_ID.get(id)?.strength || 60;
+  return starters.reduce((sum, p) => sum + p.overall, 0) / starters.length;
 }
 
 function poissonLike(lambda, random) {
@@ -313,8 +323,8 @@ function poissonLike(lambda, random) {
   return goals;
 }
 
-function choosePlayer(state, teamId, random, scorer = false) {
-  const squad = state.squads[teamId] || [];
+function choosePlayer(state, teamId, random, scorer = false, pool = null) {
+  const squad = Array.isArray(pool) && pool.length ? pool : (state.squads[teamId] || []);
   if (!squad.length) return null;
   const weights = squad.map((p) => {
     let pos = 1;
@@ -336,14 +346,13 @@ function choosePlayer(state, teamId, random, scorer = false) {
 
 function recordPlayerMatch(state, teamId, goals, won, seed) {
   const random = rng(seed);
-  const squad = state.squads[teamId] || [];
-  const starters = [...squad].sort((a, b) => b.overall - a.overall).slice(0, 11);
+  const starters = startingPlayers(state, teamId);
   for (const p of starters) {
     p.appearances = (p.appearances || 0) + 1;
     p.mvp = (p.mvp || 0) + (won ? .8 : .3) + random() * .7 + p.overall / 250;
   }
   for (let g = 0; g < goals; g++) {
-    const scorer = choosePlayer(state, teamId, random, true);
+    const scorer = choosePlayer(state, teamId, random, true, starters);
     if (scorer) {
       scorer.goals = (scorer.goals || 0) + 1;
       scorer.mvp = (scorer.mvp || 0) + 2.1;
@@ -379,7 +388,7 @@ function recordPlayedTeam(state, teamId, won, lineupIds, events, expectedGoals, 
   // Proteção para autogol/evento sem identificação: o placar nunca pode
   // divergir da artilharia total da partida por falha de identificação.
   for (let i = credited; i < expectedGoals; i++) {
-    const scorer = choosePlayer(state, teamId, random, true);
+    const scorer = choosePlayer(state, teamId, random, true, starters);
     if (scorer) {
       scorer.goals = (scorer.goals || 0) + 1;
       scorer.mvp = (scorer.mvp || 0) + 1.8;
