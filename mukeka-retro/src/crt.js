@@ -360,10 +360,17 @@ export class CRTPipeline {
     // Если железо не тянет — падаем на прежний байтовый буфер, всё остальное
     // продолжает работать.
     const gl = renderer.getContext();
-    const canHDR = CONFIG.render.hdr !== false && !!(
+    // Alguns GPUs de celular anunciam half-float mas, em render targets maiores,
+    // devolvem blocos pretos/tiles corrompidos. Em telefone usamos o caminho
+    // de 8 bits, muito mais estável; tablets/desktop continuam com HDR.
+    const coarse = globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+    const shortSide = Math.min(globalThis.innerWidth || 9999, globalThis.innerHeight || 9999);
+    const phoneSafe = !!coarse && shortSide <= 700;
+    const canHDR = !phoneSafe && CONFIG.render.hdr !== false && !!(
       gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float')
     );
     this.hdr = canHDR;
+    this.phoneSafe = phoneSafe;
     const sceneOpts = {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
