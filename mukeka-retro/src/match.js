@@ -81,7 +81,7 @@ function createControlledMarker() {
 
 export class Match {
   // teamsData: [home.json, away.json]. Человек — команда 0, атакует +X.
-  constructor(scene, ball, goals, input, teamsData) {
+  constructor(scene, ball, goals, input, teamsData, humanTeamIndex = 0) {
     this.scene = scene;   // нужна для атмосферы: вспышки трибун реагируют на гол
     this.ball = ball;
     this.goals = goals;
@@ -110,7 +110,8 @@ export class Match {
       new Team(this, +1, teamsData[0], mkPlayers(teamsData[0])),
       new Team(this, -1, teamsData[1], mkPlayers(teamsData[1])),
     ];
-    this.humanTeam = this.teams[0];
+    this.humanTeamIndex = humanTeamIndex === 1 ? 1 : 0;
+    this.humanTeam = this.teams[this.humanTeamIndex];
     this._all = [...this.teams[0].players, ...this.teams[1].players];
 
     this.controlled = null;   // игрок под управлением человека
