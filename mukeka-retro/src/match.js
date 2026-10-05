@@ -2352,7 +2352,15 @@ export class Match {
         Math.max(12, dist * 0.9 + 9), team.opponents, 0);
       const space = freeSpace(mp.x, mp.z, team.opponents);
       const gain = team.side * dx;
-      const score = cos * 12 + pc * 14 + space * 6 + gain * 0.20 - dist * 0.10;
+      const runSpeed = Math.hypot(mate.vel?.x || 0, mate.vel?.z || 0);
+      const forwardRun = runSpeed > 1
+        ? Math.max(0, team.side * (mate.vel?.x || 0) / runSpeed)
+        : 0;
+      const crowdedPenalty = space < 0.22 ? (0.22 - space) * 16 : 0;
+      // O assist continua obedecendo ao cone do jogador, mas dentro dele
+      // prefere linha limpa, progressão e parceiro já atacando o espaço.
+      const score = cos * 12 + pc * 14 + space * 8 + gain * 0.24 +
+        forwardRun * 2.4 - dist * 0.08 - crowdedPenalty;
       if (score > bestScore) {
         bestScore = score;
         best = { mate, dist };
