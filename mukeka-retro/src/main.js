@@ -15,10 +15,10 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
-import { setupRetroOnlineTest } from './online.js?v=20261005f';
-import { setupPregame } from './pregame.js?v=20261005c';
+import { setupRetroOnlineTest } from './online.js?v=20261005g';
+import { setupPregame } from './pregame.js?v=20261005d';
 import { setupMasterLeague } from './master-league.js?v=20261005c';
-import { setupMukekaCup } from './cup.js?v=20261005a';
+import { setupMukekaCup } from './cup.js?v=20261005b';
 import { setupPauseMenu } from './pause-menu.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
