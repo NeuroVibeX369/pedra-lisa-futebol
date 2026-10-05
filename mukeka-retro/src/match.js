@@ -674,11 +674,21 @@ export class Match {
     if (ownerGap <= CONFIG.ai.defence.badTouchDist) p.cancelBallApproach();
   }
 
-  _showRefereeNotice(text, seconds = 1.4) {
-    if (!this.hud?.flash) return;
-    this.hud.flash.textContent = text;
-    this.hud.flash.classList.add('show');
-    this.flashTimer = Math.max(this.flashTimer || 0, seconds);
+  _showRefereeNotice(text, seconds = 1.4, kind = '') {
+    const el = this.hud?.refBanner;
+    if (!el) return;
+    el.textContent = text;
+    el.className = kind ? `show ${kind}` : 'show';
+    this.refTimer = Math.max(this.refTimer || 0, seconds);
+  }
+
+  _showCardPresentation(player, card, minute) {
+    const el = this.hud?.refCard;
+    if (!el || !player) return;
+    el.className = card === 'red' ? 'show red' : 'show';
+    if (this.hud.refCardName) this.hud.refCardName.textContent = player.name || 'JOGADOR';
+    if (this.hud.refCardMin) this.hud.refCardMin.textContent = `${minute || Math.max(1, Math.floor(this.clock / 60) || 1)}'`;
+    this.refCardTimer = 2.0;
   }
 
   reportFoul(offender, victim, meta = {}) {
@@ -713,6 +723,7 @@ export class Match {
         attack.side * (d.group.position.x - vp.x) > 0).length
       : 99;
     const dogso = nearGoal && defendersAhead <= 1;
+    if (foul.kind === 'handball') return dogso ? 'yellow' : null;
     if ((foul.fromBehind && foul.speed >= 8.2) || (dogso && foul.fromBehind)) return 'red';
     if (foul.fromBehind || foul.speed >= 6.2 || dogso) return 'yellow';
     return null;
@@ -767,12 +778,7 @@ export class Match {
       else this.stats.yellow[teamIdx] += 1;
     }
     if (card === 'red') this._dismissPlayer(player);
-    this._showRefereeNotice(
-      card === 'red'
-        ? `CARTÃO VERMELHO · ${player.name || 'JOGADOR'}`
-        : `CARTÃO AMARELO · ${player.name || 'JOGADOR'}`,
-      1.8,
-    );
+    this._showCardPresentation(player, card, event.minute);
     return card;
   }
 
@@ -784,10 +790,8 @@ export class Match {
 
   _awardFoul(foul) {
     if (!foul?.team) return;
-    const card = this._applyCard(foul);
+    this._applyCard(foul);
     const penalty = this._isPenaltyFoul(foul.team, foul.x, foul.z);
-    const cardText = card === 'red' ? ' · CARTÃO VERMELHO'
-      : card === 'yellow' ? ' · CARTÃO AMARELO' : '';
     this.beginRestart(
       penalty ? 'penalty' : 'freekick',
       foul.team,
@@ -795,7 +799,7 @@ export class Match {
         ? foul.team.side * (CONFIG.field.length / 2 - 11)
         : Math.max(-CONFIG.field.length / 2 + 2, Math.min(CONFIG.field.length / 2 - 2, foul.x)),
       penalty ? 0 : Math.max(-CONFIG.field.width / 2 + 2, Math.min(CONFIG.field.width / 2 - 2, foul.z)),
-      { label: (penalty ? 'PÊNALTI' : 'FALTA') + cardText },
+      { label: penalty ? 'PÊNALTI' : (foul.kind === 'handball' ? 'MÃO NA BOLA' : 'FALTA') },
     );
     this.pendingFoul = null;
     this.advantage = null;
@@ -810,7 +814,7 @@ export class Match {
       const keptBall = this.possession === foul.team || this.toucher?.team === foul.team;
       if (!severe && keptBall && this.state === 'play') {
         this.advantage = { foul, t: 2.2 };
-        this._showRefereeNotice('VANTAGEM', 1.0);
+        this._showRefereeNotice('VANTAGEM', 1.0, 'advantage');
       } else {
         this._awardFoul(foul);
       }
@@ -835,6 +839,51 @@ export class Match {
     if (a.t <= 0) {
       this._applyCard(a.foul);
       this.advantage = null;
+    }
+  }
+
+  _checkHandball() {
+    if (this.state !== 'play' || this.pendingFoul || this.advantage) return;
+    const bp = this.ball.mesh.position;
+    const speed = this.ball.vel.length();
+    if (speed < 3.5 || bp.y < 0.62 || bp.y > 2.25) return;
+
+    const seq = Number.isFinite(this.ball.seq) ? this.ball.seq : -1;
+    if (seq >= 0 && seq === this._lastHandballSeq) return;
+
+    for (const p of this._all) {
+      if (!p || p.dismissed || p.isKeeper || p.downT > 0 || p.tackleT > 0) continue;
+      const pts = p.handWorldPoints?.(_handLeft, _handRight);
+      if (!pts) continue;
+      const pp = p.group.position;
+      for (const hand of [pts.left, pts.right]) {
+        const spread = Math.hypot(hand.x - pp.x, hand.z - pp.z);
+        const relY = hand.y - pp.y;
+        // Só marcamos contatos muito claros: mão afastada do tronco ou acima
+        // do ombro. Braço colado ao corpo não vira falta por acaso.
+        if (spread < 0.40 && relY < 1.48) continue;
+        const dx = bp.x - hand.x;
+        const dy = bp.y - hand.y;
+        const dz = bp.z - hand.z;
+        if (dx * dx + dy * dy + dz * dz > 0.24 * 0.24) continue;
+
+        const team = this.otherTeam(p.team);
+        const offenderIdx = this.teams.indexOf(p.team);
+        if (offenderIdx >= 0) this.stats.foul[offenderIdx] += 1;
+        this.pendingFoul = {
+          offender: p,
+          victim: null,
+          team,
+          x: bp.x,
+          z: bp.z,
+          fromBehind: false,
+          speed,
+          kind: 'handball',
+          minute: Math.max(1, Math.floor(this.clock / 60) || 1),
+        };
+        this._lastHandballSeq = seq;
+        return;
+      }
     }
   }
 
