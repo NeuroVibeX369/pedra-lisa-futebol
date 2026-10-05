@@ -999,6 +999,33 @@
     .ml-empty h2 { letter-spacing:3px; }
     .ml-empty p { color:#91ad97; }
     .ml-notice { border-color:#587a38; color:#e9f6dc; }
+    #master-result-return {
+      position: fixed; inset: 0; z-index: 140000;
+      display: grid; place-items: center;
+      padding: 18px;
+      background: rgba(2,8,5,.78);
+      font-family: var(--tv-font);
+    }
+    #master-result-return .mrr-card {
+      width: min(520px, 94%);
+      padding: 22px;
+      text-align: center;
+      color: #eef7ef;
+      background: #0b1710;
+      border: 2px solid #6e9e72;
+      box-shadow: 0 24px 70px rgba(0,0,0,.6);
+    }
+    #master-result-return h2 {
+      margin: 0 0 12px; color: #b8ff52; letter-spacing: 3px;
+    }
+    #master-result-return .mrr-score {
+      margin: 14px 0; font-size: clamp(22px,5vw,42px); font-weight: 900;
+    }
+    #master-result-return button {
+      min-height: 46px; padding: 9px 18px;
+      color: #071109; background: #b8ff52; border: 0;
+      font: 700 12px var(--tv-font); letter-spacing: 2px; cursor: pointer;
+    }
     @media (max-width: 640px) {
       .ml-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .ml-row { grid-template-columns:minmax(120px,2fr) .55fr .55fr 1fr; font-size:10px; }
