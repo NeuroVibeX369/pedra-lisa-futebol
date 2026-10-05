@@ -165,6 +165,8 @@ export class Match {
     this._lastHandballSeq = -1;
     this.shootout = null;
     this.shootoutResult = null;
+    this.penaltyView = null;
+    this.penaltyViewT = 0;
 
     // Dois tempos de 45 minutos com troca de lado.
     this.half = 1;
@@ -1014,6 +1016,8 @@ export class Match {
     const lift = Math.max(-1.2, Math.min(10.5,
       (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * B.gravity * flight));
 
+    this.penaltyView = { side: team.side, x: r.x, goalX: team.attackGoalX };
+    this.penaltyViewT = 1.65;
     r.taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'penalty');
     return true;
   }
@@ -1156,6 +1160,8 @@ export class Match {
     const flight = dist / (power * 0.82);
     const lift = Math.max(0.5, Math.min(9,
       (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * CONFIG.ball.gravity * flight));
+    this.penaltyView = { side: team.side, x: this.restart?.x ?? bp.x, goalX: team.attackGoalX };
+    this.penaltyViewT = 1.65;
     s.taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'shot');
     s.phase = 'flight';
     s.timer = 0;
@@ -1635,6 +1641,10 @@ export class Match {
   update(dt) {
     const M = CONFIG.match;
     this.stateTimer += dt;
+    if (this.penaltyViewT > 0) {
+      this.penaltyViewT -= dt;
+      if (this.penaltyViewT <= 0) this.penaltyView = null;
+    }
     if (this.switchCd > 0) this.switchCd -= dt;
     if (this.remoteSwitchCd > 0) this.remoteSwitchCd -= dt;
 
@@ -2839,6 +2849,8 @@ export class Match {
       const flight = dist / (power * 0.82);
       const lift = Math.max(0.5, Math.min(9,
         (targetY - bp.y) / Math.max(0.15, flight) - 0.5 * CONFIG.ball.gravity * flight));
+      this.penaltyView = { side: team.side, x: r.x, goalX: team.attackGoalX };
+      this.penaltyViewT = 1.65;
       taker.aiKick(this.ball, { x: dx / dist, z: dz / dist }, power, lift, 0, 'shot');
       this._finishRestart();
       return;
