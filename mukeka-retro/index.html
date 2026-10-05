@@ -2,7 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
   <title>Mukeka Retro</title>
   <!-- Шрифт телеграфики: узкий гротеск с кириллицей — так выглядели плашки
        трансляций 90-х. Jersey 10 / Press Start 2P из первоначального плана
@@ -229,8 +233,9 @@
       display: none; align-items: stretch;
       transform: skewX(var(--tv-skew));
       font-family: var(--tv-font);
-      background: var(--tv-slab);
-      color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 3px;
+      background: rgba(6,8,16,0.34);
+      color: rgba(255,255,255,0.82); font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+      opacity: 0.68;
       pointer-events: none; z-index: 10;
     }
     #nameplate.show { display: flex; }
@@ -278,14 +283,14 @@
       pointer-events: none; z-index: 9;
     }
     #radar.show { display: block; }
-    #np-mark { width: 7px; align-self: stretch; background: #888; }
+    #np-mark { width: 4px; align-self: stretch; background: #888; }
     #np-num {
-      display: flex; align-items: center; padding: 2px 10px 1px;
-      color: var(--tv-gold);
-      background: rgba(0, 0, 0, 0.35);
+      display: flex; align-items: center; padding: 1px 6px;
+      color: rgba(242,199,61,0.82);
+      background: rgba(0, 0, 0, 0.18);
       font-variant-numeric: tabular-nums;
     }
-    #np-name { display: flex; align-items: center; padding: 2px 13px 1px; }
+    #np-name { display: flex; align-items: center; padding: 1px 8px; }
 
     /* Логотип телеканала в ЛЕВОМ верхнем углу — настоящий «жучок» эфира.
        Картинку назначает ПАК атрибутики (data/packs/<id>/pack.json →
@@ -594,6 +599,96 @@
          mais ocupar o campo. O gesto avançado continua funcionando na área direita. */
       #cross-zone { display: none; }
       #gesture-viz { display: block; }
+    }
+
+    /* Celular: interface mínima, inspirada nos controles clássicos.
+       Só os quatro símbolos ficam no canto direito. L1/R2 saem da tela:
+       troca de jogador e sprint passam a ser automáticos. L2 continua
+       disponível, pequeno, logo abaixo do MUKEKA TV. */
+    @media (pointer: coarse) {
+      html, body { width: 100%; height: 100dvh; min-height: 100dvh; }
+      #tv {
+        inset: 0;
+        padding: 0;
+        background: #000;
+      }
+      #tv-screen {
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      #nameplate {
+        left: max(8px, env(safe-area-inset-left));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        font-size: 10px;
+        letter-spacing: 1px;
+        opacity: .55;
+      }
+
+      #stick-base {
+        width: 108px; height: 108px;
+        border-color: rgba(255,255,255,.16);
+        background: rgba(0,0,0,.05);
+        opacity: .55;
+      }
+      #stick-knob {
+        left: 32px; top: 32px; width: 42px; height: 42px;
+        background: rgba(255,255,255,.22);
+      }
+
+      .tbtn {
+        width: 50px; height: 50px;
+        border: 1px solid rgba(255,255,255,.22);
+        background: rgba(0,0,0,.08);
+        opacity: .40;
+      }
+      .tbtn:active {
+        opacity: .82;
+        background: rgba(255,255,255,.14);
+      }
+      .tbtn .face-label,
+      .tbtn .lbl-atk,
+      .tbtn .lbl-def {
+        display: none !important;
+      }
+      .face-symbol {
+        font-size: 24px;
+        line-height: 24px;
+        opacity: .82;
+      }
+
+      #btn-through { right: 64px; bottom: 126px; }
+      #btn-shoot   { right: 116px; bottom: 76px; }
+      #btn-cross   { right: 12px; bottom: 76px; }
+      #btn-pass    { right: 64px; bottom: 26px; }
+
+      #btn-switch,
+      #btn-sprint {
+        display: none !important;
+      }
+
+      #btn-feint {
+        display: flex !important;
+        left: max(18px, env(safe-area-inset-left));
+        right: auto;
+        top: calc(max(18px, env(safe-area-inset-top)) + 42px);
+        bottom: auto;
+        width: 36px;
+        height: 36px;
+        font-size: 9px;
+        opacity: .32;
+        background: rgba(0,0,0,.06);
+      }
+      #btn-feint:active, #btn-feint.on { opacity: .78; }
+
+      #channel-logo {
+        top: max(10px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+      }
+      #pause-start {
+        top: max(6px, env(safe-area-inset-top));
+        right: max(6px, env(safe-area-inset-right));
+      }
     }
 
     /* Бегущая строка с составами — как в начале трансляции 90-х.
@@ -1315,7 +1410,7 @@
     <h3 data-open="0">CONTROLES — CELULAR/TABLET</h3>
     <div class="row">Use o direcional virtual à esquerda e o losango de ações à direita.</div>
     <div class="row"><span class="key">×</span> passe · <span class="key">□</span> chute · <span class="key">○</span> cruzamento/carrinho · <span class="key">△</span> passe em profundidade.</div>
-    <div class="row">L1 troca o jogador, R2 corre e L2 executa drible/controle técnico. Deslizar na área direita continua permitindo cruzamento ou chute com direção e efeito.</div>
+    <div class="row">No celular a troca de jogador e o sprint são automáticos. L2 permanece como drible/controle técnico. Deslizar na área direita continua permitindo cruzamento ou chute com direção e efeito.</div>
 
     <h3 data-open="0">DICAS DE PARTIDA</h3>
     <div class="row">Laterais, escanteios e tiros de meta são cobrados automaticamente ou pelos mesmos botões de passe/cruzamento.</div>
