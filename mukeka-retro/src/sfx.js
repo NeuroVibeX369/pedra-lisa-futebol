@@ -169,6 +169,7 @@ export function updateCrowd(dt) {
 }
 
 // ===== Файеры =====
+let flareNoiseBuffer = null;
 
 // Шипение файеров на трибуне: пиротехника горит с характерным «пшшш».
 // Синтез тот же, что был у толпы, — розовый шум, но полоса высокая и узкая:
@@ -182,7 +183,13 @@ export function flareHiss(count = 1, seconds = 12) {
   const t0 = c.currentTime + 0.05;
 
   const src = c.createBufferSource();
-  src.buffer = makeNoiseBuffer(c, 3);
+  // Criar três segundos de ruído rosa exige preencher ~130 mil amostras.
+  // Fazer isso síncrono no exato quadro do gol causava uma pequena engasgada.
+  // O som é um loop: um único buffer reutilizado serve para todos os gols.
+  if (!flareNoiseBuffer || flareNoiseBuffer.sampleRate !== c.sampleRate) {
+    flareNoiseBuffer = makeNoiseBuffer(c, 3);
+  }
+  src.buffer = flareNoiseBuffer;
   src.loop = true;
 
   const bp = c.createBiquadFilter();
