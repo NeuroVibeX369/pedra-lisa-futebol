@@ -46,6 +46,9 @@ export function setupRetroOnlineTest({ onRole, onExitOnline, match, ball, input 
 
   const say = (text) => { if (status) status.textContent = text; };
 
+  const homeName = () => match?.teams?.[0]?.data?.name || 'TIME 1';
+  const awayName = () => match?.teams?.[1]?.data?.name || 'TIME 2';
+
   function setOnlineUrl(enabled) {
     const next = new URL(location.href);
     if (enabled) next.searchParams.set('online', '1');
@@ -131,8 +134,8 @@ export function setupRetroOnlineTest({ onRole, onExitOnline, match, ball, input 
       peerReady = true;
       netplay?.setConnected(true);
       say(role === 'host'
-        ? 'Amigo conectado! Você joga com o Pedra Lisa.'
-        : 'Conectado! Você joga com o Independência.');
+        ? `Amigo conectado! Você joga com ${homeName()}.`
+        : `Conectado! Você joga com ${awayName()}.`);
       gate.classList.add('connected');
       setTimeout(() => {
         if (peerReady) {
