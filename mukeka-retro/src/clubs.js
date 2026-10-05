@@ -230,6 +230,140 @@ export function buildClubCareerSquad(clubOrId) {
   });
 }
 
+
+export const FORMATION_POSITIONS = Object.freeze([
+  'GOL', 'LE', 'ZAG', 'ZAG', 'LD', 'VOL', 'MC', 'MEI', 'PE', 'ATA', 'PD',
+]);
+
+function roleForPosition(position, slot = -1) {
+  if (slot >= 0 && ROLES[slot]) return ROLES[slot];
+  const map = {
+    LE: 'fullback', LD: 'wingback', ZAG: 'cover', VOL: 'destroyer',
+    MC: 'box2box', MEI: 'playmaker10', PE: 'insideFwd',
+    PD: 'winger', ATA: 'poacher',
+  };
+  return map[position] || null;
+}
+
+export function defaultLineupIds(squad = []) {
+  const used = new Set();
+  const ids = [];
+  for (const pos of FORMATION_POSITIONS) {
+    let best = squad
+      .filter((p) => !used.has(p.id) && p.position === pos)
+      .sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
+    if (!best) {
+      best = squad
+        .filter((p) => !used.has(p.id) && (pos === 'GOL' ? p.position === 'GOL' : p.position !== 'GOL'))
+        .sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
+    }
+    if (!best) best = squad.find((p) => !used.has(p.id));
+    if (best) {
+      used.add(best.id);
+      ids.push(best.id);
+    }
+  }
+  return ids;
+}
+
+export function careerPlayerToMatchLook(player, slot = -1) {
+  if (!player) return null;
+  const random = rng('career-look-' + (player.id || player.name || slot));
+  const overall = clamp(Number(player.overall) || 70, 50, 99);
+  const position = player.position || FORMATION_POSITIONS[slot] || 'MC';
+  const skill = attr01(overall, random);
+
+  const look = {
+    careerId: player.id || null,
+    name: player.name || 'JOGADOR',
+    number: player.number || NUMBERS[Math.max(0, slot)] || (slot + 1),
+    overall,
+    height: player.height || Math.round(
+      (position === 'GOL' || position === 'ZAG' || position === 'ATA' ? 178 : 169) + random() * 10
+    ),
+    build: player.build || Number((0.94 + random() * .15).toFixed(2)),
+    skin: player.skin || SKINS[Math.floor(random() * SKINS.length)],
+    hair: player.hair || HAIRS[Math.floor(random() * HAIRS.length)],
+    hairColor: player.hairColor || '#20150f',
+  };
+
+  const role = player.role || roleForPosition(position, slot);
+  if (role) look.role = role;
+
+  if (position === 'GOL') {
+    const g = clamp(0.38 + (overall - 55) / 55, .35, .99);
+    look.gk = player.gk || {
+      reflexes: clamp(g + (random() - .5) * .05, .35, .99),
+      handling: clamp(g + (random() - .5) * .05, .35, .99),
+      positioning: clamp(g + (random() - .5) * .05, .35, .99),
+      vision: clamp(g + (random() - .5) * .05, .35, .99),
+    };
+  } else {
+    look.touch = player.touch ?? clamp(skill + (position === 'MEI' ? .07 : 0), .25, .99);
+    look.vision = player.vision ?? clamp(skill + (position === 'MEI' || position === 'MC' ? .08 : -.02), .25, .99);
+    look.composure = player.composure ?? clamp(skill + (position === 'ZAG' || position === 'VOL' ? .05 : 0), .25, .99);
+    look.work = player.work ?? clamp(skill + (position === 'VOL' || position === 'MC' ? .06 : 0), .25, .99);
+    look.risk = player.risk ?? clamp(.42 + (overall - 60) / 90 + (random() - .5) * .08, .25, .86);
+    look.shoot = player.shoot ?? clamp(.72 + (overall - 60) / 65 +
+      (position === 'ATA' || position === 'PE' || position === 'PD' ? .12 : -.04), .65, 1.4);
+    look.crossBias = player.crossBias ?? clamp(.8 +
+      (position === 'LE' || position === 'LD' || position === 'PE' || position === 'PD' ? .28 : 0), .7, 1.35);
+  }
+
+  // Características especiais definidas para os atletas personalizados.
+  if (String(player.name).toUpperCase() === 'HÉLIO') {
+    look.touch = 1;
+    look.vision = Math.max(look.vision || 0, .92);
+  }
+  if (String(player.name).toUpperCase() === 'LUCIANO') {
+    look.touch = Math.max(look.touch || 0, .94);
+    look.vision = Math.max(look.vision || 0, .94);
+    look.shoot = Math.max(look.shoot || 0, 1.28);
+  }
+  if (String(player.name).toUpperCase() === 'BASTIAOZINHO') {
+    look.touch = Math.max(look.touch || 0, .96);
+    look.shoot = Math.max(look.shoot || 0, 1.34);
+    look.runBehind = 1;
+  }
+  if (String(player.name).toUpperCase() === 'VALDEKE MATTOS') {
+    look.touch = .99;
+    look.shoot = 1.4;
+    look.composure = .99;
+    look.runBehind = 1;
+  }
+
+  return look;
+}
+
+export function buildCareerTeam(clubOrId, squad = [], lineupIds = null) {
+  const club = typeof clubOrId === 'string' ? clubById(clubOrId) : clubOrId;
+  if (!club) return null;
+
+  let ids = Array.isArray(lineupIds) ? lineupIds.filter(Boolean).slice(0, 11) : [];
+  const valid = new Set(squad.map((p) => p.id));
+  ids = ids.filter((id, i) => valid.has(id) && ids.indexOf(id) === i);
+  if (ids.length < 11) ids = defaultLineupIds(squad);
+
+  const selected = ids.map((id) => squad.find((p) => p.id === id)).filter(Boolean);
+  while (selected.length < 11) {
+    const extra = squad.find((p) => !selected.includes(p));
+    if (!extra) break;
+    selected.push(extra);
+  }
+
+  return {
+    id: club.id,
+    name: club.name,
+    short: club.short,
+    strength: club.strength,
+    colors: { primary: club.primary, shorts: club.shorts, gk: club.gk },
+    kits: { home: null, goalkeeper: null },
+    squad: selected.slice(0, 11).map((p, slot) => careerPlayerToMatchLook(p, slot)),
+    style: club.style || 'neutral',
+    _comentario_mukeka: 'Equipe carregada do save da Master Liga.',
+  };
+}
+
 export function buildClubTeam(clubOrId) {
   const club = typeof clubOrId === 'string' ? clubById(clubOrId) : clubOrId;
   if (!club) return null;
