@@ -112,6 +112,17 @@ export class Match {
     ];
     this.humanTeamIndex = humanTeamIndex === 1 ? 1 : 0;
     this.humanTeam = this.teams[this.humanTeamIndex];
+
+    // Multiplayer online host-authoritative. No modo solo estes campos ficam
+    // nulos e o comportamento original não muda. No host, o segundo jogador
+    // recebe um Input remoto e controla um jogador do outro time; os demais
+    // dez continuam sob a mesma IA do jogo original.
+    this.remoteInput = null;
+    this.remoteTeam = null;
+    this.remoteTeamIndex = -1;
+    this.remoteControlled = null;
+    this.remoteSwitchCd = 0;
+
     this._all = [...this.teams[0].players, ...this.teams[1].players];
 
     this.controlled = null;   // игрок под управлением человека
@@ -360,6 +371,9 @@ export class Match {
 
     // Человеку — ближнего к мячу полевого игрока
     this.setControlled(this.nearestFieldPlayer(this.humanTeam), 0);
+    if (this.remoteInput && this.remoteTeam) {
+      this.setRemoteControlled(this.nearestFieldPlayer(this.remoteTeam), 0);
+    }
   }
 
   // ===== ТВ-заставка перед матчем (22.07.2026) =====
@@ -634,10 +648,123 @@ export class Match {
     this.armControlledApproach(p);
   }
 
+  // Liga um segundo controle ao time adversário no navegador host.
+  // A IA continua controlando todos os outros jogadores normalmente.
+  setRemoteController(teamIndex, input) {
+    const idx = teamIndex === 1 ? 1 : 0;
+    if (!input || idx === this.humanTeamIndex) {
+      this.remoteInput = null;
+      this.remoteTeam = null;
+      this.remoteTeamIndex = -1;
+      this.remoteControlled = null;
+      return;
+    }
+    this.remoteInput = input;
+    this.remoteTeamIndex = idx;
+    this.remoteTeam = this.teams[idx];
+    this.remoteSwitchCd = 0;
+    for (const p of this.remoteTeam.players) {
+      p.passAssist = (player, type, power, aimDir, opts) =>
+        this.resolvePass(player, type, power, aimDir, opts);
+    }
+    this.setRemoteControlled(this.nearestFieldPlayer(this.remoteTeam), 0);
+  }
+
+  setRemoteControlled(p, cd = CONFIG.ai.switch.cooldown) {
+    if (!p || !this.remoteTeam || p.team !== this.remoteTeam) return;
+    if (p === this.remoteControlled) {
+      this.remoteSwitchCd = cd;
+      this.armControlledApproach(p);
+      return;
+    }
+    if (this.remoteControlled) this.remoteControlled.cancelBallApproach();
+    this.remoteControlled = p;
+    this.remoteSwitchCd = cd;
+    p.pendingStrike = null;
+    p.strikeContactLock = false;
+    p.chargeRun = false;
+    if (p.ai) p.ai.dribDir = null;
+    this.armControlledApproach(p);
+  }
+
+  validateRemoteControlledApproach() {
+    const p = this.remoteControlled;
+    const a = p && p.ballApproach;
+    if (!a) return;
+    if ((this.state !== 'play' && this.state !== 'kickoff') ||
+        p.downT > 0 || p.kickCooldown > 0) {
+      p.cancelBallApproach();
+      return;
+    }
+    const owner = this.toucher;
+    if (!owner || owner === p) return;
+    if (a.kind === 'dribble' || owner.team === p.team) {
+      p.cancelBallApproach();
+      return;
+    }
+    const bp = this.ball.mesh.position;
+    const op = owner.group.position;
+    const ownerGap = Math.hypot(bp.x - op.x, bp.z - op.z);
+    if (ownerGap <= CONFIG.ai.defence.badTouchDist) p.cancelBallApproach();
+  }
+
+  updateRemoteSwitching() {
+    if (!this.remoteInput || !this.remoteTeam) return;
+    const SW = CONFIG.ai.switch;
+    const team = this.remoteTeam;
+
+    if (this.state === 'restart' && this.restart &&
+        this.restart.team === team && this.restart.type !== 'goalkick') {
+      this.remoteInput.consumeSwitch();
+      return;
+    }
+
+    const manual = this.remoteInput.consumeSwitch();
+    if (manual) {
+      if (this.remoteControlled &&
+          (this.remoteControlled.isToucher || this.remoteControlled.hasBall)) return;
+      if (team.receiver && team.receiveTimer > 0 && !this.toucher &&
+          team.receiver !== this.remoteControlled) {
+        this.setRemoteControlled(team.receiver, 0.25);
+        return;
+      }
+      this.setRemoteControlled(this.nearestFieldPlayer(team, this.remoteControlled), 0.25);
+      return;
+    }
+
+    if (this.remoteSwitchCd > 0) return;
+
+    if (team.receiver && team.receiveTimer > 0 && !this.toucher &&
+        Math.hypot(this.ball.vel.x, this.ball.vel.z) > 2) {
+      const lead = this.receiverLead(team.receiver);
+      if (lead == null || lead > SW.handoff) return;
+      if (team.receiver !== this.remoteControlled) {
+        this.setRemoteControlled(team.receiver, SW.handoffCd);
+      }
+      return;
+    }
+
+    if (this.toucher && this.toucher.team === team &&
+        !this.toucher.isKeeper && this.toucher !== this.remoteControlled) {
+      this.setRemoteControlled(this.toucher, 0.4);
+      return;
+    }
+
+    if (!this.toucher || this.toucher.team !== team) {
+      const cur = this.remoteControlled ? distToBall(this.remoteControlled, this.ball) : Infinity;
+      const near = this.nearestFieldPlayer(team, this.remoteControlled);
+      if (near) {
+        const nd = distToBall(near, this.ball);
+        if (nd < cur * SW.advantage && cur - nd > 2.5) this.setRemoteControlled(near);
+      }
+    }
+  }
+
   update(dt) {
     const M = CONFIG.match;
     this.stateTimer += dt;
     if (this.switchCd > 0) this.switchCd -= dt;
+    if (this.remoteSwitchCd > 0) this.remoteSwitchCd -= dt;
 
     // «ГОЛ!» на экране гаснет сам
     if (this.flashTimer > 0) {
@@ -741,7 +868,8 @@ export class Match {
     // Розыгрыш AI с центра: выдержал паузу — отдал пас
     if (this.state === 'kickoff') {
       const kt = this.teams[this.kickoffTeam];
-      if (kt !== this.humanTeam && this.stateTimer > M.kickoffDelay) {
+      if (kt !== this.humanTeam && kt !== this.remoteTeam &&
+          this.stateTimer > M.kickoffDelay) {
         const st = kt.players[9];
         const pass = kt.choosePass(st, this.ball);
         if (pass) {
@@ -767,10 +895,12 @@ export class Match {
     // Мёртвый мяч стандарта арбитражу владения не принадлежит никому
     if (!paused && this.state !== 'restart') this.updateToucher(dt);
     this.validateControlledApproach();
+    this.validateRemoteControlledApproach();
 
     for (const team of this.teams) team.update(dt, aiBall);
 
     this.updateSwitching();
+    this.updateRemoteSwitching();
     // Приказ вратарю читаем ДО обхода игроков: goalkeeper.js увидит его в
     // этом же кадре, а не в следующем
     if (!paused && this.state !== 'restart') this.updateKeeperOrder();
@@ -783,6 +913,9 @@ export class Match {
         if (this.restart && p === this.restart.taker) this.updateTaker(p, dt);
         else if (p.isKeeper && p.ai && p.ai.holding) this.updateKeeperHold(p, dt);
         else if (p === this.controlled) p.update(dt, this.input, this.ball);
+        else if (p === this.remoteControlled && this.remoteInput) {
+          p.update(dt, this.remoteInput, this.ball);
+        }
         else if (p.isKeeper) updateKeeper(p, dt, aiBall);
         else updateFieldPlayer(p, dt, aiBall);
       }
