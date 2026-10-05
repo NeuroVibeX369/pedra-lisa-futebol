@@ -162,9 +162,12 @@ export class Renderer {
       ctx.closePath();
       ctx.fill();
 
-      // Name/number only for the controlled player; cosmetic only.
-      if (appearance.name) {
-        const label = `${appearance.number ?? ''} ${appearance.name}`.trim();
+      // Name/number, OVR and energy for the controlled player; cosmetic only.
+      if (p.displayName || appearance.name) {
+        const number = p.shirtNumber ?? appearance.number ?? '';
+        const name = p.displayName || appearance.name || '';
+        const ovr = state.config.premiumRatings ? ` · OVR ${p.overall ?? '--'}` : '';
+        const label = `${number} ${name}${ovr}`.trim();
         const nameAt = this.toScreen(p.x, p.y - PLAYER_R - 16);
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -176,6 +179,16 @@ export class Renderer {
         ctx.fillRect(Math.round(nameAt.x - width / 2), nameAt.y - 14, width, 14);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(label, nameAt.x, nameAt.y - 2);
+        if (state.config.premiumManagement) {
+          const stamina = clamp((p.stamina ?? 1000) / 1000, 0, 1);
+          const barW = Math.max(42, Math.min(88, width));
+          const bx = Math.round(nameAt.x - barW / 2);
+          const by = nameAt.y + 1;
+          ctx.fillStyle = 'rgba(0,0,0,.72)';
+          ctx.fillRect(bx, by, barW, 4);
+          ctx.fillStyle = stamina > .55 ? '#71df8b' : stamina > .28 ? '#ffe14d' : '#ff745c';
+          ctx.fillRect(bx, by, Math.round(barW * stamina), 4);
+        }
         ctx.restore();
       }
 
@@ -231,7 +244,12 @@ export class Renderer {
       ctx.fillStyle = TEAM_PRESETS[t].shirt;
       ctx.fillRect(12, y - 6, 10, 10);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText(`${team.name} - ${who}`, 28, y);
+      let extra = '';
+      if (state.config.premiumManagement) {
+        const mentality = team.mentality < 0 ? 'DEF' : team.mentality > 0 ? 'OFE' : 'EQU';
+        extra = ` · ${mentality} · SUB ${team.subsUsed}/3`;
+      }
+      ctx.fillText(`${team.name} - ${who}${extra}`, 28, y);
       y += 16;
     }
   }

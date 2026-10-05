@@ -1,217 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>WebSoccer</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#12331d">
-  <!-- Installed to the home screen, the page opens without any browser chrome.
-       On an iPhone that is the only way to be rid of Safari's bars. -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="WebSoccer">
-  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Mukeka Games</title>
+  <meta name="theme-color" content="#0d2517">
+  <style>
+    :root{color-scheme:dark;--bg:#08110c;--panel:#101d15;--line:#294535;--text:#f3f7f4;--muted:#9fb1a6;--green:#29b35c;--green2:#178a3c}
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
+      radial-gradient(circle at 20% 0%,rgba(41,179,92,.18),transparent 34rem),
+      linear-gradient(180deg,#0a1710 0%,var(--bg) 100%);color:var(--text);display:flex;align-items:center;justify-content:center;padding:28px}
+    .shell{width:min(1480px,100%)} .brand{text-align:center;margin-bottom:28px}
+    .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#72d895;font-weight:800}
+    h1{font-size:clamp(36px,7vw,72px);line-height:.92;margin:10px 0 12px;letter-spacing:-.045em}
+    .sub{color:var(--muted);font-size:16px;margin:0 auto;max-width:700px;line-height:1.55}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:28px}
+    .card{position:relative;min-height:360px;padding:28px;border:1px solid var(--line);border-radius:24px;background:
+      linear-gradient(180deg,rgba(255,255,255,.035),transparent 55%),var(--panel);
+      overflow:hidden;display:flex;flex-direction:column;box-shadow:0 22px 60px rgba(0,0,0,.28)}
+    .card:after{content:"";position:absolute;inset:auto -30% -45% 35%;height:250px;background:radial-gradient(circle,rgba(41,179,92,.18),transparent 60%);pointer-events:none}
+    .badge{align-self:flex-start;border:1px solid #3d6c4f;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#aee8c0}
+    .card h2{font-size:34px;margin:20px 0 8px}.card p{color:var(--muted);line-height:1.55;margin:0}
+    .features{margin:22px 0 28px;padding:0;list-style:none;display:grid;gap:9px;color:#dbe6df;font-size:14px}
+    .features li:before{content:"✓";color:#61db87;margin-right:9px;font-weight:900}
+    .actions{margin-top:auto;position:relative;z-index:1}.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:52px;border-radius:14px;text-decoration:none;font-weight:900;letter-spacing:.02em}
+    .primary{background:linear-gradient(180deg,#31c764,var(--green2));color:#fff;box-shadow:0 12px 28px rgba(23,138,60,.28)}
+    .secondary{background:#17271d;color:#eef7f1;border:1px solid #355541}.disabled{background:#18211c;color:#819087;border:1px solid #2c3931;cursor:not-allowed;box-shadow:none}
+    .foot{text-align:center;color:#789083;font-size:12px;margin-top:20px}
+    @media(max-width:1080px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){body{padding:18px}.grid{grid-template-columns:1fr}.card{min-height:330px}h1{font-size:48px}}
+    .future-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
+    .future-card{border:1px dashed rgba(255,255,255,.16);border-radius:18px;padding:20px;background:rgba(255,255,255,.025);text-align:center}
+    .future-card h3{margin:0 0 8px;font-size:1.05rem}
+    .future-card p{margin:0;opacity:.72;line-height:1.5}
+    .future-tag{display:inline-block;margin-top:4px;font-size:.78rem;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
+    @media(max-width:900px){.future-grid{grid-template-columns:1fr}}
+    </style>
 </head>
 <body>
-  <div id="wrap">
-    <canvas id="game" width="900" height="620" tabindex="0"></canvas>
+  <main class="shell">
+    <header class="brand">
+      <div class="eyebrow">Mukeka Games · Plataforma de jogos</div>
+      <h1>MUKEKA<br>GAMES</h1>
+      <p class="sub">Um lugar para jogar os títulos da Mukeka direto no navegador. Novos jogos serão liberados quando estiverem prontos.</p>
+    </header>
 
-    <div id="touch" class="hidden">
-      <button id="btnPause" type="button" aria-label="Pause">II</button>
-      <div id="stick"><div id="knob"></div></div>
-      <div id="touchButtons">
-        <button id="btnSwap" type="button">SWITCH</button>
-        <button id="btnKick" type="button">KICK</button>
-      </div>
-    </div>
 
-    <div id="rotate">Turn your phone sideways to play</div>
+    <section class="future-grid" aria-label="Próximos jogos">
+      <article class="future-card">
+        <h3>🃏 Duelo de Cartas</h3>
+        <span class="future-tag">Em breve</span>
+      </article>
+      <article class="future-card">
+        <h3>🐲 RPG de Criaturas</h3>
+        <span class="future-tag">Em breve</span>
+      </article>
+      <article class="future-card">
+        <h3>⚔️ Mundo OpenTibia</h3>
+        <span class="future-tag">Em breve</span>
+      </article>
+    </section>
 
-    <div id="menu" class="overlay">
-      <div class="panel">
-        <h1>WEB<span>SOCCER</span></h1>
-        <p class="tag">HTML / JavaScript &middot; local &amp; online</p>
+    <section class="grid" style="margin-top:18px">
+      <article class="card" style="min-height:330px">
+        <span class="badge">Disponível agora</span>
+        <h2>FC MUKEKA</h2>
+        <p>Nosso primeiro jogo oficial. Futebol 2D completo direto no navegador.</p>
+        <ul class="features">
+          <li>11 × 11</li>
+          <li>Contra a máquina</li>
+          <li>2 jogadores no mesmo PC</li>
+          <li>Online por sala</li>
+          <li>PC e celular</li>
+        </ul>
+        <div class="actions"><a class="btn primary" href="./websoccer.html">JOGAR FC MUKEKA</a></div>
+      </article>
 
-        <div class="row">
-          <label>Mode</label>
-          <div class="btns">
-            <button data-mode="1" class="active">Contra Máquina</button>
-            <button data-mode="2">2 no mesmo PC</button>
-            <button data-mode="online">Online contra amigo</button>
-          </div>
-        </div>
+      <article class="card" style="min-height:330px">
+        <span class="badge">Em desenvolvimento</span>
+        <h2>FC MUKEKA RETRÔ</h2>
+        <p>Em breve.</p>
+        <div class="actions"><span class="btn disabled" aria-disabled="true">EM BREVE</span></div>
+      </article>
 
-        <div class="row" id="difficultyRow">
-          <label>Dificuldade</label>
-          <div class="btns">
-            <button data-difficulty="easy">Fácil</button>
-            <button data-difficulty="normal" class="active">Normal</button>
-            <button data-difficulty="hard">Difícil</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label>Sound</label>
-          <div class="btns">
-            <button data-music="on" class="active">On</button>
-            <button data-music="off">Off</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label>Commentary</label>
-          <div class="btns">
-            <button data-commentary="on" class="active">On</button>
-            <button data-commentary="off">Off</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label>Offside</label>
-          <div class="btns">
-            <button data-offside="on" class="active">On</button>
-            <button data-offside="off">Off</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label for="duration">Match length</label>
-          <select id="duration">
-            <option value="60">Short (2 &times; 1 min)</option>
-            <option value="120" selected>Normal (2 &times; 2 min)</option>
-            <option value="240">Long (2 &times; 4 min)</option>
-          </select>
-        </div>
-
-        <details id="controlsBox">
-        <summary>Controls</summary>
-        <table class="keys" id="keysTable">
-          <thead>
-            <tr><th></th><th>Jogador 1 (Pedra Lisa)</th><th id="p2head">Jogador 2 (Independência)</th></tr>
-          </thead>
-          <tbody id="keysBody"></tbody>
-          <tfoot>
-            <tr>
-              <td>Presets</td>
-              <td><select data-preset="0" class="preset"></select></td>
-              <td><select data-preset="1" class="preset"></select></td>
-            </tr>
-          </tfoot>
-        </table>
-        <p id="bindHint" class="status">Click a key to change it.</p>
-        </details>
-
-        <details id="lineupBox">
-          <summary>Line-up <span id="lineupShape" class="shape">4-3-3</span></summary>
-          <div class="row" id="lineupTeamRow">
-            <label>Team</label>
-            <div class="btns">
-              <button data-lineupteam="0" class="active">Pedra Lisa</button>
-              <button data-lineupteam="1">Independência</button>
-            </div>
-          </div>
-          <div class="btns wrap" id="lineupPresets"></div>
-          <div class="pitchWrap">
-            <canvas id="lineupPitch" width="220" height="300"></canvas>
-          </div>
-          <p id="lineupNote" class="status"></p>
-          <p class="fineprint">
-            Drag anyone but the keeper. How far up the pitch you put a player is
-            what decides how he plays: push a midfielder forward and he stops
-            tracking back and starts hanging off the strikers.
-          </p>
-        </details>
-
-        <details id="scoresBox">
-          <summary>High scores <span id="scoresLevel" class="shape"></span></summary>
-          <table class="scores">
-            <tbody id="scoresBody"></tbody>
-          </table>
-          <p id="scoresNote" class="fineprint"></p>
-        </details>
-
-        <p id="iosHint" class="fineprint hidden"></p>
-
-        <div id="localSetup">
-
-          <details>
-          <summary>How it plays</summary>
-          <ul class="hints">
-            <li><b>Tap</b> for a pass along the ground, <b>hold</b> for a harder or lofted ball.</li>
-            <li><b>Aftertouch:</b> keep steering after the shot to bend the ball; forwards lifts it, backwards makes it dip.</li>
-            <li>The button <b>without the ball</b> is a slide tackle.</li>
-            <li>You automatically control whoever is nearest the ball.</li>
-            <li>Gamepads também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
-            <li><b>Esc</b> pauses.</li>
-          </ul>
-          </details>
-
-        </div>
-
-        <div id="onlineSetup" class="hidden">
-          <p class="explain">
-            One player opens a match and passes on the code; the other enters it.
-            Quem cria a sala joga com <b>Pedra Lisa</b>; quem entra pelo código joga com <b>Independência</b>.
-            You control your own team with either set of keys from the table above.
-          </p>
-
-          <div id="roomCode" class="code hidden"></div>
-          <p id="onlineStatus" class="status"></p>
-
-          <div class="joinrow">
-            <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
-            <button id="join">JOIN</button>
-          </div>
-
-          <p class="fineprint">
-            Works between two browser tabs, between computers on the same network,
-            and across the internet once you host <code>server/relay.js</code> somewhere.
-          </p>
-        </div>
-        <div class="panelFooter">
-          <button id="start" class="primary">KICK OFF</button>
-          <button id="host" class="primary hidden">OPEN A NEW MATCH</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="hiscore" class="overlay hidden">
-      <div class="panel small">
-        <h2>HIGH SCORE</h2>
-        <p id="hiscoreLine" class="status"></p>
-        <div class="picker">
-          <div id="hiscoreUp" class="letterRow"></div>
-          <div id="hiscoreLetters" class="letters"></div>
-          <div id="hiscoreDown" class="letterRow"></div>
-        </div>
-        <button id="hiscoreOk" class="primary">OK</button>
-        <p class="fineprint">
-          Tap the arrows, or use the stick: up and down for the letter, left
-          and right to move along, kick to confirm. Typing works too.
-        </p>
-      </div>
-    </div>
-
-    <div id="pause" class="overlay hidden">
-      <div class="panel small">
-        <h2>PAUSED</h2>
-        <button id="resume" class="primary">Resume</button>
-        <button id="quit">Back to menu</button>
-      </div>
-    </div>
-
-    <div id="netend" class="overlay hidden">
-      <div class="panel small">
-        <h2 id="netendTitle">CONNECTION LOST</h2>
-        <p id="netendText" class="status"></p>
-        <button id="netendQuit" class="primary">Back to menu</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="src/main.js"></script>
+      <article class="card" style="min-height:330px">
+        <span class="badge">Teste liberado</span>
+        <h2>FC MUKEKA PREMIUM</h2>
+        <p>Versão 3D leve em modo estável, sem o modelo pesado que causava travamentos.</p>
+        <ul class="features">
+          <li>Contra a máquina</li>
+          <li>Elenco e táticas completas</li>
+          <li>Jogadores 3D leves</li>
+          <li>Online por sala em teste</li>
+        </ul>
+        <div class="actions"><a class="btn primary" href="./striker3d/">TESTAR PREMIUM</a></div>
+      </article>
+    </section>
+    <div class="foot">Mukeka Games · apenas jogos liberados aparecem como jogáveis.</div>
+  </main>
 </body>
 </html>

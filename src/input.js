@@ -156,6 +156,9 @@ export class InputDevices {
     this.down = new Set();
     this.enabled = true;
     this.touch = null; // on-screen controls, when there are any
+    this.ps2FaceButtons = false; // opt-in; Classic 2D keeps its original pad mapping
+    this.premiumManagement = false; // opt-in team tactics/substitutions
+    this.virtualPulse = [0, 0]; // one-tick UI commands; safe for local and online lockstep
     this.setBindings(bindings);
 
     this._onKeyDown = (e) => {
@@ -196,6 +199,12 @@ export class InputDevices {
     return this.down.has(code);
   }
 
+  pulse(slot, bits) {
+    const i = slot | 0;
+    if (i < 0 || i > 1) return;
+    this.virtualPulse[i] = (this.virtualPulse[i] | bits) | 0;
+  }
+
   /** Bitmask for one local slot (0 or 1), keyboard and gamepad merged. */
   mask(slot) {
     if (!this.enabled) return 0;
@@ -207,8 +216,15 @@ export class InputDevices {
     }
     // The on-screen controls drive the first slot, which is the one every
     // single player and online match uses.
+    if (this.premiumManagement && slot === 0) {
+      if (this.down.has('KeyZ')) m |= BTN.TACTIC_DOWN;
+      if (this.down.has('KeyX')) m |= BTN.TACTIC_UP;
+      if (this.down.has('KeyC')) m |= BTN.SUB;
+    }
     const touch = slot === 0 && this.touch ? this.touch.mask : 0;
-    return m | touch | this.gamepadMask(slot);
+    const pulse = this.virtualPulse[slot] | 0;
+    this.virtualPulse[slot] = 0;
+    return m | touch | this.gamepadMask(slot) | pulse;
   }
 
   gamepadMask(slot) {
@@ -229,8 +245,23 @@ export class InputDevices {
     if (b[13] && b[13].pressed) m |= BTN.DOWN;
     if (b[14] && b[14].pressed) m |= BTN.LEFT;
     if (b[15] && b[15].pressed) m |= BTN.RIGHT;
-    for (const i of [0, 1, 2, 3, 6, 7]) {
-      if (b[i] && b[i].pressed) m |= BTN.FIRE;
+    if (this.ps2FaceButtons) {
+      // Standard browser gamepad order on a PlayStation-style controller:
+      // 0 cross, 1 circle, 2 square, 3 triangle.
+      if (b[0]?.pressed) m |= BTN.PASS;
+      if (b[1]?.pressed) m |= BTN.CROSS;
+      if (b[2]?.pressed) m |= BTN.SHOOT;
+      if (b[3]?.pressed) m |= BTN.THROUGH;
+      if (b[6]?.pressed || b[7]?.pressed) m |= BTN.SWITCH;
+      if (this.premiumManagement) {
+        if (b[4]?.pressed) m |= BTN.TACTIC_DOWN;
+        if (b[5]?.pressed) m |= BTN.TACTIC_UP;
+        if (b[8]?.pressed || b[9]?.pressed) m |= BTN.SUB;
+      }
+    } else {
+      for (const i of [0, 1, 2, 3, 6, 7]) {
+        if (b[i] && b[i].pressed) m |= BTN.FIRE;
+      }
     }
     return m;
   }

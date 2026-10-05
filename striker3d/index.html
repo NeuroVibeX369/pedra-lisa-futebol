@@ -1,0 +1,2591 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>FC Mukeka Premium</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110c;color:#fff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    #app{position:fixed;inset:0}#app:after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.20) 100%);z-index:2}canvas{display:block}
+    #hud{position:fixed;inset:0;pointer-events:none}
+    .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(10,72,34,.96),rgba(9,14,11,.96) 36%,rgba(9,14,11,.96) 64%,rgba(235,235,230,.96));border:1px solid rgba(255,255,255,.20);border-radius:8px;padding:9px 16px;backdrop-filter:blur(8px);font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.36);text-shadow:0 1px 2px #000}
+    .score{font-size:22px;min-width:72px;text-align:center;background:#0a0f0c;border-radius:5px;padding:3px 8px}.small{font-size:10px;color:#d0dbd4;letter-spacing:.08em;text-transform:uppercase}
+    .clock{font-size:12px;color:#d9e5dd;padding-left:9px;border-left:1px solid rgba(255,255,255,.18)}
+    .info{position:absolute;left:14px;bottom:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(8px);max-width:460px}
+    .info b{color:#82e3a0}.info .keys{margin-top:5px;color:#c8d3cc;font-size:12px;line-height:1.55}
+    .back{pointer-events:auto;position:absolute;right:14px;top:14px;text-decoration:none;color:#fff;background:rgba(6,11,8,.82);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:10px 13px;font-weight:800}
+    .tag{position:absolute;right:14px;bottom:14px;background:rgba(6,11,8,.74);padding:8px 10px;border-radius:10px;font-size:11px;color:#aab9b0}
+    .status{position:absolute;left:14px;top:14px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:11px;color:#b8c9bf;max-width:390px;transition:opacity .5s}
+    .playercard{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:rgba(6,11,8,.78);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;backdrop-filter:blur(8px)}
+    .managementHud{position:absolute;left:14px;top:58px;display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:10px;background:rgba(6,11,8,.72);border:1px solid rgba(255,255,255,.1);font-size:9px;font-weight:900;letter-spacing:.08em;color:#dbe6df;backdrop-filter:blur(7px)}
+    .staminaMini{width:72px;height:6px;border-radius:999px;background:rgba(255,255,255,.13);overflow:hidden}.staminaMini i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#e75b4c,#e0ce52,#6edb84);transform-origin:left}
+    .phase{position:absolute;left:50%;top:82px;transform:translateX(-50%);font-size:22px;font-weight:900;letter-spacing:.09em;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .15s}
+    .replay{position:absolute;left:18px;top:62px;padding:7px 11px;border-radius:7px;background:rgba(120,0,0,.85);border:1px solid rgba(255,255,255,.24);font-size:11px;font-weight:1000;letter-spacing:.16em;opacity:0;transition:opacity .12s}
+    .setPieceBanner{position:absolute;left:50%;top:112px;transform:translateX(-50%) translateY(-8px);padding:8px 13px;border-radius:8px;background:rgba(7,15,10,.88);border:1px solid rgba(255,255,255,.18);font-size:10px;font-weight:1000;letter-spacing:.14em;opacity:0;transition:opacity .16s,transform .16s;white-space:nowrap}.setPieceBanner.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .setPieceHelp{position:absolute;left:50%;top:151px;transform:translateX(-50%);max-width:min(720px,92vw);padding:7px 11px;border-radius:8px;background:rgba(5,10,7,.72);border:1px solid rgba(255,255,255,.1);font-size:9px;font-weight:800;letter-spacing:.07em;color:#d8e3dc;text-align:center;opacity:0;transition:opacity .14s;white-space:normal}.setPieceHelp.show{opacity:1}
+    .cardToast{position:absolute;right:18px;top:82px;display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;background:rgba(9,14,11,.9);border:1px solid rgba(255,255,255,.16);font-size:10px;font-weight:900;opacity:0;transform:translateY(-8px);transition:opacity .16s,transform .16s}.cardToast.show{opacity:1;transform:translateY(0)}.yellowCard{width:12px;height:20px;border-radius:2px;background:#f4d84a;box-shadow:0 0 0 1px rgba(0,0,0,.35)}.yellowCard.red{background:#e3453d}
+    .refToast{position:absolute;left:50%;top:188px;transform:translateX(-50%) translateY(-8px);padding:8px 13px;border-radius:8px;background:rgba(13,45,22,.9);border:1px solid rgba(131,232,153,.28);font-size:10px;font-weight:1000;letter-spacing:.13em;opacity:0;transition:opacity .14s,transform .14s;text-shadow:0 1px 6px #000}.refToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .powerWrap{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:min(260px,46vw);height:10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);overflow:hidden;opacity:0;transition:opacity .1s}
+    .powerFill{height:100%;width:0;background:linear-gradient(90deg,#55d977,#f0d35c,#e85b4f)}
+    .teamSide{display:flex;align-items:center;gap:7px;font-weight:1000;white-space:nowrap}
+    .teamDot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+    .teamDot.home{background:#178a3c}.teamDot.away{background:#f5f5f5;border:1px solid #222}
+    .broadcastBug{position:absolute;top:58px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:.18em;color:#d7e3dc;text-shadow:0 1px 4px #000;opacity:.72}
+    .pregame{position:fixed;inset:0;z-index:34;display:none;pointer-events:none;background:linear-gradient(180deg,rgba(3,11,7,.20),rgba(3,8,5,.56));color:white}
+    .pregame.active{display:block}
+    .pregameMatch{position:absolute;left:50%;top:14%;transform:translateX(-50%);width:min(900px,92vw);text-align:center;opacity:0;transition:opacity .35s,transform .35s}
+    .pregameMatch.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .pregameKicker{font-size:10px;font-weight:1000;letter-spacing:.26em;color:#bcd2c3;text-transform:uppercase;margin-bottom:12px}
+    .pregameTitle{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;font-size:clamp(22px,4vw,50px);font-weight:1000;text-shadow:0 3px 20px rgba(0,0,0,.7)}
+    .pregameTitle .homeName{text-align:right;color:#e9fff0}.pregameTitle .awayName{text-align:left;color:#fff}
+    .pregameVs{font-size:.42em;padding:8px 10px;border-radius:6px;background:#0b120e;border:1px solid rgba(255,255,255,.18);letter-spacing:.12em}
+    .pregameSub{margin-top:10px;font-size:11px;letter-spacing:.14em;color:#d6dfda;text-transform:uppercase}
+    .lineupCard{position:absolute;left:50%;bottom:8%;transform:translateX(-50%) translateY(22px);width:min(860px,92vw);display:grid;grid-template-columns:1fr 1px 1fr;gap:18px;background:rgba(5,12,8,.88);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:18px 20px;box-shadow:0 20px 55px rgba(0,0,0,.38);opacity:0;transition:opacity .32s,transform .32s;backdrop-filter:blur(8px)}
+    .lineupCard.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .lineupDivider{background:rgba(255,255,255,.16)}
+    .lineupHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:1000;letter-spacing:.1em}
+    .lineupHead span:last-child{font-size:9px;color:#9fb2a7}
+    .lineupList{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:10px;color:#e9efeb}
+    .lineupList div{display:flex;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lineupList b{min-width:19px;color:#91dca7}
+    .lineupAway .lineupList b{color:#fff}
+    .skipIntro{pointer-events:auto;position:absolute;right:18px;bottom:18px;border:1px solid rgba(255,255,255,.26);background:rgba(5,12,8,.72);color:white;border-radius:8px;padding:9px 13px;font:900 10px system-ui;letter-spacing:.12em;cursor:pointer}
+    .kickoffFlash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);font-size:clamp(30px,7vw,72px);font-weight:1000;letter-spacing:.12em;text-shadow:0 6px 25px #000;opacity:0;transition:opacity .18s,transform .18s}
+    .playerSpotlight{position:absolute;left:50%;bottom:10%;transform:translateX(-50%) translateY(18px);min-width:min(360px,82vw);display:flex;align-items:center;gap:13px;padding:11px 16px;border-radius:10px;background:linear-gradient(90deg,rgba(10,78,37,.94),rgba(7,13,9,.94));border:1px solid rgba(255,255,255,.2);box-shadow:0 16px 38px rgba(0,0,0,.35);opacity:0;transition:opacity .18s,transform .18s}
+    .playerSpotlight.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .spotNumber{display:grid;place-items:center;width:48px;height:48px;border-radius:8px;background:#eff4ef;color:#102116;font-size:22px;font-weight:1000}
+    .spotText{min-width:0}.spotTeam{font-size:8px;letter-spacing:.18em;color:#a8b9af;font-weight:900}.spotName{font-size:20px;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.spotRole{font-size:9px;color:#c8d5cd;letter-spacing:.08em;margin-top:2px}
+    .coinToss{position:absolute;left:50%;top:51%;transform:translate(-50%,-50%);display:grid;place-items:center;gap:12px;opacity:0;transition:opacity .2s}
+    .coinToss.show{opacity:1}.coin{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 28%,#f7e7a5,#c79a2e 64%,#7d5814);border:4px solid #ecd47a;color:#18351f;font-weight:1000;font-size:17px;box-shadow:0 12px 36px rgba(0,0,0,.38);transform-style:preserve-3d}
+    .coinToss.spin .coin{animation:coinFlip .48s linear infinite}.coinLabel{font-size:11px;font-weight:1000;letter-spacing:.15em;text-shadow:0 2px 8px #000}
+    @keyframes coinFlip{0%{transform:rotateY(0) rotateX(0)}50%{transform:rotateY(180deg) rotateX(24deg)}100%{transform:rotateY(360deg) rotateX(0)}}
+    .entranceLabel{position:absolute;left:50%;top:73%;transform:translateX(-50%);padding:7px 12px;border-radius:8px;background:rgba(4,10,7,.65);font-size:9px;font-weight:1000;letter-spacing:.18em;opacity:0;transition:opacity .18s}.entranceLabel.show{opacity:1}
+    .kickoffFlash.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    @media(max-width:700px){.pregameTitle{grid-template-columns:1fr auto 1fr;gap:9px}.lineupCard{bottom:12%;padding:13px;gap:10px}.lineupList{grid-template-columns:1fr;font-size:9px;max-height:154px;overflow:hidden}.pregameMatch{top:10%}.skipIntro{bottom:205px}}
+    .squadOpen{pointer-events:auto;position:absolute;right:92px;top:14px;border:1px solid rgba(255,255,255,.16);background:rgba(6,11,8,.86);color:#fff;border-radius:12px;padding:10px 13px;font-weight:900;font-size:10px;letter-spacing:.08em;cursor:pointer}
+    .teamScreen{position:fixed;inset:0;z-index:60;display:none;align-items:stretch;justify-content:center;background:rgba(2,7,4,.88);backdrop-filter:blur(12px);padding:18px;color:#eef5f0;pointer-events:auto}
+    .teamScreen.open{display:flex}
+    .teamShell{width:min(1180px,100%);height:100%;display:grid;grid-template-rows:auto auto 1fr auto;background:linear-gradient(180deg,#102016,#09120d);border:1px solid rgba(255,255,255,.14);border-radius:20px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+    .teamScreenHeader{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1);background:linear-gradient(90deg,rgba(23,138,60,.22),transparent)}
+    .teamScreenTitle{font-size:22px;font-weight:1000;letter-spacing:.04em}.teamScreenMeta{margin-top:3px;color:#9fb2a7;font-size:10px;letter-spacing:.11em;text-transform:uppercase}
+    .teamClose{border:1px solid rgba(255,255,255,.18);background:#17251c;color:#fff;border-radius:10px;padding:10px 13px;font-weight:900;cursor:pointer}
+    .teamTabs{display:flex;gap:8px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:#0b1710}
+    .teamTabs button{border:1px solid rgba(255,255,255,.12);background:#122119;color:#aebdb4;border-radius:9px;padding:9px 14px;font-weight:900;font-size:10px;letter-spacing:.08em;cursor:pointer}.teamTabs button.active{background:#178a3c;color:white;border-color:#2baa57}
+    .teamBody{min-height:0;overflow:auto;padding:16px}
+    .teamPane{display:none}.teamPane.active{display:block}
+    .squadLayout{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.05fr) minmax(280px,.9fr);gap:14px;min-height:520px}
+    .panelBox{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:13px;min-height:0}
+    .panelHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px;font-weight:1000;letter-spacing:.09em}.panelHead small{color:#8fa198;font-size:8px}
+    .squadRows{display:grid;gap:6px;max-height:465px;overflow:auto;padding-right:3px}
+    .squadRow{display:grid;grid-template-columns:34px 1fr 44px 68px;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.08);background:#0e1a13;border-radius:10px;padding:8px;cursor:pointer}.squadRow:hover,.squadRow.selected{border-color:#3cae61;background:#13261a}.squadRow.sent{opacity:.45}
+    .squadNum{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:#eaf1ec;color:#132019;font-weight:1000}.squadName{min-width:0;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.squadMeta{font-size:8px;color:#94a69b;margin-top:2px}.ovrPill{font-size:12px;font-weight:1000;text-align:center;color:#92eba9}.energyCell{display:grid;gap:4px;font-size:8px;color:#a9b8af}.energyBar{height:5px;background:rgba(255,255,255,.10);border-radius:999px;overflow:hidden}.energyBar i{display:block;height:100%;background:linear-gradient(90deg,#df6256,#e6d35b,#69dc88)}
+    .tacticsPitch{position:relative;min-height:490px;border-radius:14px;overflow:hidden;background:linear-gradient(90deg,#256737,#2b743c 50%,#256737);border:2px solid rgba(255,255,255,.66)}
+    .tacticsPitch:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.72)}.tacticsPitch:after{content:"";position:absolute;left:50%;top:50%;width:76px;height:76px;border:1px solid rgba(255,255,255,.72);border-radius:50%;transform:translate(-50%,-50%)}
+    .pitchBoxTop,.pitchBoxBottom{position:absolute;left:25%;width:50%;height:16%;border:1px solid rgba(255,255,255,.72)}.pitchBoxTop{top:-1px}.pitchBoxBottom{bottom:-1px}
+    .formationDot{position:absolute;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#0c1710;border:2px solid #8ce4a5;color:#fff;font-size:9px;font-weight:1000;cursor:pointer;box-shadow:0 7px 15px rgba(0,0,0,.28)}.formationDot.selected{background:#178a3c;border-color:#fff}.formationDot small{display:block;font-size:7px;color:#b6c6bc;line-height:1}
+    .detailCard{display:grid;gap:12px}.detailHero{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center}.detailOvr{width:76px;height:76px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#e7f1ea,#b8d8c1);color:#0d2515;font-size:30px;font-weight:1000}.detailName{font-size:20px;font-weight:1000}.detailSub{font-size:9px;color:#9fb0a6;letter-spacing:.09em;margin-top:3px}
+    .attrGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.attr{display:grid;grid-template-columns:34px 1fr 28px;gap:7px;align-items:center;font-size:9px;font-weight:900}.attrTrack{height:6px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}.attrTrack i{display:block;height:100%;background:#67d98a}.attrVal{text-align:right;color:#dce9e0}
+    .detailStatus{padding:9px;border-radius:9px;background:#0d1b13;border:1px solid rgba(255,255,255,.08);font-size:9px;color:#b8c7be;line-height:1.5}
+    .tacticsLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tacticCard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:15px}.tacticCard h3{margin:0 0 5px;font-size:15px}.tacticCard p{margin:0 0 13px;color:#9eb0a5;font-size:10px;line-height:1.5}
+    .choiceRow{display:flex;gap:8px;flex-wrap:wrap}.choiceBtn{border:1px solid rgba(255,255,255,.13);background:#101d16;color:#cddad2;border-radius:10px;padding:11px 13px;font-weight:900;font-size:10px;cursor:pointer}.choiceBtn.active{background:#178a3c;color:#fff;border-color:#3dbc66}.formationControl{display:grid;grid-template-columns:48px 1fr 48px;gap:8px;align-items:center}.formationControl button{height:44px;border:1px solid rgba(255,255,255,.14);background:#132119;color:#fff;border-radius:10px;font-weight:1000;cursor:pointer}.formationCurrent{text-align:center;background:#0c1710;border-radius:10px;padding:10px}.formationCurrent b{display:block;font-size:22px}.formationCurrent small{color:#8fa198;font-size:8px}
+    .tacticImpact{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.impactBox{padding:10px;border-radius:10px;background:#0d1a13;text-align:center}.impactBox b{display:block;font-size:15px;color:#85e1a0}.impactBox span{font-size:8px;color:#91a59a}
+    .subsLayout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.subPickList{display:grid;gap:7px}.subPick{display:grid;grid-template-columns:36px 1fr 48px 70px;gap:8px;align-items:center;padding:9px;border-radius:10px;background:#0e1b13;border:1px solid rgba(255,255,255,.08);cursor:pointer}.subPick.selected{border-color:#45bd6b;background:#13271b}.subPick.disabled{opacity:.45;cursor:not-allowed}.subAction{margin-top:12px;width:100%;border:0;background:#178a3c;color:#fff;border-radius:11px;padding:13px;font-weight:1000;cursor:pointer}.subAction:disabled{opacity:.4;cursor:not-allowed}
+    .benchRows{display:grid;gap:7px}.benchRow{display:grid;grid-template-columns:36px 1fr 44px;gap:8px;align-items:center;padding:9px;border-radius:10px;background:#0e1a13;border:1px solid rgba(255,255,255,.07)}.benchRow.next{border-color:#54cb78}.screenFooter{display:flex;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:9px;color:#8fa198;background:#0a150e}
+    .matchStatsGrid{display:grid;gap:7px}.matchStatRow{display:grid;grid-template-columns:48px 1fr 150px 1fr 48px;gap:8px;align-items:center;font-size:10px}.matchStatValue{font-weight:1000;text-align:center}.matchStatLabel{text-align:center;color:#a8b8ae;font-size:8px;font-weight:900;letter-spacing:.08em}.matchStatBar{height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}.matchStatBar i{display:block;height:100%;background:#55c979}.matchStatBar.away i{margin-left:auto;background:#d8e0db}
+    .ratingTable{display:grid;gap:6px;max-height:360px;overflow:auto}.ratingRow{display:grid;grid-template-columns:34px 1fr 48px 54px 58px;gap:8px;align-items:center;padding:8px;border-radius:9px;background:#0e1b13;border:1px solid rgba(255,255,255,.07);font-size:9px}.ratingRow.motm{border-color:#e3c75c;background:rgba(158,126,27,.14)}.ratingScore{font-size:16px;font-weight:1000;text-align:center;color:#8ce4a5}.ratingTeam{font-size:7px;color:#90a299}
+    .summaryScreen{position:fixed;inset:0;z-index:75;display:none;place-items:center;background:rgba(2,7,4,.90);backdrop-filter:blur(14px);padding:18px;pointer-events:auto}.summaryScreen.open{display:grid}.summaryCard{width:min(980px,100%);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#102016,#08110c);border:1px solid rgba(255,255,255,.14);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.58);padding:20px}.summaryKicker{text-align:center;font-size:9px;font-weight:1000;letter-spacing:.18em;color:#a6b7ad}.summaryScore{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;margin:12px 0 18px}.summaryTeam{font-size:clamp(18px,3vw,32px);font-weight:1000}.summaryTeam:first-child{text-align:right}.summaryResult{font-size:34px;font-weight:1000;padding:7px 14px;border-radius:9px;background:#07110b}.summaryLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.summaryPanel{padding:14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09)}.summaryPanel h3{margin:0 0 12px;font-size:12px;letter-spacing:.08em}.motmCard{display:grid;grid-template-columns:74px 1fr;gap:12px;align-items:center;padding:13px;border-radius:13px;background:linear-gradient(90deg,rgba(184,147,31,.22),rgba(255,255,255,.035));border:1px solid rgba(227,199,92,.32);margin-bottom:12px}.motmScore{width:74px;height:74px;border-radius:14px;display:grid;place-items:center;background:#ead36d;color:#162017;font-size:27px;font-weight:1000}.motmName{font-size:18px;font-weight:1000}.motmMeta{font-size:8px;color:#b6c2bb;margin-top:4px;letter-spacing:.08em}.summaryActions{display:flex;justify-content:center;gap:9px;margin-top:16px}.summaryActions button,.summaryActions a{border:0;border-radius:11px;padding:12px 16px;font-weight:1000;text-decoration:none;cursor:pointer}.summaryPrimary{background:#178a3c;color:#fff}.summarySecondary{background:#17241c;color:#fff;border:1px solid rgba(255,255,255,.12)!important}
+    @media(max-width:720px){.summaryLayout{grid-template-columns:1fr}.summaryCard{padding:13px}.matchStatRow{grid-template-columns:38px 1fr 110px 1fr 38px}.ratingRow{grid-template-columns:28px 1fr 40px 48px 48px}.summaryScore{gap:8px}.summaryTeam{font-size:17px}.summaryResult{font-size:25px}.motmCard{grid-template-columns:60px 1fr}.motmScore{width:60px;height:60px;font-size:23px}}
+
+    .onlineNote{color:#e7ca67}
+    @media(max-width:900px){.squadLayout{grid-template-columns:1fr 1fr}.detailCard{grid-column:1/-1}.tacticsLayout,.subsLayout{grid-template-columns:1fr}.teamScreen{padding:8px}.teamShell{border-radius:12px}.teamBody{padding:10px}}
+    @media(max-width:620px){.squadLayout{grid-template-columns:1fr}.tacticsPitch{min-height:410px}.teamScreenHeader{padding:13px}.teamScreenTitle{font-size:18px}.teamTabs{overflow:auto;padding:8px}.teamTabs button{white-space:nowrap}.squadRows{max-height:300px}.squadOpen{top:46px;right:7px;padding:7px 9px}.screenFooter{display:block}.screenFooter span{display:block;margin-top:3px}}
+
+    .lobby{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(4,10,7,.78);backdrop-filter:blur(10px);padding:18px}
+    .lobby.hidden{display:none}.lobbyBox{width:min(560px,100%);background:#0d1912;border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+    .lobbyBox h1{margin:0 0 6px;font-size:32px}.lobbyBox p{color:#aebdb4;line-height:1.5}.lobbyBtns{display:grid;gap:10px;margin-top:18px}
+    .lobbyBtns button,.joinRow button{min-height:50px;border:0;border-radius:13px;font-weight:900;font-size:15px;cursor:pointer}.playBtn{background:#178a3c;color:#fff}.onlineBtn{background:#1d2d22;color:#fff;border:1px solid #365743!important}
+    .joinRow{display:grid;grid-template-columns:1fr 150px;gap:8px;margin-top:10px}.joinRow input{min-width:0;border-radius:12px;border:1px solid #365743;background:#08110c;color:#fff;padding:0 14px;font-size:20px;text-transform:uppercase;letter-spacing:.18em}
+    .room{font-size:34px;font-weight:1000;letter-spacing:.22em;text-align:center;color:#8fe8aa;margin:14px 0}.lobbyStatus{min-height:22px;color:#b9c9c0;font-size:13px;margin-top:10px}
+    #touch3d{position:fixed;z-index:15;inset:0;pointer-events:none}.touchHidden{display:none!important}
+    #stick3d{position:absolute;left:22px;bottom:24px;width:126px;height:126px;border-radius:50%;background:rgba(5,12,8,.42);border:2px solid rgba(255,255,255,.24);pointer-events:auto;touch-action:none}
+    #knob3d{position:absolute;left:50%;top:50%;width:56px;height:56px;transform:translate(-50%,-50%);border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.5)}
+    #touchBtns3d{position:absolute;right:16px;bottom:18px;width:214px;height:190px;pointer-events:auto}
+    #facePad3d{position:absolute;right:0;bottom:0;width:184px;height:184px}
+    #facePad3d button{position:absolute;width:70px;height:70px;border-radius:50%;border:2px solid rgba(255,255,255,.34);color:#fff;background:rgba(8,18,12,.70);font-weight:900;touch-action:none;box-shadow:0 6px 18px rgba(0,0,0,.25);display:grid;place-items:center;align-content:center;line-height:1}
+    #facePad3d button .shape{font-size:28px;font-family:Arial,sans-serif}
+    #facePad3d button small{display:block;margin-top:4px;font-size:8px;letter-spacing:.05em;color:#d9e5dd}
+    #btnThrough3d{left:57px;top:0}#btnCircle3d{right:0;top:57px}#btnPass3d{left:57px;bottom:0}#btnShoot3d{left:0;top:57px}
+    #btnSwap3d{position:absolute;right:170px;bottom:12px;width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,255,255,.28);color:#fff;background:rgba(8,18,12,.70);font-weight:900;font-size:9px;touch-action:none}
+    #managementBtns3d{position:absolute;right:6px;bottom:194px;display:flex;gap:6px;pointer-events:auto}
+    #managementBtns3d button{min-width:54px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.24);color:#fff;background:rgba(8,18,12,.74);font-weight:900;font-size:8px;letter-spacing:.05em;touch-action:none}
+    #managementBtns3d button.pressed{background:rgba(23,138,60,.88)}
+    #touchBtns3d button.pressed{transform:scale(.93);background:rgba(23,138,60,.88);border-color:rgba(255,255,255,.75)}
+    @media(max-width:700px){.top{top:7px;padding:7px 9px;gap:6px;font-size:11px}.score{font-size:16px}.small{display:none}.info{display:none}.back{top:7px;right:7px;padding:7px 9px;font-size:11px}.status{max-width:55%;font-size:9px}.playercard{bottom:6px;font-size:10px;padding:6px 10px}.joinRow{grid-template-columns:1fr 115px}}
+  </style>
+  <script type="importmap">
+  {
+    "imports":{
+      "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<div id="browserLobby" class="lobby">
+  <div class="lobbyBox">
+    <div class="small">MUKEKA GAMES · EM DESENVOLVIMENTO</div>
+    <h1>FC MUKEKA PREMIUM</h1>
+    <p>Jogue direto no navegador. Contra a CPU funciona imediatamente. Para jogar com um amigo, um cria a sala e envia o código de 4 letras.</p>
+    <div class="lobbyBtns">
+      <button id="playCpu" class="playBtn" type="button">JOGAR CONTRA CPU</button>
+      <button id="createRoom" class="onlineBtn" type="button">CRIAR SALA ONLINE</button>
+    </div>
+    <div id="room3d" class="room" hidden></div>
+    <div class="joinRow">
+      <input id="joinCode3d" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false">
+      <button id="joinRoom" class="onlineBtn" type="button">ENTRAR</button>
+    </div>
+    <div id="lobbyStatus3d" class="lobbyStatus">× passe/pressão · ○ cruzar/carrinho · □ chute · △ profundidade · Q/TROCAR proteger/finta · Q+□ colocado · Q+△ cavadinha.</div>
+  </div>
+</div>
+<div id="pregame" class="pregame">
+  <div id="pregameMatch" class="pregameMatch">
+    <div class="pregameKicker">FC MUKEKA PREMIUM · APRESENTAÇÃO DA PARTIDA</div>
+    <div class="pregameTitle">
+      <div class="homeName">PEDRA LISA</div><div class="pregameVs">VS</div><div class="awayName">INDEPENDÊNCIA</div>
+    </div>
+    <div class="pregameSub">Estádio Mukeka · formação 4-3-3</div>
+  </div>
+  <div id="lineupCard" class="lineupCard">
+    <div class="lineupHome">
+      <div class="lineupHead"><span>PEDRA LISA</span><span>11 INICIAL</span></div>
+      <div id="lineupHomeList" class="lineupList"></div>
+    </div>
+    <div class="lineupDivider"></div>
+    <div class="lineupAway">
+      <div class="lineupHead"><span>INDEPENDÊNCIA</span><span>11 INICIAL</span></div>
+      <div id="lineupAwayList" class="lineupList"></div>
+    </div>
+  </div>
+  <div id="playerSpotlight" class="playerSpotlight">
+    <div id="spotNumber" class="spotNumber">10</div>
+    <div class="spotText"><div id="spotTeam" class="spotTeam">PEDRA LISA</div><div id="spotName" class="spotName">JOGADOR</div><div id="spotRole" class="spotRole">DESTAQUE DA PARTIDA</div></div>
+  </div>
+  <div id="coinToss" class="coinToss"><div id="coin" class="coin">PL</div><div id="coinLabel" class="coinLabel">SORTEIO DE SAÍDA</div></div>
+  <div id="entranceLabel" class="entranceLabel">TIMES ENTRANDO EM CAMPO</div>
+  <div id="kickoffFlash" class="kickoffFlash">VAI COMEÇAR</div>
+  <button id="skipIntro" class="skipIntro" type="button">PULAR APRESENTAÇÃO</button>
+</div>
+<div id="teamScreen" class="teamScreen" aria-hidden="true">
+  <div class="teamShell">
+    <div class="teamScreenHeader">
+      <div>
+        <div class="teamScreenTitle">ELENCO & TÁTICAS</div>
+        <div id="teamScreenMeta" class="teamScreenMeta">PEDRA LISA · FC MUKEKA PREMIUM</div>
+      </div>
+      <button id="teamClose" class="teamClose" type="button">VOLTAR AO JOGO</button>
+    </div>
+    <div class="teamTabs">
+      <button type="button" data-team-tab="roster" class="active">ELENCO</button>
+      <button type="button" data-team-tab="tactics">TÁTICAS</button>
+      <button type="button" data-team-tab="subs">SUBSTITUIÇÕES</button>
+      <button type="button" data-team-tab="stats">ESTATÍSTICAS</button>
+    </div>
+    <div class="teamBody">
+      <section id="teamPaneRoster" class="teamPane active">
+        <div class="squadLayout">
+          <div class="panelBox">
+            <div class="panelHead"><span>11 EM CAMPO</span><small id="rosterShapeLabel">4-3-3</small></div>
+            <div id="squadRows" class="squadRows"></div>
+          </div>
+          <div class="panelBox">
+            <div class="panelHead"><span>FORMAÇÃO</span><small>ATAQUE PARA CIMA</small></div>
+            <div id="tacticsPitch" class="tacticsPitch">
+              <div class="pitchBoxTop"></div><div class="pitchBoxBottom"></div>
+              <div id="formationDots"></div>
+            </div>
+          </div>
+          <div class="panelBox detailCard" id="playerDetail"></div>
+        </div>
+      </section>
+      <section id="teamPaneTactics" class="teamPane">
+        <div class="tacticsLayout">
+          <div class="tacticCard">
+            <h3>Mentalidade</h3>
+            <p>Altera altura da linha, quantidade de jogadores na pressão, profundidade dos ataques e risco dos passes.</p>
+            <div id="mentalityChoices" class="choiceRow">
+              <button class="choiceBtn" type="button" data-mentality="-1">DEFENSIVO</button>
+              <button class="choiceBtn" type="button" data-mentality="0">EQUILIBRADO</button>
+              <button class="choiceBtn" type="button" data-mentality="1">OFENSIVO</button>
+            </div>
+            <div id="tacticImpact" class="tacticImpact"></div>
+          </div>
+          <div class="tacticCard">
+            <h3>Formação</h3>
+            <p>Troca a estrutura da equipe durante a partida. Os jogadores assumem os novos papéis sem reiniciar o jogo.</p>
+            <div class="formationControl">
+              <button id="formationPrev" type="button">◀</button>
+              <div class="formationCurrent"><b id="formationName">4-3-3</b><small id="formationNote">FORMAÇÃO ATUAL</small></div>
+              <button id="formationNext" type="button">▶</button>
+            </div>
+          </div>
+          <div class="tacticCard">
+            <h3>Comportamento coletivo</h3>
+            <p id="collectiveDescription">Bloco equilibrado, pressão moderada e saída apoiada.</p>
+            <div class="tacticImpact">
+              <div class="impactBox"><b id="pressValue">3</b><span>PRESSÃO PÓS-PERDA</span></div>
+              <div class="impactBox"><b id="lineValue">MÉDIA</b><span>ALTURA DA LINHA</span></div>
+              <div class="impactBox"><b id="riskValue">MÉDIO</b><span>RISCO NO PASSE</span></div>
+            </div>
+          </div>
+          <div class="tacticCard">
+            <h3>Estado físico</h3>
+            <p>A energia interfere em aceleração, velocidade, pressão e capacidade de repetir sprints.</p>
+            <div id="fitnessSummary" class="detailStatus"></div>
+          </div>
+        </div>
+      </section>
+      <section id="teamPaneSubs" class="teamPane">
+        <div class="subsLayout">
+          <div class="panelBox">
+            <div class="panelHead"><span>ESCOLHA QUEM SAI</span><small id="subsUsedLabel">0/3 USADAS</small></div>
+            <div id="subPickList" class="subPickList"></div>
+            <button id="prepareSub" class="subAction" type="button">PREPARAR SUBSTITUIÇÃO</button>
+          </div>
+          <div class="panelBox">
+            <div class="panelHead"><span>BANCO</span><small>PROVISÓRIO</small></div>
+            <div id="benchRows" class="benchRows"></div>
+            <div id="pendingSubInfo" class="detailStatus" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </section>
+      <section id="teamPaneStats" class="teamPane">
+        <div class="summaryLayout">
+          <div class="summaryPanel">
+            <h3>ESTATÍSTICAS DA PARTIDA</h3>
+            <div id="teamStatsRows" class="matchStatsGrid"></div>
+          </div>
+          <div class="summaryPanel">
+            <h3>NOTAS DOS JOGADORES</h3>
+            <div id="teamRatingsTable" class="ratingTable"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="screenFooter">
+      <span id="teamScreenHint">ESC fecha esta tela · a partida fica pausada contra a CPU.</span>
+      <span id="teamScreenOnlineNote" class="onlineNote"></span>
+    </div>
+  </div>
+</div>
+<div id="matchSummary" class="summaryScreen" aria-hidden="true">
+  <div class="summaryCard">
+    <div id="summaryKicker" class="summaryKicker">INTERVALO · FC MUKEKA PREMIUM</div>
+    <div class="summaryScore">
+      <div class="summaryTeam">PEDRA LISA</div>
+      <div id="summaryScore" class="summaryResult">0 — 0</div>
+      <div class="summaryTeam">INDEPENDÊNCIA</div>
+    </div>
+    <div id="motmCard" class="motmCard">
+      <div id="motmScore" class="motmScore">7.0</div>
+      <div><div class="summaryKicker">MELHOR EM CAMPO</div><div id="motmName" class="motmName">—</div><div id="motmMeta" class="motmMeta">AGUARDANDO DESTAQUE</div></div>
+    </div>
+    <div class="summaryLayout">
+      <div class="summaryPanel">
+        <h3>RESUMO DA PARTIDA</h3>
+        <div id="summaryStatsRows" class="matchStatsGrid"></div>
+      </div>
+      <div class="summaryPanel">
+        <h3>NOTAS DOS JOGADORES</h3>
+        <div id="summaryRatings" class="ratingTable"></div>
+      </div>
+    </div>
+    <div class="summaryActions">
+      <button id="summaryContinue" class="summaryPrimary" type="button">CONTINUAR</button>
+      <button id="summaryTeamScreen" class="summarySecondary" type="button">ELENCO / TÁTICAS</button>
+      <a class="summarySecondary" href="../">VOLTAR AO HUB</a>
+    </div>
+  </div>
+</div>
+<div id="touch3d" class="touchHidden">
+  <div id="stick3d"><div id="knob3d"></div></div>
+  <div id="managementBtns3d">
+    <button id="btnTacticDown3d" type="button">DEF −</button>
+    <button id="btnTacticUp3d" type="button">OFE +</button>
+    <button id="btnSub3d" type="button">SUB</button>
+  </div>
+  <div id="touchBtns3d">
+    <button id="btnSwap3d" type="button">TROCAR</button>
+    <div id="facePad3d" aria-label="Controles de ação">
+      <button id="btnThrough3d" type="button" aria-label="Passe em profundidade"><span class="shape">△</span><small>PROF.</small></button>
+      <button id="btnCircle3d" type="button" aria-label="Cruzamento"><span class="shape">○</span><small>CRUZAR</small></button>
+      <button id="btnPass3d" type="button" aria-label="Passe"><span class="shape">×</span><small>PASSE</small></button>
+      <button id="btnShoot3d" type="button" aria-label="Chute"><span class="shape">□</span><small>CHUTE</small></button>
+    </div>
+  </div>
+</div>
+<div id="app"></div>
+<div id="hud">
+  <div class="top">
+    <span class="teamSide"><i class="teamDot home"></i>PEDRA LISA</span>
+    <span class="score" id="score">0 — 0</span>
+    <span class="teamSide">INDEPENDÊNCIA<i class="teamDot away"></i></span>
+    <span class="clock" id="clock">1T · 00:00</span><span class="small">PREMIUM · 3D WEB</span>
+  </div>
+  <div class="broadcastBug">MUKEKA GAMES · PARTIDA AMISTOSA</div>
+  <div class="status" id="status">Iniciando motor WebSoccer + renderização Striker 3D…</div>
+  <div class="managementHud" id="managementHud"><span id="tacticHud">EQUILIBRADO</span><span id="subsHud">SUB 0/3</span><span class="staminaMini"><i id="staminaMiniFill"></i></span></div>
+  <div class="phase" id="phase"></div>
+  <div class="replay" id="replayLabel">REPLAY</div>
+  <div class="setPieceBanner" id="setPieceBanner"></div>
+  <div class="setPieceHelp" id="setPieceHelp"></div>
+  <div class="cardToast" id="cardToast"><span class="yellowCard"></span><span id="cardText">CARTÃO AMARELO</span></div>
+  <div class="refToast" id="refToast">VANTAGEM</div>
+  <div class="powerWrap" id="powerWrap"><div class="powerFill" id="powerFill"></div></div>
+  <button id="openTeamScreen" class="squadOpen" type="button">ELENCO / TÁTICAS</button>
+  <a class="back" href="../">← HUB</a>
+  <div class="info">
+    <div><b>FC Mukeka Premium · motor determinístico</b></div>
+    <div class="keys">Ataque: × passe · □ chute (toque rasteiro / segure forte) · Q+□ colocado · Q+△ cavadinha · ○ cruzar · △ profundidade · Q/TROCAR proteger/finta · Tática: Z defensivo · X ofensivo · C substituição · Defesa: × pressionar/desarmar · ○ carrinho</div>
+  </div>
+  <div class="playercard" id="playercard">Carregando…</div>
+  <div class="tag">Mukeka Games · build em desenvolvimento</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { createMatch } from '../src/game/state.js';
+import { step } from '../src/game/sim.js';
+import { LocalTransport, OnlineTransport } from '../src/net/transport.js';
+import { Signal } from '../src/net/signal.js';
+import { relayFor } from '../src/config.js';
+import { InputDevices, defaultBindings } from '../src/input.js';
+import { TouchControls, isTouchDevice } from '../src/touch.js';
+import { PRESETS as FORMATION_PRESETS } from '../src/game/formations.js';
+import {
+  FRAME_TIME, BTN, FIELD, FIELD_W as SIM_FIELD_W, FIELD_H as SIM_FIELD_H,
+  CROSSBAR_H, PLAYER_ROSTERS, SKIN_TONES, TEAM_PRESETS, KEEPER_KIT, SUB_TARGET_BITS
+} from '../src/constants.js';
+
+// Stable visual mode: low-poly native Three.js players, no external rig.
+const STABLE_VISUAL_MODE=true;
+const PREMATCH_PRESENTATION=false;
+let premiumRig=false;
+const app=document.getElementById('app');
+const statusEl=document.getElementById('status');
+const scoreEl=document.getElementById('score');
+const clockEl=document.getElementById('clock');
+const cardEl=document.getElementById('playercard');
+const phaseEl=document.getElementById('phase');
+const replayLabelEl=document.getElementById('replayLabel');
+const setPieceBannerEl=document.getElementById('setPieceBanner');
+const setPieceHelpEl=document.getElementById('setPieceHelp');
+const cardToastEl=document.getElementById('cardToast');
+const cardTextEl=document.getElementById('cardText');
+const cardIconEl=cardToastEl.querySelector('.yellowCard');
+const refToastEl=document.getElementById('refToast');
+const powerWrapEl=document.getElementById('powerWrap');
+const powerFillEl=document.getElementById('powerFill');
+const lobbyEl=document.getElementById('browserLobby');
+const lobbyStatusEl=document.getElementById('lobbyStatus3d');
+const roomEl=document.getElementById('room3d');
+const pregameEl=document.getElementById('pregame');
+const pregameMatchEl=document.getElementById('pregameMatch');
+const lineupCardEl=document.getElementById('lineupCard');
+const lineupHomeListEl=document.getElementById('lineupHomeList');
+const lineupAwayListEl=document.getElementById('lineupAwayList');
+const kickoffFlashEl=document.getElementById('kickoffFlash');
+const skipIntroEl=document.getElementById('skipIntro');
+const playerSpotlightEl=document.getElementById('playerSpotlight');
+const spotNumberEl=document.getElementById('spotNumber');
+const spotTeamEl=document.getElementById('spotTeam');
+const spotNameEl=document.getElementById('spotName');
+const spotRoleEl=document.getElementById('spotRole');
+const coinTossEl=document.getElementById('coinToss');
+const coinEl=document.getElementById('coin');
+const coinLabelEl=document.getElementById('coinLabel');
+const entranceLabelEl=document.getElementById('entranceLabel');
+const swapBtnEl=document.getElementById('btnSwap3d');
+const tacticHudEl=document.getElementById('tacticHud');
+const subsHudEl=document.getElementById('subsHud');
+const staminaMiniFillEl=document.getElementById('staminaMiniFill');
+const teamScreenEl=document.getElementById('teamScreen');
+const teamScreenMetaEl=document.getElementById('teamScreenMeta');
+const teamCloseEl=document.getElementById('teamClose');
+const openTeamScreenEl=document.getElementById('openTeamScreen');
+const squadRowsEl=document.getElementById('squadRows');
+const formationDotsEl=document.getElementById('formationDots');
+const playerDetailEl=document.getElementById('playerDetail');
+const rosterShapeLabelEl=document.getElementById('rosterShapeLabel');
+const mentalityChoicesEl=document.getElementById('mentalityChoices');
+const tacticImpactEl=document.getElementById('tacticImpact');
+const formationNameEl=document.getElementById('formationName');
+const formationNoteEl=document.getElementById('formationNote');
+const formationPrevEl=document.getElementById('formationPrev');
+const formationNextEl=document.getElementById('formationNext');
+const collectiveDescriptionEl=document.getElementById('collectiveDescription');
+const pressValueEl=document.getElementById('pressValue');
+const lineValueEl=document.getElementById('lineValue');
+const riskValueEl=document.getElementById('riskValue');
+const fitnessSummaryEl=document.getElementById('fitnessSummary');
+const subPickListEl=document.getElementById('subPickList');
+const prepareSubEl=document.getElementById('prepareSub');
+const benchRowsEl=document.getElementById('benchRows');
+const pendingSubInfoEl=document.getElementById('pendingSubInfo');
+const subsUsedLabelEl=document.getElementById('subsUsedLabel');
+const teamScreenHintEl=document.getElementById('teamScreenHint');
+const teamScreenOnlineNoteEl=document.getElementById('teamScreenOnlineNote');
+const teamStatsRowsEl=document.getElementById('teamStatsRows');
+const teamRatingsTableEl=document.getElementById('teamRatingsTable');
+const matchSummaryEl=document.getElementById('matchSummary');
+const summaryKickerEl=document.getElementById('summaryKicker');
+const summaryScoreEl=document.getElementById('summaryScore');
+const summaryStatsRowsEl=document.getElementById('summaryStatsRows');
+const summaryRatingsEl=document.getElementById('summaryRatings');
+const motmCardEl=document.getElementById('motmCard');
+const motmScoreEl=document.getElementById('motmScore');
+const motmNameEl=document.getElementById('motmName');
+const motmMetaEl=document.getElementById('motmMeta');
+const summaryContinueEl=document.getElementById('summaryContinue');
+const summaryTeamScreenEl=document.getElementById('summaryTeamScreen');
+
+const devices=new InputDevices(defaultBindings());
+devices.ps2FaceButtons=true;
+devices.premiumManagement=true;
+devices.attach();
+const touch3d=new TouchControls();
+const touchDevice=isTouchDevice();
+if(touchDevice){
+  touch3d.attach({
+    root:document.getElementById('touch3d'),
+    stick:document.getElementById('stick3d'),
+    knob:document.getElementById('knob3d'),
+    kick:null,
+    swap:document.getElementById('btnSwap3d'),
+  });
+  touch3d.button(document.getElementById('btnPass3d'),BTN.PASS);
+  touch3d.button(document.getElementById('btnShoot3d'),BTN.SHOOT);
+  touch3d.button(document.getElementById('btnCircle3d'),BTN.CROSS);
+  touch3d.button(document.getElementById('btnThrough3d'),BTN.THROUGH);
+  touch3d.button(document.getElementById('btnTacticDown3d'),BTN.TACTIC_DOWN);
+  touch3d.button(document.getElementById('btnTacticUp3d'),BTN.TACTIC_UP);
+  touch3d.button(document.getElementById('btnSub3d'),BTN.SUB);
+  devices.touch=touch3d;
+}
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x90b7d1);
+scene.fog=new THREE.Fog(0x90b7d1,145,330);
+
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,550);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=false;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=.92;
+app.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe7f4ff,0x31512e,1.65));
+const sun=new THREE.DirectionalLight(0xffefd7,2.35);
+sun.position.set(-45,78,42);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-80;sun.shadow.camera.right=80;sun.shadow.camera.top=58;sun.shadow.camera.bottom=-58;
+sun.shadow.bias=-.00035;scene.add(sun);
+
+const FIELD_L=105, FIELD_W=68, BALL_R=.22;
+const world=new THREE.Group();scene.add(world);
+
+// ---------- Pitch / stadium ----------
+function makePitchTexture(){
+  const canvas=document.createElement('canvas');
+  canvas.width=1024;canvas.height=640;
+  const ctx=canvas.getContext('2d');
+  const stripes=12;
+  for(let i=0;i<stripes;i++){
+    ctx.fillStyle=i%2?'#327f3f':'#2b7438';
+    ctx.fillRect(i*canvas.width/stripes,0,canvas.width/stripes+1,canvas.height);
+  }
+  // Fine mowing/noise so the grass stops looking like a neon flat plane.
+  const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+  for(let i=0;i<img.data.length;i+=4){
+    const n=(Math.random()-.5)*12;
+    img.data[i]=Math.max(0,Math.min(255,img.data[i]+n));
+    img.data[i+1]=Math.max(0,Math.min(255,img.data[i+1]+n));
+    img.data[i+2]=Math.max(0,Math.min(255,img.data[i+2]+n*.45));
+  }
+  ctx.putImageData(img,0,0);
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return tex;
+}
+const apron=new THREE.Mesh(new THREE.PlaneGeometry(FIELD_L+28,FIELD_W+28),new THREE.MeshStandardMaterial({color:0x24492b,roughness:1}));
+apron.rotation.x=-Math.PI/2;apron.position.y=-.035;apron.receiveShadow=true;world.add(apron);
+const pitchTex=makePitchTexture();
+const pitch=new THREE.Mesh(
+  new THREE.PlaneGeometry(FIELD_L,FIELD_W),
+  new THREE.MeshStandardMaterial({map:pitchTex,color:0xffffff,roughness:.94,metalness:0})
+);
+pitch.rotation.x=-Math.PI/2;pitch.position.y=0;pitch.receiveShadow=true;world.add(pitch);
+const lineMat=new THREE.LineBasicMaterial({color:0xf6f6f0,transparent:true,opacity:.95});
+const lineY=.035;
+const addLine=pts=>world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lineMat));
+function rect(x1,z1,x2,z2){addLine([new THREE.Vector3(x1,lineY,z1),new THREE.Vector3(x2,lineY,z1),new THREE.Vector3(x2,lineY,z2),new THREE.Vector3(x1,lineY,z2),new THREE.Vector3(x1,lineY,z1)])}
+rect(-FIELD_L/2,-FIELD_W/2,FIELD_L/2,FIELD_W/2);
+addLine([new THREE.Vector3(0,lineY,-FIELD_W/2),new THREE.Vector3(0,lineY,FIELD_W/2)]);
+world.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({length:80},(_,i)=>{const a=i/80*Math.PI*2;return new THREE.Vector3(Math.cos(a)*9.15,lineY,Math.sin(a)*9.15)})),lineMat));
+rect(-FIELD_L/2,-20.16,-FIELD_L/2+16.5,20.16);rect(FIELD_L/2-16.5,-20.16,FIELD_L/2,20.16);
+rect(-FIELD_L/2,-9.16,-FIELD_L/2+5.5,9.16);rect(FIELD_L/2-5.5,-9.16,FIELD_L/2,9.16);
+
+const goalNets=[];
+function buildGoal(side){
+  const g=new THREE.Group();
+  const postMat=new THREE.MeshStandardMaterial({color:0xf8f8f5,metalness:.14,roughness:.38});
+  const frontX=side*FIELD_L/2;
+  const depth=2.6;
+  const backX=side*(FIELD_L/2+depth);
+  // Slightly wider than regulation on purpose: the WebSoccer engine uses an
+  // arcade-sized goal mouth, so this keeps saves visually aligned without
+  // changing any physics or scoring rules.
+  const hw=5.1, h=2.44;
+
+  const cyl=(len,x,y,z,axis='y')=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,len,12),postMat);
+    m.position.set(x,y,z);
+    if(axis==='z')m.rotation.x=Math.PI/2;
+    if(axis==='x')m.rotation.z=Math.PI/2;
+    m.castShadow=true;g.add(m);return m;
+  };
+
+  // Front frame
+  cyl(h,frontX,h/2,-hw);
+  cyl(h,frontX,h/2, hw);
+  cyl(hw*2,frontX,h,0,'z');
+
+  // Back frame + depth rails. Everything is orthogonal, so the goal no longer
+  // looks twisted when viewed from the broadcast camera.
+  cyl(h,backX,h/2,-hw);
+  cyl(h,backX,h/2, hw);
+  cyl(hw*2,backX,h,0,'z');
+  cyl(hw*2,backX,.04,0,'z');
+  for(const z of [-hw,hw]){
+    cyl(depth,side*(FIELD_L/2+depth/2),h,z,'x');
+    cyl(depth,side*(FIELD_L/2+depth/2),.04,z,'x');
+  }
+
+  const netMat=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.30,depthWrite:false});
+  const netPts=[];
+  const addSeg=(a,b)=>netPts.push(a,b);
+
+  // Back net: clean rectangular grid.
+  for(let zi=0;zi<=16;zi++){
+    const z=-hw+(2*hw*zi/16);
+    addSeg(new THREE.Vector3(backX,0,z),new THREE.Vector3(backX,h,z));
+  }
+  for(let yi=0;yi<=8;yi++){
+    const y=h*yi/8;
+    addSeg(new THREE.Vector3(backX,y,-hw),new THREE.Vector3(backX,y,hw));
+  }
+
+  // Side nets.
+  for(const z of [-hw,hw]){
+    for(let xi=0;xi<=7;xi++){
+      const x=frontX+(backX-frontX)*(xi/7);
+      addSeg(new THREE.Vector3(x,0,z),new THREE.Vector3(x,h,z));
+    }
+    for(let yi=0;yi<=8;yi++){
+      const y=h*yi/8;
+      addSeg(new THREE.Vector3(frontX,y,z),new THREE.Vector3(backX,y,z));
+    }
+  }
+
+  // Roof net.
+  for(let zi=0;zi<=16;zi++){
+    const z=-hw+(2*hw*zi/16);
+    addSeg(new THREE.Vector3(frontX,h,z),new THREE.Vector3(backX,h,z));
+  }
+  for(let xi=0;xi<=7;xi++){
+    const x=frontX+(backX-frontX)*(xi/7);
+    addSeg(new THREE.Vector3(x,h,-hw),new THREE.Vector3(x,h,hw));
+  }
+
+  const netMesh=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(netPts),netMat);
+  g.add(netMesh);
+  goalNets.push({side,mesh:netMesh,pulse:0,impactZ:0,impactY:0});
+  world.add(g);
+}
+buildGoal(-1);buildGoal(1);
+
+const concrete=new THREE.MeshStandardMaterial({color:0x3a403d,roughness:.88});
+const concreteLight=new THREE.MeshStandardMaterial({color:0x555d58,roughness:.9});
+const dark=new THREE.MeshStandardMaterial({color:0x181d1a,roughness:.96});
+const roofMat=new THREE.MeshStandardMaterial({color:0x222824,roughness:.82,metalness:.14,side:THREE.DoubleSide});
+function stand(x,y,z,w,h,d,mat=concrete){const s=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);s.position.set(x,y,z);s.castShadow=true;s.receiveShadow=true;world.add(s);return s}
+
+// Full stadium bowl: lower and upper tiers, end stands and roof. Designed to keep
+// the pitch open while making the broadcast camera feel like a real venue.
+for(const side of [-1,1]){
+  stand(0,3.4,side*43.5,122,6.8,8,concrete);
+  stand(0,8.0,side*49.2,126,5.8,8,concreteLight);
+  const roof=stand(0,13.0,side*53.0,130,.8,14,roofMat);
+  roof.rotation.x=side*.08;
+}
+for(const side of [-1,1]){
+  stand(side*59.5,3.2,0,8,6.4,70,concrete);
+  stand(side*64.0,7.7,0,7,5.4,72,concreteLight);
+  stand(side*68.0,12.4,0,9,.7,76,roofMat);
+}
+
+// Dark fascia between tiers gives the PS2-era broadcast look and hides the
+// simple geometry from field level.
+for(const z of [-44.4,44.4]) stand(0,6.7,z,124,1.0,.55,dark);
+for(const x of [-60.4,60.4]) stand(x,6.4,0,.55,1.0,71,dark);
+
+function makeCrowdTexture(seed=1){
+  const cv=document.createElement('canvas');cv.width=512;cv.height=128;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#202621';ctx.fillRect(0,0,cv.width,cv.height);
+  const colors=['#e5d7c0','#c6a47f','#7c563e','#f0f0e9','#178a3c','#f5f5f5','#263d70','#9f2e2e','#d6b84d'];
+  let s=seed>>>0;
+  const rand=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+  for(let row=0;row<7;row++){
+    for(let col=0;col<72;col++){
+      const x=col*7.2+(row%2)*3.5+(rand()-.5)*2;
+      const y=12+row*16+(rand()-.5)*3;
+      ctx.fillStyle=colors[Math.floor(rand()*colors.length)];
+      ctx.beginPath();ctx.arc(x,y,2.4+rand()*1.8,0,Math.PI*2);ctx.fill();
+      ctx.fillRect(x-2.5,y+3,5,6+rand()*5);
+    }
+  }
+  const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.RepeatWrapping;return tex;
+}
+const crowdTex=makeCrowdTexture(20261004);
+function crowdPanel(w,h,x,y,z,rotY=0,repeat=8){
+  const tex=crowdTex.clone();tex.needsUpdate=true;tex.repeat.set(repeat,1);
+  const m=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,toneMapped:false});
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m);
+  p.position.set(x,y,z);p.rotation.y=rotY;world.add(p);return p;
+}
+// Lower + upper crowd strips on all four sides.
+for(const z of [-39.7,39.7]){
+  crowdPanel(116,5.2,0,4.3,z,z<0?0:Math.PI,14);
+  crowdPanel(120,4.6,0,8.8,z<0?-46.8:46.8,z<0?0:Math.PI,15);
+}
+for(const x of [-55.4,55.4]){
+  crowdPanel(64,5.0,x,4.2,0,x<0?Math.PI/2:-Math.PI/2,8);
+  crowdPanel(66,4.4,x<0?-62.1:62.1,8.5,0,x<0?Math.PI/2:-Math.PI/2,9);
+}
+
+// Stadium floodlights.
+const mastMat=new THREE.MeshStandardMaterial({color:0x4a504d,metalness:.5,roughness:.5});
+for(const x of [-50,50])for(const z of [-48,48]){
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.16,.22,22,10),mastMat);mast.position.set(x,11,z);world.add(mast);
+  const rack=new THREE.Mesh(new THREE.BoxGeometry(7,2,.45),new THREE.MeshStandardMaterial({color:0xe9eee9,emissive:0xffffff,emissiveIntensity:.65}));
+  rack.position.set(x,21.4,z);world.add(rack);
+}
+
+// Original Pedra Lisa advertising, no third-party marks.
+function adTexture(text,bg='#0b5128',fg='#ffffff'){
+  const cv=document.createElement('canvas');cv.width=1024;cv.height=128;
+  const ctx=cv.getContext('2d');ctx.fillStyle=bg;ctx.fillRect(0,0,1024,128);
+  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.strokeRect(4,4,1016,120);
+  ctx.fillStyle=fg;ctx.font='900 54px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(text,512,65);
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const adMats=[
+  new THREE.MeshStandardMaterial({map:adTexture('PEDRA LISA GAMES'),emissive:0x0a2413,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({map:adTexture('FC MUKEKA PREMIUM','#13213f'),emissive:0x081127,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({map:adTexture('INDEPENDÊNCIA','#f4f4ef','#111111'),emissive:0x222222,emissiveIntensity:.2})
+];
+let adIdx=0;
+for(const z of [-35.8,35.8])for(let x=-48;x<=48;x+=12){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(10.5,.95,.16),adMats[adIdx++%adMats.length]);b.position.set(x,.58,z);world.add(b);
+}
+for(const x of [-53.3,53.3])for(let z=-28;z<=28;z+=10){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.16,.95,8.6),adMats[adIdx++%adMats.length]);b.position.set(x,.58,z);world.add(b);
+}
+
+// Player tunnel and bench blocks.
+stand(-4,1.3,36.9,8,2.6,2.2,dark);
+for(const x of [-24,24]){stand(x,1.1,37.0,15,2.2,2.2,new THREE.MeshStandardMaterial({color:0x1f3428,roughness:.8}));}
+
+
+function makeBallTexture(){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=128;
+  const ctx=cv.getContext('2d');ctx.fillStyle='#f3f1e8';ctx.fillRect(0,0,256,128);
+  ctx.fillStyle='#202020';
+  for(const [x,y] of [[32,28],[96,74],[162,27],[221,78],[62,112],[192,112]]){
+    ctx.beginPath();
+    for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;const px=x+13*Math.cos(a),py=y+13*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py)}
+    ctx.closePath();ctx.fill();
+  }
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const ball=new THREE.Mesh(new THREE.SphereGeometry(BALL_R,32,24),new THREE.MeshStandardMaterial({map:makeBallTexture(),roughness:.46}));
+ball.castShadow=true;world.add(ball);
+
+const setPieceTargetRing=new THREE.Mesh(
+  new THREE.RingGeometry(.72,.92,32),
+  new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.92,depthWrite:false})
+);
+setPieceTargetRing.rotation.x=-Math.PI/2;
+setPieceTargetRing.position.y=.06;
+setPieceTargetRing.visible=false;
+world.add(setPieceTargetRing);
+
+const setPieceAimRing=new THREE.Mesh(
+  new THREE.RingGeometry(.28,.42,28),
+  new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false})
+);
+setPieceAimRing.rotation.y=Math.PI/2;
+setPieceAimRing.visible=false;
+world.add(setPieceAimRing);
+
+// ---------- Model loading / player visuals ----------
+let template=null,clipMap={},fitScale=1,fitMinY=0;
+const mixers=[];
+const visuals=[[],[]];
+
+function colorHex(v){return new THREE.Color(v).getHex()}
+function playerData(teamIdx,i){
+  const r=PLAYER_ROSTERS[teamIdx][i];
+  const tone=SKIN_TONES[r.skinTone]||SKIN_TONES[1];
+  return {...r,skin:colorHex(tone.skin),hair:r.bald?colorHex(tone.skin):colorHex(r.hair||tone.hair),gk:i===0};
+}
+function kitColors(teamIdx,isGK){
+  const k=isGK?KEEPER_KIT[teamIdx]:TEAM_PRESETS[teamIdx];
+  return {shirt:colorHex(k.shirt),shorts:colorHex(k.shorts),socks:colorHex(k.trim||k.shirt)};
+}
+function fallbackVisual(data,teamIdx){
+  const root=new THREE.Group();
+  const body=new THREE.Group();
+  root.add(body);
+
+  const kit=kitColors(teamIdx,data.gk);
+  const skin=new THREE.MeshStandardMaterial({color:data.skin,roughness:.78});
+  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.82});
+  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.86});
+  const socks=new THREE.MeshStandardMaterial({color:kit.socks,roughness:.86});
+  const boots=new THREE.MeshStandardMaterial({color:0x161918,roughness:.66});
+  const hair=new THREE.MeshStandardMaterial({color:data.hair,roughness:.9});
+
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.27,.31,.62,8),shirt);
+  torso.position.y=1.16;body.add(torso);
+  const shoulders=new THREE.Mesh(new THREE.BoxGeometry(.64,.16,.28),shirt);
+  shoulders.position.y=1.42;body.add(shoulders);
+  const hip=new THREE.Mesh(new THREE.BoxGeometry(.48,.28,.31),shorts);
+  hip.position.y=.76;body.add(hip);
+
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.13,8),skin);
+  neck.position.y=1.54;body.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.205,10,8),skin);
+  head.position.y=1.76;body.add(head);
+  if(!data.bald){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.208,10,6,0,Math.PI*2,0,Math.PI*.48),hair);
+    cap.position.y=1.79;body.add(cap);
+  }
+
+  const armPivots=[],legPivots=[];
+  for(const side of [-1,1]){
+    const armPivot=new THREE.Group();
+    armPivot.position.set(side*.34,1.43,0);
+    const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.18,7),shirt);
+    sleeve.position.y=-.09;armPivot.add(sleeve);
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.052,.06,.44,7),skin);
+    arm.position.y=-.37;armPivot.add(arm);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.065,7,6),skin);
+    hand.position.y=-.62;armPivot.add(hand);
+    body.add(armPivot);armPivots.push(armPivot);
+
+    const legPivot=new THREE.Group();
+    legPivot.position.set(side*.145,.66,0);
+    const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.09,.105,.36,7),shorts);
+    thigh.position.y=-.18;legPivot.add(thigh);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(.058,.072,.34,7),socks);
+    shin.position.y=-.50;legPivot.add(shin);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.13,.10,.25),boots);
+    boot.position.set(0,-.70,.055);legPivot.add(boot);
+    body.add(legPivot);legPivots.push(legPivot);
+  }
+
+  // Cheap blob shadow instead of 22 dynamic shadow-casting rigs.
+  const shadow=new THREE.Mesh(
+    new THREE.CircleGeometry(.34,16),
+    new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false})
+  );
+  shadow.rotation.x=-Math.PI/2;shadow.position.y=.012;root.add(shadow);
+
+  const h=data.height||1,b=data.build||1;
+  body.scale.set(b,h,b);
+  root.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+  return {
+    root,body,armPivots,legPivots,mixer:null,actions:{},active:'Idle',data,
+    procedural:true,limbPhase:teamIdx*.7+(data.number||0)*.19,
+    actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''
+  };
+}
+function tintRig(root,data,teamIdx){
+  const kit=kitColors(teamIdx,data.gk);
+  root.traverse(o=>{
+    if(!o.isMesh)return;
+    o.castShadow=true;
+    o.receiveShadow=true;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    const repl=mats.map(src=>{
+      const m=src.clone();
+      const n=(src.name||'').toLowerCase();
+      if(/hair/.test(n))m.color?.setHex(data.hair);
+      else if(/skin|face/.test(n))m.color?.setHex(data.skin);
+      else if(/eye/.test(n))m.color?.setHex(0x202020);
+      else if(/shirt|jersey|top|torso|cloth/.test(n))m.color?.setHex(kit.shirt);
+      else if(/pants|short/.test(n))m.color?.setHex(kit.shorts);
+      else if(/sock/.test(n))m.color?.setHex(kit.socks);
+      else if(/shoe|boot/.test(n))m.color?.setHex(0x181818);
+      if('roughness' in m)m.roughness=.72;
+      return m;
+    });
+    o.material=Array.isArray(o.material)?repl:repl[0];
+  });
+}
+
+function attachKitMesh(rig,boneName,mesh,pos=[0,0,0],rot=[0,0,0],scale=[1,1,1]){
+  const bone=rig.getObjectByName(boneName);
+  if(!bone)return;
+  mesh.position.set(...pos);
+  mesh.rotation.set(...rot);
+  mesh.scale.set(...scale);
+  mesh.castShadow=true;
+  bone.add(mesh);
+}
+
+function decoratePremiumKit(rig,data,teamIdx){
+  if(!rig.getObjectByName('spine_02'))return;
+  const kit=kitColors(teamIdx,data.gk);
+  const shirt=new THREE.MeshStandardMaterial({color:kit.shirt,roughness:.72});
+  const shorts=new THREE.MeshStandardMaterial({color:kit.shorts,roughness:.78});
+  const socks=new THREE.MeshStandardMaterial({color:kit.socks,roughness:.8});
+  const boots=new THREE.MeshStandardMaterial({color:0x151515,roughness:.58});
+
+  // Lightweight bone-mounted kit pieces: they share the imported skeleton but
+  // keep Pedra Lisa/Independência colors readable from broadcast distance.
+  attachKitMesh(rig,'spine_02',new THREE.Mesh(new THREE.CylinderGeometry(.17,.19,.36,10),shirt),[0,.025,0],[0,0,0],[1.12,1, .76]);
+  for(const side of ['l','r']){
+    attachKitMesh(rig,'upperarm_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.072,.09,.16,8),shirt),[0,.055,0]);
+    attachKitMesh(rig,'thigh_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.105,.12,.2,8),shorts),[0,.075,0]);
+    attachKitMesh(rig,'calf_'+side,new THREE.Mesh(new THREE.CylinderGeometry(.058,.072,.24,8),socks),[0,.10,0]);
+    attachKitMesh(rig,'foot_'+side,new THREE.Mesh(new THREE.CapsuleGeometry(.055,.11,2,6),boots),[0,-.025,.055],[Math.PI/2,0,0],[.9,1.18,.78]);
+  }
+}
+
+const BASE_FOOTBALL_POSE={
+  upperarm_l:[.02,0,-.96],
+  upperarm_r:[.02,0,.96],
+  lowerarm_l:[-.08,0,0],
+  lowerarm_r:[-.08,0,0],
+};
+
+function footballClip(root,name,duration,frames){
+  const bones=new Set(Object.keys(BASE_FOOTBALL_POSE));
+  for(const [,pose] of frames)for(const key of Object.keys(pose))bones.add(key);
+  const tracks=[];
+  for(const boneName of bones){
+    const bone=root.getObjectByName(boneName);
+    if(!bone)continue;
+    const times=[],values=[];
+    for(const [t,pose] of frames){
+      const r=pose[boneName]||BASE_FOOTBALL_POSE[boneName]||[0,0,0];
+      const off=new THREE.Quaternion().setFromEuler(new THREE.Euler(r[0],r[1],r[2],'XYZ'));
+      const q=bone.quaternion.clone().multiply(off).normalize();
+      times.push(t*duration);
+      values.push(q.x,q.y,q.z,q.w);
+    }
+    tracks.push(new THREE.QuaternionKeyframeTrack(boneName+'.quaternion',times,values));
+  }
+  return new THREE.AnimationClip(name,duration,tracks);
+}
+
+function createPremiumFootballClips(root){
+  const clips={};
+  const add=(name,duration,frames)=>clips[name]=footballClip(root,name,duration,frames);
+
+  add('Idle',2.2,[
+    [0,{spine_02:[.015,0,0],neck_01:[0,-.02,0]}],
+    [.5,{spine_02:[-.02,0,0],neck_01:[0,.025,0]}],
+    [1,{spine_02:[.015,0,0],neck_01:[0,-.02,0]}],
+  ]);
+
+  add('Walk',.92,[
+    [0,{thigh_l:[-.28,0,0],thigh_r:[.28,0,0],calf_l:[.18,0,0],calf_r:[-.08,0,0],upperarm_l:[.24,0,-.96],upperarm_r:[-.24,0,.96]}],
+    [.5,{thigh_l:[.28,0,0],thigh_r:[-.28,0,0],calf_l:[-.08,0,0],calf_r:[.18,0,0],upperarm_l:[-.24,0,-.96],upperarm_r:[.24,0,.96]}],
+    [1,{thigh_l:[-.28,0,0],thigh_r:[.28,0,0],calf_l:[.18,0,0],calf_r:[-.08,0,0],upperarm_l:[.24,0,-.96],upperarm_r:[-.24,0,.96]}],
+  ]);
+
+  add('Run',.64,[
+    [0,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
+    [.5,{spine_02:[.10,0,0],thigh_l:[.58,0,0],thigh_r:[-.55,0,0],calf_l:[-.18,0,0],calf_r:[.42,0,0],upperarm_l:[-.42,0,-.9],upperarm_r:[.42,0,.9]}],
+    [1,{spine_02:[.10,0,0],thigh_l:[-.55,0,0],thigh_r:[.58,0,0],calf_l:[.42,0,0],calf_r:[-.18,0,0],upperarm_l:[.42,0,-.9],upperarm_r:[-.42,0,.9]}],
+  ]);
+
+  add('Dribble',.56,[
+    [0,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
+    [.5,{spine_02:[.08,0,0],thigh_l:[.40,0,0],thigh_r:[-.34,0,0],calf_l:[-.10,0,0],calf_r:[.22,0,0],foot_l:[.10,0,0],upperarm_l:[-.24,0,-.88],upperarm_r:[.24,0,.88]}],
+    [1,{spine_02:[.08,0,0],thigh_l:[-.34,0,0],thigh_r:[.40,0,0],calf_l:[.22,0,0],calf_r:[-.10,0,0],foot_r:[.10,0,0],upperarm_l:[.24,0,-.88],upperarm_r:[-.24,0,.88]}],
+  ]);
+
+  add('FirstTouch',.38,[
+    [0,{spine_02:[.05,0,0],thigh_r:[-.22,0,0],calf_r:[.18,0,0],foot_r:[.08,0,0]}],
+    [.42,{spine_02:[-.04,.05,0],thigh_r:[.32,0,0],calf_r:[-.24,0,0],foot_r:[.28,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Shield',.74,[
+    [0,{spine_02:[.08,0,.16],pelvis:[0,0,.10],upperarm_l:[-.12,0,-.82],upperarm_r:[-.12,0,.84],thigh_l:[-.12,0,0],thigh_r:[.16,0,0]}],
+    [.5,{spine_02:[.10,0,-.14],pelvis:[0,0,-.08],upperarm_l:[-.10,0,-.92],upperarm_r:[-.14,0,.74],thigh_l:[.12,0,0],thigh_r:[-.10,0,0]}],
+    [1,{spine_02:[.08,0,.16],pelvis:[0,0,.10],upperarm_l:[-.12,0,-.82],upperarm_r:[-.12,0,.84],thigh_l:[-.12,0,0],thigh_r:[.16,0,0]}],
+  ]);
+
+  add('SkillTouch',.44,[
+    [0,{spine_02:[.08,0,-.12],pelvis:[0,0,-.08],thigh_r:[-.24,0,0],foot_r:[.12,0,0],upperarm_l:[.16,0,-.76],upperarm_r:[-.18,0,.78]}],
+    [.42,{spine_02:[.12,0,.30],pelvis:[0,0,.22],thigh_r:[.44,0,.20],calf_r:[-.18,0,0],foot_r:[.30,0,.22],upperarm_l:[-.24,0,-.88],upperarm_r:[.22,0,.72]}],
+    [1,{}],
+  ]);
+
+  add('ThrowHold',.8,[
+    [0,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
+    [1,{spine_02:[-.05,0,0],upperarm_l:[-1.18,0,-.36],upperarm_r:[-1.18,0,.36],lowerarm_l:[-.78,0,0],lowerarm_r:[-.78,0,0]}],
+  ]);
+
+  add('ThrowIn',.62,[
+    [0,{spine_02:[-.12,0,0],upperarm_l:[-1.28,0,-.34],upperarm_r:[-1.28,0,.34],lowerarm_l:[-.84,0,0],lowerarm_r:[-.84,0,0]}],
+    [.52,{spine_02:[.18,0,0],upperarm_l:[-.56,0,-.48],upperarm_r:[-.56,0,.48],lowerarm_l:[-.22,0,0],lowerarm_r:[-.22,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Charge',.45,[
+    [0,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
+    [1,{spine_02:[-.12,-.14,0],pelvis:[0,-.10,0],thigh_r:[-.58,0,0],calf_r:[.48,0,0],upperarm_l:[.30,0,-.62],upperarm_r:[-.18,0,.56]}],
+  ]);
+
+  add('Pass',.46,[
+    [0,{spine_02:[-.04,-.10,0],thigh_r:[-.34,0,0],calf_r:[.22,0,0]}],
+    [.46,{spine_02:[.07,.14,0],thigh_r:[.62,0,0],calf_r:[-.28,0,0],foot_r:[.20,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Through',.52,[
+    [0,{spine_02:[-.05,-.12,0],thigh_r:[-.38,0,0],calf_r:[.26,0,0]}],
+    [.48,{spine_02:[.10,.18,0],thigh_r:[.76,0,0],calf_r:[-.34,0,0],foot_r:[.24,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Cross',.64,[
+    [0,{spine_02:[-.10,.16,0],pelvis:[0,-.14,0],thigh_l:[-.48,0,0],calf_l:[.38,0,0],upperarm_r:[.16,0,.58]}],
+    [.48,{spine_02:[.16,-.24,0],pelvis:[0,.18,0],thigh_l:[.92,0,0],calf_l:[-.42,0,0],foot_l:[.34,0,0],upperarm_r:[-.34,0,.66]}],
+    [1,{}],
+  ]);
+
+  add('Shoot',.68,[
+    [0,{spine_02:[-.16,-.18,0],pelvis:[0,-.14,0],thigh_r:[-.70,0,0],calf_r:[.56,0,0],upperarm_l:[.38,0,-.66],upperarm_r:[-.26,0,.58]}],
+    [.44,{spine_02:[.22,.30,0],pelvis:[0,.22,0],thigh_r:[1.15,0,0],calf_r:[-.52,0,0],foot_r:[.34,0,0],upperarm_l:[-.42,0,-.72],upperarm_r:[.34,0,.70]}],
+    [.72,{spine_02:[.10,.38,0],thigh_r:[.26,0,0],calf_r:[-.18,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Volley',.76,[
+    [0,{spine_02:[-.14,-.10,0],pelvis:[0,-.10,0],thigh_r:[-.82,0,0],calf_r:[.72,0,0],upperarm_l:[.42,0,-.70],upperarm_r:[-.26,0,.62]}],
+    [.36,{spine_02:[.22,.20,0],pelvis:[0,.18,0],thigh_r:[1.34,0,0],calf_r:[-.72,0,0],foot_r:[.42,0,0],upperarm_l:[-.48,0,-.82],upperarm_r:[.42,0,.78]}],
+    [.68,{spine_02:[.10,.34,0],thigh_r:[.44,0,0],calf_r:[-.28,0,0]}],
+    [1,{}],
+  ]);
+
+  add('Header',.58,[
+    [0,{spine_01:[-.18,0,0],spine_03:[-.16,0,0],neck_01:[.12,0,0],upperarm_l:[0,0,-.62],upperarm_r:[0,0,.62]}],
+    [.46,{spine_01:[.30,0,0],spine_03:[.34,0,0],neck_01:[-.30,0,0],Head:[-.22,0,0],upperarm_l:[-.22,0,-.78],upperarm_r:[-.22,0,.78]}],
+    [1,{}],
+  ]);
+
+  add('Slide',.78,[
+    [0,{pelvis:[0,0,-.08],spine_02:[.12,0,.08],thigh_l:[-.34,0,0],thigh_r:[.24,0,0]}],
+    [.42,{pelvis:[-.32,0,-.72],spine_01:[.34,0,.34],thigh_l:[1.02,0,0],calf_l:[-.30,0,0],thigh_r:[-.46,0,0],calf_r:[.44,0,0],upperarm_l:[-.28,0,-1.02],upperarm_r:[.16,0,.72]}],
+    [1,{pelvis:[-.12,0,-.38],thigh_l:[.28,0,0],thigh_r:[-.14,0,0]}],
+  ]);
+
+  add('Tackle',.34,[
+    [0,{spine_02:[.04,0,0],thigh_r:[-.18,0,0]}],
+    [.5,{spine_02:[.18,0,0],thigh_r:[.26,0,0],upperarm_l:[-.18,0,-.78],upperarm_r:[-.18,0,.78]}],
+    [1,{}],
+  ]);
+
+  add('Save',.62,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.20,0,-.72],upperarm_r:[-.20,0,.72]}],
+    [.46,{spine_02:[.16,0,0],upperarm_l:[-1.12,0,-.34],upperarm_r:[-1.12,0,.34],lowerarm_l:[-.32,0,0],lowerarm_r:[-.32,0,0]}],
+    [1,{}],
+  ]);
+
+  add('SaveLeft',.72,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.25,0,-.72],upperarm_r:[-.25,0,.72]}],
+    [.44,{pelvis:[-.12,0,-.72],spine_01:[.12,0,-.48],spine_02:[.10,0,-.42],upperarm_l:[-1.18,0,-.52],upperarm_r:[-1.02,0,.28],thigh_l:[.22,0,-.28],thigh_r:[-.18,0,-.16]}],
+    [1,{pelvis:[-.06,0,-.38],spine_01:[.06,0,-.22],upperarm_l:[-.52,0,-.54],upperarm_r:[-.42,0,.42]}],
+  ]);
+
+  add('SaveRight',.72,[
+    [0,{spine_02:[-.08,0,0],upperarm_l:[-.25,0,-.72],upperarm_r:[-.25,0,.72]}],
+    [.44,{pelvis:[-.12,0,.72],spine_01:[.12,0,.48],spine_02:[.10,0,.42],upperarm_l:[-1.02,0,-.28],upperarm_r:[-1.18,0,.52],thigh_l:[-.18,0,.16],thigh_r:[.22,0,.28]}],
+    [1,{pelvis:[-.06,0,.38],spine_01:[.06,0,.22],upperarm_l:[-.42,0,-.42],upperarm_r:[-.52,0,.54]}],
+  ]);
+
+  add('Knockdown',.92,[
+    [0,{}],
+    [.5,{pelvis:[-.58,0,.28],spine_01:[-.38,0,0],upperarm_l:[0,0,-.76],upperarm_r:[0,0,.76]}],
+    [1,{pelvis:[-1.18,0,.38],spine_01:[-.46,0,0],Head:[.14,0,0]}],
+  ]);
+
+  add('Celebrate',1.2,[
+    [0,{}],
+    [.38,{spine_03:[-.10,0,0],upperarm_l:[-1.30,0,-.34],upperarm_r:[-1.30,0,.34],lowerarm_l:[-.42,0,0],lowerarm_r:[-.42,0,0]}],
+    [.72,{spine_03:[.14,0,0],upperarm_l:[-1.02,0,-.62],upperarm_r:[-1.02,0,.62],Head:[0,.18,0]}],
+    [1,{upperarm_l:[-1.24,0,-.40],upperarm_r:[-1.24,0,.40]}],
+  ]);
+  return clips;
+}
+
+function animatedVisual(data,teamIdx){
+  if(!template)return fallbackVisual(data,teamIdx);
+  const rig=SkeletonUtils.clone(template);
+  const h=data.height||1,b=data.build||1;
+  const arcadeBody=1.04;
+  rig.scale.set(fitScale*b*arcadeBody,fitScale*h*1.02,fitScale*b*arcadeBody);
+  rig.position.y=-fitMinY*fitScale*h;
+  tintRig(rig,data,teamIdx);
+  if(premiumRig)decoratePremiumKit(rig,data,teamIdx);
+  const root=new THREE.Group();root.add(rig);
+  const mixer=new THREE.AnimationMixer(rig),actions={};
+  for(const [name,clip] of Object.entries(clipMap))actions[name]=mixer.clipAction(clip);
+  if(actions.Idle)actions.Idle.play();
+  mixers.push(mixer);
+  return {root,mixer,actions,active:'Idle',data,actionUntil:0,actionStarted:0,actionDuration:0,actionKind:''};
+}
+function setAnim(v,name,oneShot=false){
+  if(!v.mixer||(!oneShot&&v.active===name))return;
+  const next=v.actions[name];if(!next)return;
+  const prev=v.actions[v.active];if(prev&&prev!==next)prev.fadeOut(.12);
+  next.reset().setLoop(oneShot?THREE.LoopOnce:THREE.LoopRepeat,Infinity);
+  next.clampWhenFinished=oneShot;next.fadeIn(.12).play();v.active=name;
+}
+function playAction(v,kind,clip,duration=.38,contact=0){
+  const now=performance.now()/1000;
+  v.actionKind=kind;
+  v.actionStarted=now;
+  v.actionDuration=duration;
+  v.actionUntil=now+duration;
+  setAnim(v,clip,true);
+  const action=v.actions[clip];
+  if(premiumRig && action && contact>0){
+    const d=action.getClip()?.duration||duration;
+    action.time=Math.min(d*.92,Math.max(0,d*contact));
+  }
+}
+function respawnVisuals(){
+  for(const team of visuals)for(const v of team)world.remove(v.root);
+  visuals[0].length=0;visuals[1].length=0;mixers.length=0;
+  for(let t=0;t<2;t++)for(let i=0;i<11;i++){const v=animatedVisual(playerData(t,i),t);v.team=t;v.idx=i;world.add(v.root);visuals[t].push(v)}
+}
+
+// ---------- Real WebSoccer simulation ----------
+let match=createMatch({
+  seed:20261004,
+  halfSeconds:120,
+  humans:[true,false],
+  difficulty:'normal',
+  offside:true,
+  premiumAI:true,
+  premiumSetPieces:true,
+  premiumBallControl:true,
+  premiumManagement:true,
+  premiumRatings:true,
+  premiumStats:true,
+  formations:['433','433']
+});
+let transport=null;
+let signal=null;
+let matchActive=false;
+let localTeam=0;
+let teamScreenOpen=false;
+let teamScreenTab='roster';
+let teamSelectedIdx=9;
+let uiPaused=false;
+let lastTeamScreenRender=0;
+respawnVisuals();
+
+function resetMatch(opts={}){
+  match=createMatch({
+    seed:opts.seed||((Date.now()&0x7fffffff)||1),
+    halfSeconds:opts.halfSeconds||120,
+    humans:opts.humans||[true,false],
+    difficulty:opts.difficulty||'normal',
+    offside:opts.offside!==false,
+    premiumAI:true,
+    premiumSetPieces:true,
+    premiumBallControl:true,
+    premiumManagement:true,
+    premiumRatings:true,
+    premiumStats:true,
+    formations:opts.formations||['433','433']
+  });
+  localTeam=opts.localTeam??0;
+  selectedIdx=-1;
+  respawnVisuals();
+  refreshControlled();
+  teamSelectedIdx=9;
+  if(teamScreenOpen)renderTeamScreen();
+}
+
+function teamLabel(idx){return idx===0?'PEDRA LISA':'INDEPENDÊNCIA'}
+
+function clampRating(v){return Math.max(4,Math.min(10,v))}
+
+function matchRatingFor(record){
+  const s=record.matchStats||{};
+  let rating=6.0;
+  rating+=(s.goals||0)*1.25+(s.assists||0)*.72;
+  rating+=(s.shotsOnTarget||0)*.13;
+  rating+=Math.max(0,(s.shots||0)-(s.shotsOnTarget||0))*(-.045);
+  rating+=(s.tackles||0)*.11+(s.saves||0)*.18;
+  rating-=(s.fouls||0)*.07+(s.yellow||0)*.18+(s.red||0)*.70;
+  if((s.passes||0)>=5){
+    const acc=(s.passesCompleted||0)/Math.max(1,s.passes||0);
+    rating+=Math.max(-.28,Math.min(.34,(acc-.72)*1.25));
+    rating+=Math.min(.22,(s.passesCompleted||0)*.008);
+  }
+  const opp=1-record.team;
+  if(record.position==='GOL'&&match.score[opp]===0&&match.half>=1)rating+=.24;
+  return clampRating(rating);
+}
+
+function allMatchPlayers(){
+  const out=[];
+  for(let t=0;t<2;t++){
+    const team=match.teams[t];
+    for(const rec of team.subArchive||[]){
+      out.push({
+        team:t,
+        displayName:rec.displayName,
+        shirtNumber:rec.shirtNumber,
+        position:rec.position,
+        overall:rec.overall,
+        matchStats:rec.matchStats||{},
+        archived:true,
+      });
+    }
+    for(const p of team.players){
+      out.push({
+        team:t,
+        displayName:p.displayName,
+        shirtNumber:p.shirtNumber,
+        position:p.position||p.role.toUpperCase(),
+        overall:p.overall,
+        matchStats:p.matchStats||{},
+        archived:false,
+      });
+    }
+  }
+  return out;
+}
+
+function matchLeaders(){
+  const players=allMatchPlayers().map(p=>({...p,matchRating:matchRatingFor(p)}));
+  players.sort((a,b)=>
+    b.matchRating-a.matchRating ||
+    (b.matchStats.goals||0)-(a.matchStats.goals||0) ||
+    (b.matchStats.assists||0)-(a.matchStats.assists||0) ||
+    (b.matchStats.saves||0)-(a.matchStats.saves||0) ||
+    (b.matchStats.tackles||0)-(a.matchStats.tackles||0) ||
+    (b.overall||0)-(a.overall||0)
+  );
+  return players;
+}
+
+function statPercentPair(a,b){
+  const total=a+b;
+  if(total<=0)return [50,50];
+  return [a/total*100,b/total*100];
+}
+
+function statsRow(label,left,right,leftText=String(left),rightText=String(right)){
+  const [lp,rp]=statPercentPair(Number(left)||0,Number(right)||0);
+  return '<div class="matchStatRow">'+
+    '<div class="matchStatValue">'+leftText+'</div>'+
+    '<div class="matchStatBar"><i style="width:'+lp.toFixed(1)+'%"></i></div>'+
+    '<div class="matchStatLabel">'+label+'</div>'+
+    '<div class="matchStatBar away"><i style="width:'+rp.toFixed(1)+'%"></i></div>'+
+    '<div class="matchStatValue">'+rightText+'</div>'+
+  '</div>';
+}
+
+function renderStatsRows(target){
+  const a=match.matchStats.teams[0],b=match.matchStats.teams[1];
+  const possTotal=a.possessionTicks+b.possessionTicks;
+  const pa=possTotal?Math.round(a.possessionTicks/possTotal*100):50;
+  const pb=100-pa;
+  const accA=a.passes?Math.round(a.passesCompleted/a.passes*100):0;
+  const accB=b.passes?Math.round(b.passesCompleted/b.passes*100):0;
+  target.innerHTML=
+    statsRow('POSSE',pa,pb,pa+'%',pb+'%')+
+    statsRow('FINALIZAÇÕES',a.shots,b.shots)+
+    statsRow('NO GOL',a.shotsOnTarget,b.shotsOnTarget)+
+    statsRow('PASSES',a.passes,b.passes)+
+    statsRow('PRECISÃO',accA,accB,accA+'%',accB+'%')+
+    statsRow('FALTAS',a.fouls,b.fouls)+
+    statsRow('ESCANTEIOS',a.corners,b.corners)+
+    statsRow('IMPEDIMENTOS',a.offsides,b.offsides)+
+    statsRow('DEFESAS',a.saves,b.saves)+
+    statsRow('CARTÕES',a.yellow+a.red,b.yellow+b.red,(a.yellow+'A '+a.red+'V'),(b.yellow+'A '+b.red+'V'));
+}
+
+function renderRatings(target,limit=22){
+  const leaders=matchLeaders().slice(0,limit);
+  const motm=leaders[0];
+  target.innerHTML=leaders.map((p,n)=>{
+    const s=p.matchStats||{};
+    const meta=[];
+    if(s.goals)meta.push(s.goals+'G');
+    if(s.assists)meta.push(s.assists+'A');
+    if(s.saves)meta.push(s.saves+'DEF');
+    if(s.tackles)meta.push(s.tackles+'DES');
+    const passAcc=s.passes?Math.round((s.passesCompleted||0)/s.passes*100):0;
+    if(s.passes>=5)meta.push(passAcc+'% PAS');
+    return '<div class="ratingRow '+(motm===p?'motm':'')+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div>'+
+      '<div><div class="squadName">'+p.displayName+'</div><div class="ratingTeam">'+teamLabel(p.team)+' · '+p.position+(p.archived?' · SAIU':'')+'</div></div>'+
+      '<div class="ovrPill">'+(p.overall??'--')+'</div>'+
+      '<div class="squadMeta">'+(meta.join(' · ')||'—')+'</div>'+
+      '<div class="ratingScore">'+p.matchRating.toFixed(1)+'</div>'+
+    '</div>';
+  }).join('');
+  return motm;
+}
+
+function renderMatchStatsPane(){
+  renderStatsRows(teamStatsRowsEl);
+  renderRatings(teamRatingsTableEl,22);
+}
+
+let summaryOpen=false;
+let summaryKind='';
+
+function renderMatchSummary(){
+  summaryScoreEl.textContent=match.score[0]+' — '+match.score[1];
+  renderStatsRows(summaryStatsRowsEl);
+  const motm=renderRatings(summaryRatingsEl,12);
+  if(motm){
+    motmScoreEl.textContent=motm.matchRating.toFixed(1);
+    motmNameEl.textContent='#'+motm.shirtNumber+' '+motm.displayName;
+    const s=motm.matchStats||{};
+    const bits=[teamLabel(motm.team),motm.position,'OVR '+motm.overall];
+    if(s.goals)bits.push(s.goals+' gol'+(s.goals>1?'s':''));
+    if(s.assists)bits.push(s.assists+' assistência'+(s.assists>1?'s':''));
+    if(s.saves)bits.push(s.saves+' defesa'+(s.saves>1?'s':''));
+    motmMetaEl.textContent=bits.join(' · ');
+  }
+  summaryKickerEl.textContent=(summaryKind==='full'?'FIM DE JOGO':'INTERVALO')+' · FC MUKEKA PREMIUM';
+  summaryContinueEl.textContent=summaryKind==='full'?'VER CAMPO':'CONTINUAR 2º TEMPO';
+}
+
+function openMatchSummary(kind){
+  if(summaryOpen)return;
+  summaryOpen=true;
+  summaryKind=kind;
+  if(teamScreenOpen){
+    teamScreenOpen=false;
+    teamScreenEl.classList.remove('open');
+    teamScreenEl.setAttribute('aria-hidden','true');
+  }
+  if(!transport?.online&&kind!=='full')uiPaused=true;
+  matchSummaryEl.classList.add('open');
+  matchSummaryEl.setAttribute('aria-hidden','false');
+  showTouch(false);
+  renderMatchSummary();
+}
+
+function closeMatchSummary(){
+  if(!summaryOpen)return;
+  summaryOpen=false;
+  matchSummaryEl.classList.remove('open');
+  matchSummaryEl.setAttribute('aria-hidden','true');
+  if(summaryKind!=='full')uiPaused=false;
+  if(matchActive&&!presentation.active&&!teamScreenOpen)showTouch(true);
+}
+
+summaryContinueEl.addEventListener('click',closeMatchSummary);
+summaryTeamScreenEl.addEventListener('click',()=>{
+  closeMatchSummary();
+  if(match.phase!=='fulltime')openTeamScreen('stats');
+  else {
+    teamScreenOpen=true;
+    teamScreenTab='stats';
+    uiPaused=false;
+    teamScreenEl.classList.add('open');
+    teamScreenEl.setAttribute('aria-hidden','false');
+    renderTeamScreen();
+  }
+});
+
+function formationPreset(key){
+  return FORMATION_PRESETS.find(p=>p.key===key)||FORMATION_PRESETS[0];
+}
+
+function playerAttrEntries(p){
+  if(p.position==='GOL'&&p.rating?.gk){
+    return [
+      ['DEF',p.rating.gk.defesa],['REF',p.rating.gk.reflexo],['POS',p.rating.gk.pos],
+      ['SAÍ',p.rating.gk.saida],['PÉS',p.rating.gk.pes],
+    ];
+  }
+  return [
+    ['VEL',p.rating?.vel??72],['FIN',p.rating?.fin??72],['PAS',p.rating?.pas??72],
+    ['DRI',p.rating?.dri??72],['DEF',p.rating?.def??72],['FIS',p.rating?.fis??72],
+  ];
+}
+
+function renderPlayerDetail(team,p){
+  if(!p){playerDetailEl.innerHTML='';return}
+  const energy=Math.round((p.stamina??1000)/10);
+  const attrs=playerAttrEntries(p).map(([label,value])=>
+    '<div class="attr"><span>'+label+'</span><span class="attrTrack"><i style="width:'+Math.max(0,Math.min(100,value))+'%"></i></span><span class="attrVal">'+value+'</span></div>'
+  ).join('');
+  const card=p.sentOff?'EXPULSO':p.yellowCards?'AMARELO '+p.yellowCards:'SEM CARTÃO';
+  const pending=team.pendingSubIdx===p.idx?' · TROCA PREPARADA':'';
+  playerDetailEl.innerHTML=
+    '<div class="detailHero"><div class="detailOvr">'+(p.overall??'--')+'</div><div><div class="detailName">#'+p.shirtNumber+' '+p.displayName+'</div><div class="detailSub">'+(p.position||p.role.toUpperCase())+' · '+card+pending+'</div></div></div>'+
+    '<div class="attrGrid">'+attrs+'</div>'+
+    '<div class="detailStatus"><b>ENERGIA '+energy+'%</b><br>OVR é calculado pelos atributos e pelo peso da posição. Energia baixa reduz principalmente aceleração e repetição de esforços.</div>';
+}
+
+function renderRosterPane(){
+  const team=match.teams[localTeam];
+  const selected=team.players[teamSelectedIdx]||team.players[team.controlled]||team.players[1];
+  const shape=formationPreset(team.formationKey);
+  rosterShapeLabelEl.textContent=shape.label;
+
+  squadRowsEl.innerHTML=team.players.map((p,i)=>{
+    const energy=Math.round((p.stamina??1000)/10);
+    const state=p.sentOff?'EXPULSO':p.substitute?'RESERVA EM CAMPO':p.yellowCards?'CA '+p.yellowCards:'TITULAR';
+    return '<div class="squadRow '+(i===teamSelectedIdx?'selected ':'')+(p.sentOff?'sent':'')+'" data-squad-player="'+i+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div>'+
+      '<div><div class="squadName">'+p.displayName+'</div><div class="squadMeta">'+(p.position||p.role.toUpperCase())+' · '+state+'</div></div>'+
+      '<div class="ovrPill">'+(p.overall??'--')+'</div>'+
+      '<div class="energyCell"><span>'+energy+'%</span><span class="energyBar"><i style="width:'+energy+'%"></i></span></div>'+
+    '</div>';
+  }).join('');
+
+  formationDotsEl.innerHTML=team.players.map((p,i)=>{
+    if(p.sentOff)return '';
+    const spot=team.formation[i];
+    const left=Math.max(5,Math.min(95,(spot.x+1)*50));
+    const top=Math.max(5,Math.min(95,(1-spot.y)*100));
+    const bg=localTeam===0?'#0d2c18':'#e8eee9';
+    const fg=localTeam===0?'#fff':'#102017';
+    return '<button class="formationDot '+(i===teamSelectedIdx?'selected':'')+'" data-squad-player="'+i+'" style="left:'+left+'%;top:'+top+'%;background:'+bg+';color:'+fg+'">'+
+      p.shirtNumber+'<small>'+p.overall+'</small></button>';
+  }).join('');
+
+  renderPlayerDetail(team,selected);
+}
+
+function renderTacticsPane(){
+  const team=match.teams[localTeam];
+  const mentality=team.mentality||0;
+  for(const btn of mentalityChoicesEl.querySelectorAll('[data-mentality]')){
+    btn.classList.toggle('active',Number(btn.dataset.mentality)===mentality);
+  }
+  const preset=formationPreset(team.formationKey);
+  formationNameEl.textContent=preset.label;
+  formationNoteEl.textContent=preset.note||'FORMAÇÃO ATUAL';
+
+  const descriptions={
+    '-1':'Bloco mais baixo, menos jogadores na pressão e prioridade para proteger o centro antes de sair em contra-ataque.',
+    '0':'Bloco equilibrado, pressão moderada e ocupação balanceada dos corredores.',
+    '1':'Linha mais alta, mais jogadores na pressão e procura maior por passes verticais e finalizações.'
+  };
+  collectiveDescriptionEl.textContent=descriptions[String(mentality)];
+  pressValueEl.textContent=mentality<0?'2':mentality>0?'4':'3';
+  lineValueEl.textContent=mentality<0?'BAIXA':mentality>0?'ALTA':'MÉDIA';
+  riskValueEl.textContent=mentality<0?'BAIXO':mentality>0?'ALTO':'MÉDIO';
+
+  tacticImpactEl.innerHTML=
+    '<div class="impactBox"><b>'+(mentality<0?'−':mentality>0?'+':'=')+'</b><span>ALTURA DA EQUIPE</span></div>'+
+    '<div class="impactBox"><b>'+(mentality<0?'2':mentality>0?'4':'3')+'</b><span>PRESSORES</span></div>'+
+    '<div class="impactBox"><b>'+(mentality<0?'SEGURO':mentality>0?'VERTICAL':'MISTO')+'</b><span>PASSE</span></div>';
+
+  const active=team.players.filter(p=>!p.sentOff);
+  const avg=active.length?Math.round(active.reduce((s,p)=>s+(p.stamina??1000),0)/active.length/10):0;
+  const tired=active.filter(p=>(p.stamina??1000)<500).length;
+  const critical=active.filter(p=>(p.stamina??1000)<300).length;
+  fitnessSummaryEl.innerHTML='<b>ENERGIA MÉDIA '+avg+'%</b><br>'+tired+' jogador(es) abaixo de 50% · '+critical+' abaixo de 30%. Mentalidade ofensiva e pressão pós-perda aumentam o desgaste.';
+}
+
+function provisionalBenchOverall(team,number,basePlayer){
+  const base=basePlayer?.overall??72;
+  const delta=((number+localTeam*3)%5)-2;
+  return Math.max(66,Math.min(78,base-2+delta));
+}
+
+function renderSubsPane(){
+  const team=match.teams[localTeam];
+  const selected=team.players[teamSelectedIdx];
+  subsUsedLabelEl.textContent=team.subsUsed+'/3 USADAS';
+
+  subPickListEl.innerHTML=team.players.map((p,i)=>{
+    const energy=Math.round((p.stamina??1000)/10);
+    const disabled=i===0||p.sentOff||p.substitute||team.subsUsed>=3;
+    const status=team.pendingSubIdx===i?'TROCA PREPARADA':p.substitute?'JÁ ENTROU':p.sentOff?'EXPULSO':'ENERGIA '+energy+'%';
+    return '<div class="subPick '+(i===teamSelectedIdx?'selected ':'')+(disabled?'disabled':'')+'" data-sub-player="'+i+'">'+
+      '<div class="squadNum">'+p.shirtNumber+'</div><div><div class="squadName">'+p.displayName+'</div><div class="squadMeta">'+(p.position||p.role.toUpperCase())+' · '+status+'</div></div>'+
+      '<div class="ovrPill">'+p.overall+'</div><div class="energyCell"><span>'+energy+'%</span><span class="energyBar"><i style="width:'+energy+'%"></i></span></div></div>';
+  }).join('');
+
+  const start=Math.max(12,team.nextBenchNumber);
+  benchRowsEl.innerHTML=Array.from({length:7},(_,j)=>{
+    const num=start+j;
+    const ovr=provisionalBenchOverall(team,num,selected);
+    return '<div class="benchRow '+(j===0?'next':'')+'"><div class="squadNum">'+num+'</div><div><div class="squadName">Reserva '+num+'</div><div class="squadMeta">'+(j===0?'PRÓXIMO A ENTRAR · ':'')+'IDENTIDADE PROVISÓRIA</div></div><div class="ovrPill">'+ovr+'</div></div>';
+  }).join('');
+
+  const can=!!selected&&teamSelectedIdx>0&&!selected.sentOff&&!selected.substitute&&team.subsUsed<3&&team.pendingSubIdx<0;
+  prepareSubEl.disabled=!can;
+  prepareSubEl.textContent=team.pendingSubIdx>=0?'SUBSTITUIÇÃO JÁ PREPARADA':can?'PREPARAR: SAI '+selected.displayName:'SUBSTITUIÇÃO INDISPONÍVEL';
+
+  if(team.pendingSubIdx>=0){
+    const out=team.players[team.pendingSubIdx];
+    pendingSubInfoEl.innerHTML='<b>AGUARDANDO PARALISAÇÃO</b><br>Sai '+out.displayName+' e entra Reserva '+team.nextBenchNumber+'.';
+  }else{
+    pendingSubInfoEl.innerHTML='<b>BANCO PROVISÓRIO</b><br>Os nomes dos reservas ainda serão cadastrados. A troca mantém a posição do jogador que saiu e coloca um atleta descansado.';
+  }
+}
+
+function renderTeamScreen(){
+  if(!teamScreenOpen)return;
+  const team=match.teams[localTeam];
+  const frac=Math.min(1,match.halfTick/Math.max(1,match.config.halfTicks));
+  const minute=Math.min(45,Math.floor(frac*45));
+  teamScreenMetaEl.textContent=teamLabel(localTeam)+' · '+match.half+'T '+String(minute).padStart(2,'0')+"' · "+match.score[0]+'–'+match.score[1]+' · '+formationPreset(team.formationKey).label;
+  document.querySelectorAll('[data-team-tab]').forEach(b=>b.classList.toggle('active',b.dataset.teamTab===teamScreenTab));
+  document.querySelectorAll('.teamPane').forEach(p=>p.classList.remove('active'));
+  const pane=document.getElementById('teamPane'+teamScreenTab[0].toUpperCase()+teamScreenTab.slice(1));
+  pane?.classList.add('active');
+  if(teamScreenTab==='roster')renderRosterPane();
+  else if(teamScreenTab==='tactics')renderTacticsPane();
+  else if(teamScreenTab==='subs')renderSubsPane();
+  else renderMatchStatsPane();
+
+  const online=!!transport?.online;
+  teamScreenOnlineNoteEl.textContent=online?'ONLINE: a partida continua enquanto esta tela está aberta.':'CONTRA CPU: partida pausada enquanto esta tela está aberta.';
+  teamScreenHintEl.textContent='ESC fecha · clique em um jogador para ver OVR, atributos e energia.';
+}
+
+function applyTeamScreenCommand(bits){
+  if(!bits)return;
+  devices.pulse(0,bits);
+  if(uiPaused&&matchActive&&!transport?.online){
+    const inputs=[0,0];
+    inputs[localTeam]=devices.mask(0);
+    step(match,inputs);
+    // Offline-only UI command: release the edge immediately so repeated clicks work
+    // without needing to advance a second gameplay tick while the pause screen is open.
+    match.teams[localTeam].prevMask&=~bits;
+    queueVisualEvents();
+  }
+  renderTeamScreen();
+}
+
+function openTeamScreen(tab='roster'){
+  if(presentation.active||!matchActive)return;
+  teamScreenOpen=true;
+  teamScreenTab=tab;
+  teamSelectedIdx=match.teams[localTeam]?.controlled??9;
+  uiPaused=!transport?.online;
+  if(uiPaused)acc=0;
+  teamScreenEl.classList.add('open');
+  teamScreenEl.setAttribute('aria-hidden','false');
+  showTouch(false);
+  renderTeamScreen();
+}
+
+function closeTeamScreen(){
+  if(!teamScreenOpen)return;
+  teamScreenOpen=false;
+  uiPaused=false;
+  teamScreenEl.classList.remove('open');
+  teamScreenEl.setAttribute('aria-hidden','true');
+  if(matchActive&&!presentation.active)showTouch(true);
+}
+
+openTeamScreenEl.addEventListener('click',()=>openTeamScreen('roster'));
+teamCloseEl.addEventListener('click',closeTeamScreen);
+document.querySelectorAll('[data-team-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+  teamScreenTab=btn.dataset.teamTab;
+  renderTeamScreen();
+}));
+squadRowsEl.addEventListener('click',e=>{
+  const row=e.target.closest('[data-squad-player]');if(!row)return;
+  teamSelectedIdx=Number(row.dataset.squadPlayer);renderTeamScreen();
+});
+formationDotsEl.addEventListener('click',e=>{
+  const dot=e.target.closest('[data-squad-player]');if(!dot)return;
+  teamSelectedIdx=Number(dot.dataset.squadPlayer);renderTeamScreen();
+});
+subPickListEl.addEventListener('click',e=>{
+  const row=e.target.closest('[data-sub-player]');if(!row||row.classList.contains('disabled'))return;
+  teamSelectedIdx=Number(row.dataset.subPlayer);renderTeamScreen();
+});
+mentalityChoicesEl.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-mentality]');if(!btn)return;
+  const v=Number(btn.dataset.mentality);
+  applyTeamScreenCommand(v<0?BTN.MENTALITY_DEF:v>0?BTN.MENTALITY_ATT:BTN.MENTALITY_BAL);
+});
+formationPrevEl.addEventListener('click',()=>applyTeamScreenCommand(BTN.FORMATION_PREV));
+formationNextEl.addEventListener('click',()=>applyTeamScreenCommand(BTN.FORMATION_NEXT));
+prepareSubEl.addEventListener('click',()=>{
+  if(teamSelectedIdx<=0||teamSelectedIdx>=SUB_TARGET_BITS.length)return;
+  applyTeamScreenCommand(SUB_TARGET_BITS[teamSelectedIdx]);
+});
+
+function showTouch(on){
+  if(!touchDevice)return;
+  document.getElementById('touch3d').classList.toggle('touchHidden',!on);
+  touch3d.show(on);
+}
+
+let crowdAudioStarted=false;
+function startCrowdAudio(){
+  if(crowdAudioStarted)return;
+  crowdAudioStarted=true;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    const ac=new AC(),len=ac.sampleRate*3,buf=ac.createBuffer(1,len,ac.sampleRate),data=buf.getChannelData(0);
+    for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*(.28+.18*Math.sin(i/1800));
+    const src=ac.createBufferSource();src.buffer=buf;src.loop=true;
+    const filter=ac.createBiquadFilter();filter.type='bandpass';filter.frequency.value=720;filter.Q.value=.35;
+    const gain=ac.createGain();gain.gain.value=.055;
+    src.connect(filter);filter.connect(gain);gain.connect(ac.destination);src.start();
+  }catch{}
+}
+
+let matchAudioCtx=null;
+function ensureMatchAudio(){
+  if(matchAudioCtx)return matchAudioCtx;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return null;
+  matchAudioCtx=new AC();
+  return matchAudioCtx;
+}
+function playBallContactSound(kind='pass'){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+    const now=ac.currentTime;
+    o.type='sine';
+    o.frequency.setValueAtTime(kind==='shot'?128:(kind==='header'?92:(kind==='save'?76:108)),now);
+    o.frequency.exponentialRampToValueAtTime(58,now+.075);
+    f.type='lowpass';f.frequency.value=850;
+    g.gain.setValueAtTime(kind==='shot'?.14:(kind==='save'?.115:.09),now);
+    g.gain.exponentialRampToValueAtTime(.0001,now+.085);
+    o.connect(f);f.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.09);
+  }catch{}
+}
+
+const presentation={
+  active:false,
+  started:0,
+  duration:11.0,
+  featured:null,
+  whistlePlayed:false,
+  onDone:null,
+  online:false,
+};
+
+function renderLineupList(target,teamIdx){
+  const roster=PLAYER_ROSTERS[teamIdx];
+  target.innerHTML=roster.map((p,i)=>{
+    const live=match.teams[teamIdx].players[i];
+    return '<div><b>'+String(p.number).padStart(2,'0')+'</b><span>'+p.name+' · '+p.position+' · OVR '+(live?.overall??'--')+'</span></div>';
+  }).join('');
+}
+renderLineupList(lineupHomeListEl,0);
+renderLineupList(lineupAwayListEl,1);
+
+function playPresentationSting(){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const now=ac.currentTime;
+    for(const [freq,at,dur,gain] of [[196,0,.22,.045],[247,.12,.24,.04],[294,.25,.34,.035]]){
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='triangle';o.frequency.value=freq;
+      g.gain.setValueAtTime(.0001,now+at);
+      g.gain.exponentialRampToValueAtTime(gain,now+at+.025);
+      g.gain.exponentialRampToValueAtTime(.0001,now+at+dur);
+      o.connect(g);g.connect(ac.destination);o.start(now+at);o.stop(now+at+dur+.03);
+    }
+  }catch{}
+}
+
+function finishPresentation(){
+  if(!presentation.active)return;
+  presentation.active=false;
+  pregameEl.classList.remove('active');
+  pregameMatchEl.classList.remove('show');
+  lineupCardEl.classList.remove('show');
+  kickoffFlashEl.classList.remove('show');
+  playerSpotlightEl.classList.remove('show');
+  coinTossEl.classList.remove('show','spin');
+  entranceLabelEl.classList.remove('show');
+  showTouch(true);
+  const done=presentation.onDone;
+  presentation.onDone=null;
+  if(done)done();
+}
+
+function startPresentation(onDone,{online=false}={}){
+  presentation.active=true;
+  presentation.started=performance.now()/1000;
+  presentation.onDone=onDone;
+  presentation.online=online;
+  matchActive=false;
+  showTouch(false);
+  pregameEl.classList.add('active');
+  pregameMatchEl.classList.add('show');
+  lineupCardEl.classList.remove('show');
+  kickoffFlashEl.classList.remove('show');
+  playerSpotlightEl.classList.remove('show');
+  coinTossEl.classList.remove('show','spin');
+  entranceLabelEl.classList.remove('show');
+  presentation.featured=null;
+  presentation.whistlePlayed=false;
+  playPresentationSting();
+}
+
+skipIntroEl.addEventListener('click',finishPresentation);
+
+function playWhistle(){
+  try{
+    const ac=ensureMatchAudio();if(!ac)return;
+    const now=ac.currentTime;
+    for(const detune of [-10,10]){
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='square';o.frequency.value=1760;o.detune.value=detune;
+      g.gain.setValueAtTime(.0001,now);
+      g.gain.exponentialRampToValueAtTime(.032,now+.012);
+      g.gain.setValueAtTime(.032,now+.18);
+      g.gain.exponentialRampToValueAtTime(.0001,now+.30);
+      o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.32);
+    }
+  }catch{}
+}
+
+const presentationFeatures=[
+  [0,0,'GOLEIRO'],
+  [1,0,'GOLEIRO'],
+  [0,7,'MEIO-CAMPO'],
+  [1,9,'ATAQUE'],
+];
+
+function setFeaturedPlayer(slot){
+  const item=presentationFeatures[slot%presentationFeatures.length];
+  if(!item)return;
+  const [team,idx,role]=item;
+  const p=PLAYER_ROSTERS[team][idx];
+  presentation.featured={team,idx};
+  spotNumberEl.textContent=p.number;
+  spotTeamEl.textContent=team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+  spotNameEl.textContent=p.name;
+  const live=match.teams[team]?.players?.[idx];
+  spotRoleEl.textContent=role+' · OVR '+(live?.overall??'--')+' · DESTAQUE DA APRESENTAÇÃO';
+}
+
+function updatePresentation(nowSec){
+  if(!presentation.active)return;
+  const t=nowSec-presentation.started;
+
+  // 0–1.25s: stadium/title. 1.15–4.8s: teams leave the tunnel.
+  pregameMatchEl.classList.toggle('show',t<2.15);
+  entranceLabelEl.classList.toggle('show',t>=1.1&&t<4.75);
+
+  // 4.5–7.55s: formation card + broadcast close-ups of selected players.
+  lineupCardEl.classList.toggle('show',t>=4.45&&t<7.55);
+  const spotlightOn=t>=4.65&&t<7.55;
+  playerSpotlightEl.classList.toggle('show',spotlightOn);
+  if(spotlightOn){
+    const slot=Math.min(3,Math.floor((t-4.65)/.73));
+    if(!presentation.featured || presentation.featured.slot!==slot){
+      setFeaturedPlayer(slot);
+      presentation.featured.slot=slot;
+    }
+  }else{
+    presentation.featured=null;
+  }
+
+  // 7.55–9.2s: deterministic kickoff-team reveal from the actual match.
+  const tossOn=t>=7.55&&t<9.2;
+  coinTossEl.classList.toggle('show',tossOn);
+  coinTossEl.classList.toggle('spin',t>=7.55&&t<8.45);
+  if(tossOn){
+    const team=match.kickoffTeam??match.firstKickoffTeam??0;
+    if(t<8.45){
+      coinEl.textContent=t%0.24<.12?'PL':'IND';
+      coinLabelEl.textContent='SORTEIO DE SAÍDA';
+    }else{
+      coinEl.textContent=team===0?'PL':'IND';
+      coinLabelEl.textContent=(team===0?'PEDRA LISA':'INDEPENDÊNCIA')+' DÁ A SAÍDA';
+    }
+  }
+
+  // 9.15–11s: whistle + transition to gameplay camera.
+  kickoffFlashEl.classList.toggle('show',t>=9.15);
+  if(t>=9.35&&!presentation.whistlePlayed){
+    presentation.whistlePlayed=true;
+    playWhistle();
+  }
+  if(t>=presentation.duration)finishPresentation();
+}
+
+function presentationPose(teamIdx,idx,nowSec){
+  if(!presentation.active)return null;
+  const t=nowSec-presentation.started;
+  if(t<1.05)return null;
+
+  const spread=2.45;
+  const lineupX=teamIdx===0?-3.15:3.15;
+  const lineupZ=-12.3+idx*spread;
+
+  // Both teams emerge through the tunnel on the near stand, staggered by player.
+  if(t<4.7){
+    const delay=idx*.075+teamIdx*.035;
+    const q=THREE.MathUtils.clamp((t-1.05-delay)/3.05,0,1);
+    const ease=q*q*(3-2*q);
+    const startX=teamIdx===0?-2.1:2.1;
+    const startZ=37.4+idx*.34;
+    return {
+      x:THREE.MathUtils.lerp(startX,lineupX,ease),
+      y:0,
+      z:THREE.MathUtils.lerp(startZ,lineupZ,ease),
+      rot:Math.PI,
+      mode:q<.98?'walk':'idle',
+    };
+  }
+
+  // During the player close-ups, everybody holds the ceremonial lineup.
+  if(t<7.55){
+    return {x:lineupX,y:0,z:lineupZ,rot:teamIdx===0?0:Math.PI,mode:'idle'};
+  }
+
+  // During the toss, the two number 10s step a little closer to the centre;
+  // everyone else remains lined up. This is presentation-only.
+  const isRepresentative=idx===7;
+  if(t<9.2 && isRepresentative){
+    const q=THREE.MathUtils.clamp((t-7.55)/.8,0,1);
+    return {
+      x:THREE.MathUtils.lerp(lineupX,teamIdx===0?-1.1:1.1,q),
+      y:0,
+      z:THREE.MathUtils.lerp(lineupZ,0,q),
+      rot:teamIdx===0?Math.PI/2:-Math.PI/2,
+      mode:q<.95?'walk':'idle',
+    };
+  }
+
+  return {x:lineupX,y:0,z:lineupZ,rot:teamIdx===0?0:Math.PI,mode:'idle'};
+}
+
+function presentationCamera(nowSec){
+  if(!presentation.active)return false;
+  const t=nowSec-presentation.started;
+
+  if(t<1.15){
+    const q=t/1.15;
+    camera.position.set(-38+q*12,21-q*4,43-q*5);
+    camera.fov=40;
+    camera.lookAt(0,1.0,0);
+  }else if(t<4.55){
+    // Low tunnel camera following the entrance procession.
+    const q=(t-1.15)/3.4;
+    camera.position.set(-8+q*13,3.0,31-q*17);
+    camera.fov=31;
+    camera.lookAt(0,1.2,THREE.MathUtils.lerp(24,-2,q));
+  }else if(t<7.55){
+    // Close-ups follow the currently highlighted player.
+    const feat=presentation.featured||{team:0,idx:0};
+    const pose=presentationPose(feat.team,feat.idx,nowSec);
+    const px=pose?.x??0,pz=pose?.z??0;
+    const side=feat.team===0?-1:1;
+    camera.position.set(px+side*4.5,2.5,pz+4.8);
+    camera.fov=28;
+    camera.lookAt(px,1.25,pz);
+  }else if(t<9.2){
+    camera.position.set(0,4.7,10.8);
+    camera.fov=30;
+    camera.lookAt(0,1.0,0);
+  }else{
+    const q=Math.min(1,(t-9.2)/1.8);
+    camera.position.set(
+      THREE.MathUtils.lerp(0,focusX,q),
+      THREE.MathUtils.lerp(7.2,13.6,q),
+      THREE.MathUtils.lerp(15.5,30.5,q)
+    );
+    camera.fov=THREE.MathUtils.lerp(31,36,q);
+    camera.lookAt(THREE.MathUtils.lerp(0,focusX,q),1.0,0);
+  }
+  camera.updateProjectionMatrix();
+  return true;
+}
+
+function beginCpu(){
+  startCrowdAudio();
+  transport?.dispose?.();
+  signal=null;
+  resetMatch({humans:[true,false],difficulty:'normal',localTeam:0});
+  transport=new LocalTransport(devices,[0]);
+  lobbyEl.classList.add('hidden');
+  if(PREMATCH_PRESENTATION){
+    statusEl.textContent='FC Mukeka Premium · Pedra Lisa x Independência';
+    startPresentation(()=>{
+      matchActive=true;
+      statusEl.textContent='FC Mukeka Premium · contra CPU';
+    });
+  }else{
+    matchActive=true;
+    showTouch(true);
+    statusEl.textContent='FC Mukeka Premium · contra CPU · modo estável';
+  }
+}
+
+function beginOnline({seed,localTeam:team,signal:sig}){
+  startCrowdAudio();
+  transport?.dispose?.();
+  signal=sig;
+  resetMatch({seed,humans:[true,true],localTeam:team,formations:['433','433']});
+  transport=new OnlineTransport({signal:sig,devices,localTeam:team});
+  lobbyEl.classList.add('hidden');
+  if(PREMATCH_PRESENTATION){
+    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · apresentação';
+    startPresentation(()=>{
+      matchActive=true;
+      statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA');
+    },{online:true});
+  }else{
+    matchActive=true;
+    showTouch(true);
+    statusEl.textContent='FC MUKEKA PREMIUM · ONLINE · '+(team===0?'PEDRA LISA':'INDEPENDÊNCIA')+' · modo estável';
+  }
+}
+
+function simToWorld(x,y,z=0){
+  return {
+    x: -((y-FIELD.cy)/SIM_FIELD_H)*FIELD_L,
+    y: Math.max(0,z)*(2.44/CROSSBAR_H),
+    z: ((x-FIELD.cx)/SIM_FIELD_W)*FIELD_W
+  };
+}
+
+let selectedIdx=-1;
+let ring=new THREE.Mesh(new THREE.RingGeometry(.58,.78,32),new THREE.MeshBasicMaterial({color:0xffe36a,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
+ring.rotation.x=-Math.PI/2;ring.position.y=.035;
+function refreshControlled(){
+  const team=localTeam||0;
+  const idx=match.teams[team].controlled;
+  if(idx===selectedIdx)return;
+  if(ring.parent)ring.parent.remove(ring);
+  selectedIdx=idx;
+  visuals[team][idx].root.add(ring);
+  const p=match.teams[team].players[idx];
+  cardEl.textContent='#'+(p.shirtNumber??PLAYER_ROSTERS[team][idx].number)+' '+(p.displayName||PLAYER_ROSTERS[team][idx].name)+' · '+(p.position||PLAYER_ROSTERS[team][idx].position)+' · OVR '+(p.overall??'--');
+}
+refreshControlled();
+
+// Stable build deliberately avoids the previous external skinned character.
+template=null;
+clipMap={};
+premiumRig=false;
+respawnVisuals();
+selectedIdx=-1;
+refreshControlled();
+statusEl.textContent='FC Mukeka Premium · modo estável · jogadores 3D leves';
+setTimeout(()=>statusEl.style.opacity='.55',2600);
+
+addEventListener('keydown',e=>{
+  if(e.code==='Escape'&&matchActive&&!presentation.active){
+    e.preventDefault();
+    if(summaryOpen)closeMatchSummary();
+    else if(teamScreenOpen)closeTeamScreen();
+    else openTeamScreen('roster');
+    return;
+  }
+  if(teamScreenOpen)return;
+  if(e.code==='Digit1')camMode='broadcast';
+  if(e.code==='Digit2')camMode='close';
+  if(e.code==='Digit3')camMode='tactical';
+});
+
+function inputMask(){
+  return devices.mask(0);
+}
+
+let camMode='broadcast',acc=0,last=performance.now(),focusX=0,lastKicker='';
+const visualEvents=[];
+const replayHistory=[];
+let replay={active:false,frames:[],started:0,duration:2.15};
+let cardToastUntil=0;
+let refToastUntil=0;
+
+function recordReplayFrame(){
+  if(!matchActive || match.tick%3!==0)return;
+  const frame={
+    tick:match.tick,
+    ball:{x:match.ball.x,y:match.ball.y,z:match.ball.z},
+    teams:match.teams.map(team=>team.players.map(p=>({x:p.x,y:p.y,dirX:p.dirX,dirY:p.dirY})))
+  };
+  replayHistory.push(frame);
+  if(replayHistory.length>60)replayHistory.shift();
+}
+
+function startGoalReplay(){
+  const frames=replayHistory.slice(-48);
+  if(frames.length<8)return;
+  replay={active:true,frames,started:performance.now()/1000,duration:2.15};
+  replayLabelEl.style.opacity='1';
+}
+
+function replayFrameNow(nowSec){
+  if(!replay.active)return null;
+  const t=(nowSec-replay.started)/replay.duration;
+  if(t>=1){
+    replay.active=false;
+    replayLabelEl.style.opacity='0';
+    return null;
+  }
+  const eased=Math.max(0,Math.min(.999,t));
+  const idx=Math.floor(eased*replay.frames.length);
+  return replay.frames[Math.min(replay.frames.length-1,idx)];
+}
+
+function queueVisualEvents(){
+  if(!match.events?.length)return;
+  for(const ev of match.events) visualEvents.push({...ev,tick:match.tick});
+  if(visualEvents.length>80)visualEvents.splice(0,visualEvents.length-80);
+}
+
+function processVisualEvents(){
+  while(visualEvents.length){
+    const ev=visualEvents.shift();
+    if(ev.type==='action' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playBallContactSound(['placed-shot','low-shot','power-shot','chip-shot'].includes(ev.kind)?'shot':ev.kind);
+      if(ev.kind==='throw-in')playAction(v,'throw-in',v.actions.ThrowIn?'ThrowIn':'Punch',.62,.46);
+      else if(ev.kind==='header')playAction(v,'header',v.actions.Header?'Header':(v.actions.Jump?'Jump':'Punch'),.58,.46);
+      else if(ev.kind==='volley')playAction(v,'volley',v.actions.Volley?'Volley':(v.actions.Shoot?'Shoot':'Punch'),.76,.36);
+      else if(['shot','placed-shot','low-shot','power-shot','chip-shot'].includes(ev.kind))playAction(v,ev.kind,v.actions.Shoot?'Shoot':'Punch',ev.kind==='power-shot'?.74:.68,.44);
+      else if(ev.kind==='cross')playAction(v,'cross',v.actions.Cross?'Cross':'Punch',.64,.48);
+      else if(ev.kind==='through')playAction(v,'through',v.actions.Through?'Through':(v.actions.Pass?'Pass':'Punch'),.52,.48);
+      else playAction(v,'pass',v.actions.Pass?'Pass':'Punch',.46,.46);
+    }else if(ev.type==='first-touch' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'first-touch',v.actions.FirstTouch?'FirstTouch':(v.actions.Dribble?'Dribble':'Walk'),.38,.18);
+    }else if(ev.type==='dribble' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'skill',v.actions.SkillTouch?'SkillTouch':(v.actions.Dribble?'Dribble':'Walk'),.44,.20);
+    }else if(ev.type==='tackle' && visuals[ev.team]?.[ev.idx]){
+      const v=visuals[ev.team][ev.idx];
+      playAction(v,'standing-tackle',v.actions.Tackle?'Tackle':'Punch',.34);
+    }else if(ev.type==='save'){
+      const v=visuals[ev.team]?.[ev.idx??0];
+      if(v){
+        const claim=ev.kind==='claim';
+        const clip=claim
+          ?(v.actions.Jump?'Jump':(v.actions.Save?'Save':'Punch'))
+          :ev.side<0
+            ?(v.actions.SaveLeft?'SaveLeft':(v.actions.Save?'Save':'Punch'))
+            :(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'));
+        playAction(v,'save',clip,claim?.58:.72,claim?.28:.44);
+        v.saveSide=claim?0:(ev.side||1);
+        v.saveParry=ev.kind==='parry';
+        v.saveHigh=!!ev.high;
+        if(ev.kind==='parry'||claim)playBallContactSound('save');
+      }
+    }else if(ev.type==='tactic'){
+      const teamName=ev.team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+      refToastEl.textContent=teamName+' · TÁTICA '+ev.label;
+      refToastUntil=performance.now()/1000+1.35;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='formation'){
+      const teamName=ev.team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+      refToastEl.textContent=teamName+' · FORMAÇÃO '+ev.label;
+      refToastUntil=performance.now()/1000+1.45;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='sub-pending'){
+      if(ev.team===localTeam){
+        refToastEl.textContent='SUBSTITUIÇÃO PREPARADA · '+ev.outName+' · PRÓXIMA PARADA';
+        refToastUntil=performance.now()/1000+1.7;
+        refToastEl.classList.add('show');
+      }
+    }else if(ev.type==='substitution'){
+      const teamName=ev.team===0?'PEDRA LISA':'INDEPENDÊNCIA';
+      refToastEl.textContent=teamName+' · SAI '+ev.outName+' · ENTRA '+ev.inName;
+      refToastUntil=performance.now()/1000+2.3;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='transition'){
+      if(ev.winner===localTeam){
+        refToastEl.textContent='CONTRA-ATAQUE · ATAQUE O ESPAÇO';
+        refToastUntil=performance.now()/1000+1.15;
+        refToastEl.classList.add('show');
+      }else if(ev.loser===localTeam){
+        refToastEl.textContent='PRESSÃO PÓS-PERDA';
+        refToastUntil=performance.now()/1000+1.0;
+        refToastEl.classList.add('show');
+      }
+    }else if(ev.type==='advantage'){
+      refToastEl.textContent='VANTAGEM · '+(ev.label||'SEGUE O JOGO');
+      refToastUntil=performance.now()/1000+1.8;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='advantage-end'){
+      if(ev.successful){
+        refToastEl.textContent='VANTAGEM CONFIRMADA · SEGUE O JOGO';
+        refToastUntil=performance.now()/1000+1.15;
+        refToastEl.classList.add('show');
+      }
+    }else if(ev.type==='foul-awarded'){
+      refToastEl.textContent=(ev.kind==='PENALTY'?'PÊNALTI':'FALTA')+(ev.label?' · '+ev.label:'');
+      refToastUntil=performance.now()/1000+1.65;
+      refToastEl.classList.add('show');
+    }else if(ev.type==='penalty-dive'){
+      const v=visuals[ev.team]?.[ev.idx??0];
+      if(v){
+        const s=ev.side||0;
+        const clip=s<0
+          ?(v.actions.SaveLeft?'SaveLeft':(v.actions.Save?'Save':'Punch'))
+          :s>0
+            ?(v.actions.SaveRight?'SaveRight':(v.actions.Save?'Save':'Punch'))
+            :(v.actions.Save?'Save':(v.actions.Jump?'Jump':'Punch'));
+        playAction(v,'save',clip,.72,.38);
+        v.saveSide=s;
+        v.saveParry=true;
+        v.saveHigh=false;
+      }
+    }else if(ev.type==='card'){
+      const roster=PLAYER_ROSTERS[ev.team]?.[ev.idx];
+      const red=ev.color==='red';
+      cardIconEl.classList.toggle('red',red);
+      cardTextEl.textContent=(red?'CARTÃO VERMELHO':'CARTÃO AMARELO')+' · '+(roster?.name||'JOGADOR')+(ev.reason?' · '+ev.reason:'');
+      cardToastUntil=performance.now()/1000+(red?3.2:2.4);
+      cardToastEl.classList.add('show');
+    }else if(ev.type==='whistle'){
+      playWhistle();
+      if(ev.kind==='half')openMatchSummary('half');
+      else if(ev.kind==='end')openMatchSummary('full');
+    }else if(ev.type==='goal'){
+      const gw=simToWorld(ev.x,ev.y,ev.z||0);
+      const side=gw.x<0?-1:1;
+      const net=goalNets.find(n=>n.side===side);
+      if(net){
+        net.pulse=1;
+        net.impactZ=gw.z;
+        net.impactY=gw.y;
+      }
+      startGoalReplay();
+      const team=ev.team;
+      const scorer=(match.ball.lastTouch?.team===team)?match.ball.lastTouch.idx:match.teams[team].controlled;
+      const order=[scorer,...Array.from({length:11},(_,i)=>i).filter(i=>i!==scorer)].slice(0,4);
+      order.forEach((idx,n)=>{
+        const v=visuals[team]?.[idx];if(!v)return;
+        const clip=v.actions.Celebrate?'Celebrate':(v.actions.Clapping?'Clapping':(v.actions.Jump?'Jump':'Idle'));
+        playAction(v,'celebrate',clip,1.15+n*.08);
+      });
+    }
+  }
+}
+function updateSetPieceGuide(nowSec){
+  const sp=match.setPiece;
+  setPieceTargetRing.visible=false;
+  setPieceAimRing.visible=false;
+
+  if(!sp || presentation.active || replay.active){
+    setPieceHelpEl.classList.remove('show');
+    return;
+  }
+
+  const names={
+    KICKOFF:'SAÍDA DE BOLA',
+    'THROW-IN':'LATERAL',
+    CORNER:'ESCANTEIO',
+    'GOAL KICK':'TIRO DE META',
+    'FREE KICK':'FALTA',
+    PENALTY:'PÊNALTI',
+    OFFSIDE:'IMPEDIMENTO · TIRO LIVRE'
+  };
+  const taker=PLAYER_ROSTERS[sp.team]?.[sp.taker];
+  const base=names[sp.kind]||sp.kind;
+  const foulSuffix=sp.foulLabel?' · '+sp.foulLabel:'';
+  setPieceBannerEl.textContent=base+foulSuffix+(taker?' · #'+taker.number+' '+taker.name:'');
+  setPieceBannerEl.classList.add('show');
+
+  let help='';
+  if(sp.team===localTeam){
+    const target=sp.targetIdx>=0?PLAYER_ROSTERS[sp.team]?.[sp.targetIdx]:null;
+    const targetLabel=target?' · ALVO: #'+target.number+' '+target.name:'';
+
+    if(sp.kind==='PENALTY'){
+      help='←/→ MIRA · ↑/↓ ALTURA · □ SEGURE E SOLTE PARA CHUTAR · TROCAR: COBRADOR';
+    }else if(sp.kind==='FREE KICK'||sp.kind==='OFFSIDE'){
+      help='←/→ MIRA · ↑/↓ ALTURA · □ CHUTE · △ TROCA ALVO · × PASSE · ○ CRUZAMENTO · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='CORNER'){
+      help='△ TROCA ALVO · × CURTO · ○ CRUZAMENTO · □ CRUZAMENTO FORTE · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='THROW-IN'){
+      help='△ TROCA COMPANHEIRO · × ARREMESSO · ○/□ ARREMESSO LONGO · TROCAR: COBRADOR'+targetLabel;
+    }else if(sp.kind==='GOAL KICK'){
+      help='△ TROCA ALVO · × SAÍDA CURTA · ○/□ LANÇAMENTO'+targetLabel;
+    }else if(sp.kind==='KICKOFF'){
+      help='× PASSE PARA COMEÇAR A PARTIDA';
+    }
+
+    if((sp.kind==='PENALTY'||sp.kind==='FREE KICK') && sp.team===localTeam){
+      const goalWorldX=match.teams[sp.team].attackDir<0?-FIELD_L/2:FIELD_L/2;
+      const targetSimX=FIELD.cx+(sp.aimX||0);
+      const wz=((targetSimX-FIELD.cx)/SIM_FIELD_W)*FIELD_W;
+      const maxLift=sp.kind==='PENALTY'?42:95;
+      const h=.55+Math.min(1,(sp.aimLift||0)/Math.max(1,maxLift))*1.55;
+      setPieceAimRing.position.set(goalWorldX-(goalWorldX>0?.05:-.05),h,wz);
+      setPieceAimRing.visible=true;
+      const pulse=1+Math.sin(nowSec*7)*.08;
+      setPieceAimRing.scale.setScalar(pulse);
+    }else if(sp.targetIdx>=0){
+      const tp=match.teams[sp.team]?.players?.[sp.targetIdx];
+      if(tp&&!tp.sentOff){
+        const w=simToWorld(tp.x,tp.y,0);
+        setPieceTargetRing.position.set(w.x,.06,w.z);
+        const pulse=1+Math.sin(nowSec*6)*.10;
+        setPieceTargetRing.scale.setScalar(pulse);
+        setPieceTargetRing.visible=true;
+      }
+    }
+  }else if(sp.kind==='PENALTY' && localTeam===1-sp.team){
+    const side=sp.keeperDive<0?'ESQUERDA':sp.keeperDive>0?'DIREITA':'CENTRO';
+    help='GOLEIRO: ←/→ ESCOLHE O CANTO · ↑/↓ VOLTA AO CENTRO · ATUAL: '+side;
+  }
+
+  setPieceHelpEl.textContent=help;
+  setPieceHelpEl.classList.toggle('show',!!help);
+}
+
+function setPieceCamera(nowSec,bw){
+  const sp=match.setPiece;
+  if(!sp || presentation.active || replay.active)return false;
+  const w=simToWorld(sp.x,sp.y,0);
+  const attackGoalX=match.teams[sp.team].attackDir<0?-FIELD_L/2:FIELD_L/2;
+
+  if(sp.kind==='PENALTY'){
+    camera.position.set(w.x+(attackGoalX>w.x?-9:9),4.1,w.z+8.6);
+    camera.fov=30;
+    camera.lookAt(attackGoalX,1.05,0);
+  }else if(sp.kind==='CORNER'){
+    camera.position.set(w.x+(attackGoalX>w.x?-7:7),5.8,w.z+(w.z>0?8:-8));
+    camera.fov=34;
+    camera.lookAt(attackGoalX,1.0,0);
+  }else if(sp.kind==='THROW-IN'){
+    camera.position.set(w.x,5.0,w.z+(w.z>0?13:-13));
+    camera.fov=35;
+    camera.lookAt(w.x,1.1,w.z);
+  }else if(sp.kind==='FREE KICK'||sp.kind==='OFFSIDE'){
+    camera.position.set(w.x+(attackGoalX>w.x?-8:8),5.2,w.z+7.4);
+    camera.fov=33;
+    camera.lookAt(attackGoalX,1.05,0);
+  }else if(sp.kind==='GOAL KICK'){
+    camera.position.set(w.x+(attackGoalX>w.x?10:-10),7.1,w.z+12);
+    camera.fov=36;
+    camera.lookAt(0,1.0,0);
+  }else{
+    camera.position.set(0,8.6,19);
+    camera.fov=34;
+    camera.lookAt(0,1.0,0);
+  }
+  camera.updateProjectionMatrix();
+  return true;
+}
+
+function animateStablePlayer(v,p,speed,ownsBall,actionActive,nowSec,dt,holdingThrow){
+  if(!v.procedural)return;
+  const k=1-Math.exp(-dt*18);
+  const move=THREE.MathUtils.clamp(speed/150,0,1.15);
+  v.limbPhase+=dt*(2.4+move*8.4);
+
+  let leftLeg=0,rightLeg=0,leftArm=0,rightArm=0;
+  let leftArmZ=0,rightArmZ=0,bodyY=0,bodyTilt=0;
+
+  if(p.slide>0){
+    bodyTilt=-.42;
+    leftLeg=.72;rightLeg=-.20;
+    leftArmZ=-.48;rightArmZ=.48;
+  }else if(holdingThrow){
+    leftArmZ=-2.35;rightArmZ=2.35;
+    leftArm=-.25;rightArm=-.25;
+    bodyTilt=-.06;
+  }else if(actionActive){
+    const q=THREE.MathUtils.clamp((nowSec-v.actionStarted)/Math.max(.01,v.actionDuration),0,1);
+    const hit=Math.sin(q*Math.PI);
+    if(['shot','placed-shot','low-shot','power-shot','chip-shot','kick','cross','pass','through'].includes(v.actionKind)){
+      rightLeg=-1.02*hit;
+      leftLeg=.22*hit;
+      leftArm=.44*hit;rightArm=-.48*hit;
+      bodyTilt=-.08*hit;
+    }else if(v.actionKind==='volley'){
+      rightLeg=-1.22*hit;leftLeg=.34*hit;
+      leftArm=.62*hit;rightArm=-.58*hit;
+      bodyTilt=-.16*hit;
+    }else if(v.actionKind==='header'){
+      leftArmZ=-.74*hit;rightArmZ=.74*hit;
+      leftArm=-.34*hit;rightArm=-.34*hit;
+      bodyTilt=-.12*hit;
+    }else if(v.actionKind==='save'){
+      leftArmZ=-1.45*hit;rightArmZ=1.45*hit;
+      leftArm=-.60*hit;rightArm=-.60*hit;
+      leftLeg=.26*hit;rightLeg=-.26*hit;
+    }else if(v.actionKind==='standing-tackle'){
+      rightLeg=-.78*hit;leftLeg=.18*hit;
+      bodyTilt=-.18*hit;
+    }else if(v.actionKind==='skill'){
+      leftLeg=Math.sin(q*Math.PI*2)*.48;
+      rightLeg=-leftLeg;
+      leftArm=-leftLeg*.55;rightArm=leftLeg*.55;
+    }else if(v.actionKind==='first-touch'){
+      rightLeg=-.50*hit;leftArm=.20*hit;rightArm=-.20*hit;
+    }else if(v.actionKind==='celebrate'){
+      leftArmZ=-2.35;rightArmZ=2.35;
+      bodyY=Math.abs(Math.sin(q*Math.PI*2))*.06;
+    }
+  }else if(p.down>0){
+    bodyTilt=-.30;
+    leftLeg=.28;rightLeg=-.22;
+  }else{
+    const swing=Math.sin(v.limbPhase)*(.12+.58*move);
+    leftLeg=swing;rightLeg=-swing;
+    leftArm=-swing*.72;rightArm=swing*.72;
+    bodyY=Math.abs(Math.cos(v.limbPhase))*.025*move;
+    bodyTilt=.035*move;
+    if(p.shielding&&ownsBall){
+      leftArmZ=-.42;rightArmZ=.30;
+      bodyTilt=.10;
+    }
+  }
+
+  v.legPivots[0].rotation.x=THREE.MathUtils.lerp(v.legPivots[0].rotation.x,leftLeg,k);
+  v.legPivots[1].rotation.x=THREE.MathUtils.lerp(v.legPivots[1].rotation.x,rightLeg,k);
+  v.armPivots[0].rotation.x=THREE.MathUtils.lerp(v.armPivots[0].rotation.x,leftArm,k);
+  v.armPivots[1].rotation.x=THREE.MathUtils.lerp(v.armPivots[1].rotation.x,rightArm,k);
+  v.armPivots[0].rotation.z=THREE.MathUtils.lerp(v.armPivots[0].rotation.z,leftArmZ,k);
+  v.armPivots[1].rotation.z=THREE.MathUtils.lerp(v.armPivots[1].rotation.z,rightArmZ,k);
+  v.body.position.y=THREE.MathUtils.lerp(v.body.position.y,bodyY,k);
+  v.body.rotation.x=THREE.MathUtils.lerp(v.body.rotation.x,bodyTilt,k);
+}
+
+function renderState(dt){
+  refreshControlled();
+  processVisualEvents();
+  const nowSec=performance.now()/1000;
+  const replayFrame=replayFrameNow(nowSec);
+  updateSetPieceGuide(nowSec);
+
+  for(let t=0;t<2;t++){
+    for(let i=0;i<11;i++){
+      const p=match.teams[t].players[i],v=visuals[t][i];
+      v.root.visible=!p.sentOff;
+      if(p.sentOff)continue;
+      const rp=replayFrame?.teams?.[t]?.[i];
+      const px=rp?rp.x:p.x,py=rp?rp.y:p.y,pdirX=rp?rp.dirX:p.dirX,pdirY=rp?rp.dirY:p.dirY;
+      const introPose=presentationPose(t,i,nowSec);
+      const w=introPose?{x:introPose.x,y:introPose.y,z:introPose.z}:simToWorld(px,py,0);
+      if(i===0 && !presentation.active){
+        // Keep the goalkeeper visually in front of the goal mouth when the
+        // simulation has him guarding the line. WebSoccer uses a much wider
+        // abstract goal than a 3D football pitch, so the clamp is presentation
+        // only and avoids the keeper appearing beside the posts.
+        const ownGoalX=match.teams[t].attackDir<0 ? -FIELD_L/2 : FIELD_L/2;
+        if(Math.abs(w.x-ownGoalX)<10){
+          w.z=THREE.MathUtils.clamp(w.z,-4.45,4.45);
+          w.x=ownGoalX + (ownGoalX>0?-1:1)*Math.max(.8,Math.abs(w.x-ownGoalX));
+        }
+      }
+      v.root.position.set(w.x,0,w.z);
+      const dx=-pdirY,dz=pdirX;
+      if(introPose)v.root.rotation.y=introPose.rot;
+      else if(Math.abs(dx)+Math.abs(dz)>.001)v.root.rotation.y=Math.atan2(dx,dz);
+
+      const speed=Math.hypot(p.vx,p.vy);
+      const ownsBall=!!(match.ball.owner && match.ball.owner.team===t && match.ball.owner.idx===i);
+      // Reset presentation-only action pose before applying the current one.
+      v.root.rotation.x=0;
+      v.root.rotation.z=0;
+      const actionActive=v.actionUntil>nowSec;
+
+      const holdingThrow=!!(match.setPiece?.kind==='THROW-IN'
+        && match.ball.owner?.team===t && match.ball.owner?.idx===i
+        && match.setPiece.team===t && match.setPiece.taker===i);
+
+      if(presentation.active && introPose){
+        if(introPose.mode==='walk'){
+          setAnim(v,v.actions.Walk?'Walk':'Run');
+          if(v.actions.Walk)v.actions.Walk.timeScale=1.05;
+        }else setAnim(v,'Idle');
+      }else if(holdingThrow && v.actions.ThrowHold){
+        setAnim(v,'ThrowHold');
+      }else if(p.slide>0){
+        setAnim(v,v.actions.Slide?'Slide':'Punch');
+        // A short forward body tilt makes the generic Punch clip read much more
+        // like a football slide without changing simulation/collision.
+        v.root.rotation.x=-.72;
+        v.root.position.y=.16;
+      }else if(actionActive){
+        const phase=Math.max(0,Math.min(1,(nowSec-v.actionStarted)/Math.max(.01,v.actionDuration)));
+        if(v.actionKind==='header'){
+          v.root.position.y+=Math.sin(phase*Math.PI)*.42;
+          v.root.rotation.x=-.12*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='save'){
+          const s=v.saveSide??1;
+          const parry=v.saveParry?1.25:1;
+          const high=v.saveHigh?1.18:1;
+          v.root.position.y+=Math.sin(phase*Math.PI)*.34*high;
+          v.root.position.z+=s*Math.sin(phase*Math.PI)*.72*parry;
+          v.root.rotation.z=-s*.52*Math.sin(phase*Math.PI)*parry;
+        }else if(v.actionKind==='volley'){
+          v.root.position.y+=Math.sin(phase*Math.PI)*.08;
+          v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
+        }else if(['shot','placed-shot','low-shot','power-shot','chip-shot'].includes(v.actionKind)||v.actionKind==='cross'){
+          const extra=v.actionKind==='power-shot'?1.45:v.actionKind==='chip-shot'?.72:1;
+          v.root.rotation.x=-.08*extra*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='standing-tackle'){
+          v.root.rotation.x=-.16*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='skill'){
+          v.root.rotation.z=.16*Math.sin(phase*Math.PI*2);
+        }else if(v.actionKind==='first-touch'){
+          v.root.rotation.x=-.06*Math.sin(phase*Math.PI);
+        }else if(v.actionKind==='celebrate'){
+          v.root.position.y+=Math.sin(phase*Math.PI*2)*.10;
+        }
+      }else if(p.charging && v.actions.Charge){
+        setAnim(v,'Charge');
+      }else if(p.shielding && ownsBall && v.actions.Shield){
+        setAnim(v,'Shield');
+      }else if(p.down>0)setAnim(v,v.actions.Knockdown?'Knockdown':'Idle');
+      else if(ownsBall && speed>12 && v.actions.Dribble){
+        setAnim(v,'Dribble');
+        v.actions.Dribble.timeScale=Math.min(1.35,Math.max(.72,speed/118));
+      }else if(speed>95){setAnim(v,'Run');if(v.actions.Run)v.actions.Run.timeScale=Math.min(1.35,Math.max(.7,speed/176))}
+      else if(speed>12){setAnim(v,'Walk');if(v.actions.Walk)v.actions.Walk.timeScale=Math.min(1.3,Math.max(.65,speed/90))}
+      else setAnim(v,'Idle');
+
+      animateStablePlayer(v,p,speed,ownsBall,actionActive,nowSec,dt,holdingThrow);
+    }
+  }
+
+  const rb=replayFrame?.ball;
+  const bw=simToWorld(rb?rb.x:match.ball.x,rb?rb.y:match.ball.y,rb?rb.z:match.ball.z);
+  if(!replayFrame && match.ball.owner){
+    const o=match.ball.owner;
+    const p=match.teams[o.team].players[o.idx];
+    const pw=simToWorld(p.x,p.y,0);
+    if(match.setPiece?.kind==='THROW-IN' && match.setPiece.team===o.team && match.setPiece.taker===o.idx){
+      ball.position.set(pw.x,1.98,pw.z);
+    }else{
+    const simDirX=p.skillTicks>0?p.skillDirX:p.dirX;
+    const simDirY=p.skillTicks>0?p.skillDirY:p.dirY;
+    const fx=-simDirY,fz=simDirX;
+    const fl=Math.hypot(fx,fz)||1;
+    const dx=fx/fl,dz=fz/fl;
+    const lx=-dz,lz=dx;
+    const speed=Math.hypot(p.vx,p.vy);
+    const stride=Math.sin(match.tick*.22);
+    const forward=p.shielding?.34:p.skillTicks>0?.78:p.firstTouchTicks>0?.70:(speed>18?.63:.48);
+    const side=p.shielding?stride*.055:(speed>18?stride*.12:0);
+    const bob=p.firstTouchTicks>0?.045:(speed>18?Math.abs(Math.sin(match.tick*.22))*.025:0);
+    ball.position.set(pw.x+dx*forward+lx*side,BALL_R+bob,pw.z+dz*forward+lz*side);
+    }
+  }else{
+    ball.position.set(bw.x,BALL_R+bw.y,bw.z);
+  }
+  ball.rotation.x+=match.ball.vy*dt*.006;
+  ball.rotation.z-=match.ball.vx*dt*.006;
+
+  const kicker=match.ball.kicker?match.ball.kicker.team+':'+match.ball.kicker.idx:'';
+  if(kicker&&kicker!==lastKicker){
+    const [t,i]=kicker.split(':').map(Number);
+    const v=visuals[t][i];
+    if(v && v.actionUntil<=performance.now()/1000)playAction(v,'kick',v.actions.Shoot?'Shoot':'Punch',.46,.44);
+  }
+  lastKicker=kicker;
+
+  const localStateTeam=match.teams[localTeam];
+  const cp=localStateTeam?.players?.[localStateTeam?.controlled??0];
+  const mentalityLabel=localStateTeam?.mentality<0?'DEFENSIVO':localStateTeam?.mentality>0?'OFENSIVO':'EQUILIBRADO';
+  tacticHudEl.textContent=mentalityLabel;
+  subsHudEl.textContent='SUB '+(localStateTeam?.subsUsed||0)+'/3';
+  if(cp){
+    const staminaPct=Math.round((cp.stamina??1000)/10);
+    staminaMiniFillEl.style.transform='scaleX('+Math.max(0,Math.min(1,staminaPct/100))+')';
+    cardEl.textContent='#'+(cp.shirtNumber??PLAYER_ROSTERS[localTeam][localStateTeam.controlled].number)+' '+(cp.displayName||PLAYER_ROSTERS[localTeam][localStateTeam.controlled].name)+' · '+(cp.position||PLAYER_ROSTERS[localTeam][localStateTeam.controlled].position)+' · OVR '+(cp.overall??'--')+' · ENERGIA '+staminaPct+'%';
+  }
+  if(touchDevice){
+    const localOwns=!!(match.ball.owner && match.ball.owner.team===localTeam);
+    if(match.setPiece?.team===localTeam)swapBtnEl.textContent='COBRADOR';
+    else swapBtnEl.textContent=localOwns?'PROTEGER':'TROCAR';
+  }
+  if(!replay.active && cp?.charging){
+    const pct=Math.min(100,(cp.charge/30)*100);
+    powerWrapEl.style.opacity='1';
+    powerFillEl.style.width=pct+'%';
+  }else{
+    powerWrapEl.style.opacity='0';
+    powerFillEl.style.width='0%';
+  }
+
+  scoreEl.textContent=match.score[0]+' — '+match.score[1];
+  const frac=Math.min(1,match.halfTick/Math.max(1,match.config.halfTicks));
+  const matchSeconds=Math.floor(frac*45*60);
+  clockEl.textContent=match.half+'T · '+String(Math.floor(matchSeconds/60)).padStart(2,'0')+':'+String(matchSeconds%60).padStart(2,'0');
+
+  const setPieceNames={
+    KICKOFF:'SAÍDA DE BOLA',
+    'THROW-IN':'LATERAL',
+    CORNER:'ESCANTEIO',
+    'GOAL KICK':'TIRO DE META',
+    'FREE KICK':'FALTA',
+    PENALTY:'PÊNALTI',
+    OFFSIDE:'IMPEDIMENTO · TIRO LIVRE'
+  };
+  const setPieceText=match.setPiece?setPieceNames[match.setPiece.kind]||match.setPiece.kind:'';
+  if(!match.setPiece){
+    setPieceBannerEl.textContent='';
+    setPieceBannerEl.classList.remove('show');
+    setPieceHelpEl.classList.remove('show');
+  }
+  if(cardToastUntil && nowSec>cardToastUntil){
+    cardToastUntil=0;
+    cardToastEl.classList.remove('show');
+  }
+  if(refToastUntil && nowSec>refToastUntil){
+    refToastUntil=0;
+    refToastEl.classList.remove('show');
+  }
+  const phaseText=match.message||((match.phase==='kickoff')?'INÍCIO':(match.phase==='halftime'?'INTERVALO':match.phase==='fulltime'?'FIM DE JOGO':''));
+  phaseEl.textContent=phaseText;
+  phaseEl.style.opacity=phaseText?'1':'0';
+
+  for(const n of goalNets){
+    if(n.pulse>0){
+      n.pulse=Math.max(0,n.pulse-dt*1.55);
+      const wave=Math.sin((1-n.pulse)*Math.PI*7)*n.pulse;
+      n.mesh.position.x=n.side*(.34*n.pulse+.12*wave);
+      n.mesh.scale.z=1+.035*wave;
+      n.mesh.scale.y=1+.018*Math.abs(wave);
+      n.mesh.material.opacity=.30+.18*n.pulse;
+    }else{
+      n.mesh.position.x=0;
+      n.mesh.scale.set(1,1,1);
+      n.mesh.material.opacity=.30;
+    }
+  }
+
+  const targetX=THREE.MathUtils.clamp(bw.x,-36,36);
+  focusX=THREE.MathUtils.lerp(focusX,targetX,1-Math.exp(-dt*4));
+  if(presentationCamera(nowSec)){
+    // Camera controlled by the pre-match sequence.
+  }else if(replay.active){
+    camera.position.set(bw.x-10,7.0,THREE.MathUtils.clamp(bw.z+15,-23,23));
+    camera.fov=34;
+    camera.lookAt(bw.x,1.05,bw.z);
+  }else if(setPieceCamera(nowSec,bw)){
+    // Dedicated broadcast framing while a restart is waiting to be taken.
+  }else{
+    if(camMode==='close'){camera.position.set(focusX,8.6,21.5);camera.fov=42}
+    else if(camMode==='tactical'){camera.position.set(focusX,32,48);camera.fov=38}
+    else{camera.position.set(focusX,13.6,30.5);camera.fov=36}
+    camera.lookAt(focusX,1.0,0);
+  }
+  camera.updateProjectionMatrix();
+
+  for(const m of mixers)m.update(dt);
+}
+
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
+  updatePresentation(now/1000);
+  if(uiPaused)acc=0;
+  let guard=0;
+  while(matchActive&&!uiPaused&&acc>=FRAME_TIME&&guard<8){
+    const tick=match.tick;
+    transport?.sample?.(tick);
+    if(transport?.ready && !transport.ready(tick))break;
+    step(match,transport?.poll?transport.poll(tick):[inputMask(),0]);
+    recordReplayFrame();
+    queueVisualEvents();
+    transport?.afterStep?.(match);
+    acc-=FRAME_TIME;guard++;
+  }
+  if(guard>=8)acc=0;
+  if(teamScreenOpen&&now-lastTeamScreenRender>220){
+    lastTeamScreenRender=now;
+    renderTeamScreen();
+  }
+  if(summaryOpen&&transport?.online&&summaryKind==='half'&&match.phase!=='halftime'){
+    closeMatchSummary();
+  }else if(summaryOpen&&now-lastTeamScreenRender>220){
+    renderMatchSummary();
+  }
+  renderState(dt);
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function connectSignal(){
+  signal?.close?.();
+  const s=new Signal(relayFor(location));
+  signal=s;
+  s.on('error',()=>lobbyStatusEl.textContent='Não foi possível conectar ao servidor de salas.');
+  s.on('close',()=>{if(!matchActive)lobbyStatusEl.textContent='Conexão com o servidor encerrada.'});
+  return s;
+}
+
+document.getElementById('playCpu').addEventListener('click',beginCpu);
+
+document.getElementById('createRoom').addEventListener('click',()=>{
+  const s=connectSignal();
+  lobbyStatusEl.textContent='Criando sala…';
+  s.on('room',m=>{
+    roomEl.hidden=false;
+    roomEl.textContent=m.code;
+    lobbyStatusEl.textContent='Envie este código ao seu amigo e aguarde.';
+  });
+  let started=false;
+  s.on('peer',()=>{
+    if(started)return;
+    started=true;
+    const seed=(Date.now()&0x7fffffff)||1;
+    s.send({t:'start',seed,halfSeconds:120,offside:true,formations:['433','433']});
+    beginOnline({seed,localTeam:0,signal:s});
+  });
+  s.create();
+});
+
+document.getElementById('joinRoom').addEventListener('click',()=>{
+  const code=document.getElementById('joinCode3d').value.toUpperCase().trim();
+  if(code.length<4){lobbyStatusEl.textContent='Digite o código de 4 letras.';return;}
+  const s=connectSignal();
+  lobbyStatusEl.textContent='Entrando na sala '+code+'…';
+  s.on('room',()=>lobbyStatusEl.textContent='Conectado. Aguardando o início da partida…');
+  s.on('start',m=>beginOnline({seed:m.seed,localTeam:1,signal:s}));
+  s.join(code);
+});
+
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>

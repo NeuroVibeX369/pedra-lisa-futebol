@@ -292,6 +292,26 @@ details[open] summary { color: #ffe14d; }
 
 details .keys { margin-top: 0; }
 
+/* --- FC Mukeka 2D Plus: match centre / tactics --------------------------- */
+.pauseMeta{margin:-8px 0 12px;color:#9fc7a8;font-size:11px;letter-spacing:1px}
+.pauseActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.panel.small .pauseActions button{width:auto;margin:0;padding:8px 5px;font-size:9px}
+.matchCenterPanel{width:min(860px,94vw)}
+.matchCenterHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.matchCenterHead h2{margin:0}.matchCenterHead .tag{margin:0 0 4px}
+.matchCenterHead button{white-space:nowrap}
+.matchCenterScore{margin:8px 0 14px;padding:10px;text-align:center;font-size:22px;font-weight:bold;letter-spacing:2px;background:#0c2414;border:1px solid #2f7a42}
+.matchCenterMotm{margin-bottom:12px;padding:10px 12px;background:#183a23;border-left:4px solid #ffe14d;color:#dce9df;font-size:12px;line-height:1.5}
+.matchCenterGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.matchCenterGrid h3{margin:0 0 8px;color:#ffe14d;font-size:12px;letter-spacing:1px}
+.matchStats2d,.playerRatings2d{display:grid;gap:6px}
+.stat2d{display:grid;grid-template-columns:44px 1fr 92px 1fr 44px;gap:7px;align-items:center;font-size:10px}
+.stat2d .label{text-align:center;color:#9fc7a8}.stat2d .value{text-align:center;font-weight:bold}
+.statBar2d{height:7px;background:#0b1c11;border:1px solid #234c2f;overflow:hidden}.statBar2d i{display:block;height:100%;background:#ffe14d}.statBar2d.away i{margin-left:auto;background:#dfe8e1}
+.rating2d{display:grid;grid-template-columns:32px 1fr 40px 46px;gap:7px;align-items:center;padding:7px 8px;background:#0c2414;border:1px solid #234c2f;font-size:10px}.rating2d.motm{border-color:#ffe14d}.rating2d .num{color:#ffe14d;font-weight:bold}.rating2d .name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rating2d .ovr{color:#9fc7a8;text-align:center}.rating2d .note{font-size:15px;font-weight:bold;text-align:center;color:#fff}
+.matchCenterFooter{display:flex;gap:8px;margin-top:14px}.matchCenterFooter button{flex:1}.matchCenterFooter .primary{margin-top:0}
+@media(max-width:700px){.matchCenterGrid{grid-template-columns:1fr}.matchCenterPanel{padding:16px}.matchCenterScore{font-size:16px}.playerRatings2d{max-height:180px;overflow:auto}.stat2d{grid-template-columns:34px 1fr 82px 1fr 34px}}
+
 /* --- touch controls --- */
 
 #touch {

@@ -47,8 +47,12 @@ export function assistedAim(state, teamIdx, playerIdx, dx, dy) {
   const p = team.players[playerIdx];
   if (aimedAtGoal(state, teamIdx, p, aim)) return { x: aim.x, y: aim.y };
 
+  const passRating = state.config?.premiumRatings ? (p.rating?.pas ?? 72) : null;
+  const cone = passRating === null ? CONE : Math.max(0.42, Math.min(0.58, 0.36 + passRating * 0.0022));
+  const strength = passRating === null ? STRENGTH : Math.max(0.66, Math.min(0.84, 0.56 + passRating * 0.0026));
+
   let best = null;
-  let bestAngle = CONE;
+  let bestAngle = cone;
   for (let i = 0; i < team.players.length; i++) {
     if (i === playerIdx) continue;
     const mate = team.players[i];
@@ -66,8 +70,8 @@ export function assistedAim(state, teamIdx, playerIdx, dx, dy) {
   if (!best) return { x: aim.x, y: aim.y };
 
   const bent = norm(
-    aim.x + (best.x - aim.x) * STRENGTH,
-    aim.y + (best.y - aim.y) * STRENGTH,
+    aim.x + (best.x - aim.x) * strength,
+    aim.y + (best.y - aim.y) * strength,
   );
   return { x: bent.x, y: bent.y };
 }

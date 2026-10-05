@@ -1,0 +1,541 @@
+{
+  "name": "Pedra Lisa",
+  "short_name": "PDL",
+  "league_id": 1,
+  "colors": {
+    "primary": [
+      23,
+      138,
+      60
+    ],
+    "secondary": [
+      255,
+      255,
+      255
+    ]
+  },
+  "logo": {
+    "source": "bundle",
+    "file": "logo.png"
+  },
+  "kit": {
+    "source": "bundle"
+  },
+  "flag": {
+    "source": "painted",
+    "orientation": "horizontal"
+  },
+  "formation": [
+    {
+      "role": "GK",
+      "position": [
+        -1,
+        0
+      ]
+    },
+    {
+      "role": "LB",
+      "position": [
+        -0.72,
+        0.78
+      ]
+    },
+    {
+      "role": "CB",
+      "position": [
+        -0.92,
+        0.28
+      ]
+    },
+    {
+      "role": "CB",
+      "position": [
+        -0.92,
+        -0.28
+      ]
+    },
+    {
+      "role": "RB",
+      "position": [
+        -0.72,
+        -0.78
+      ]
+    },
+    {
+      "role": "CM",
+      "position": [
+        -0.28,
+        0.26
+      ]
+    },
+    {
+      "role": "CM",
+      "position": [
+        -0.28,
+        -0.26
+      ]
+    },
+    {
+      "role": "LM",
+      "position": [
+        0.58,
+        0.82
+      ]
+    },
+    {
+      "role": "AM",
+      "position": [
+        0.18,
+        0
+      ]
+    },
+    {
+      "role": "RM",
+      "position": [
+        0.58,
+        -0.82
+      ]
+    },
+    {
+      "role": "CF",
+      "position": [
+        0.95,
+        0
+      ]
+    }
+  ],
+  "tactics": {
+    "dribble_centermagnet": 0.42,
+    "dribble_offensiveness": 0.72,
+    "position_defense_depth_factor": 0.56,
+    "position_defense_microfocus_strength": 0.48,
+    "position_defense_midfieldfocus": 0.62,
+    "position_defense_sidefocus_strength": 0.46,
+    "position_defense_width_factor": 0.74,
+    "position_offense_depth_factor": 0.5,
+    "position_offense_microfocus_strength": 0.64,
+    "position_offense_midfieldfocus": 0.68,
+    "position_offense_sidefocus_strength": 0.6,
+    "position_offense_width_factor": 0.72
+  },
+  "players": [
+    {
+      "first_name": "Olavo",
+      "last_name": "Lobão",
+      "role": "GK",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.8,
+      "weight": 77.8,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 1,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.76,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.56,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.66,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.48,
+        "technical_slidingtackle": 0.3,
+        "technical_ballcontrol": 0.5,
+        "technical_dribble": 0.28,
+        "technical_shortpass": 0.52,
+        "technical_highpass": 0.58,
+        "technical_header": 0.3,
+        "technical_shot": 0.18,
+        "technical_volley": 0.22,
+        "mental_calmness": 0.64,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.72,
+        "mental_offensivepositioning": 0.18,
+        "mental_vision": 0.58
+      },
+      "id": 9001
+    },
+    {
+      "first_name": "Neto",
+      "last_name": "Bode",
+      "role": "LB",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.6,
+      "weight": 57.3,
+      "skin_color": 3,
+      "hair_style": "short02",
+      "hair_color": "brown",
+      "formation_order": 2,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.66,
+        "physical_velocity": 0.64,
+        "physical_stamina": 0.7,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.64,
+        "technical_slidingtackle": 0.62,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.55,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.61,
+        "technical_header": 0.5,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.64,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.58
+      },
+      "id": 9002
+    },
+    {
+      "first_name": "Djha",
+      "last_name": "",
+      "role": "CB",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.7,
+      "weight": 70.7,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 3,
+      "profile": {
+        "physical_balance": 0.68,
+        "physical_reaction": 0.6,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.48,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.7,
+        "technical_slidingtackle": 0.68,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.36,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.55,
+        "technical_header": 0.7,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.74,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.58
+      },
+      "id": 9003
+    },
+    {
+      "first_name": "Bastiaozão",
+      "last_name": "Rei",
+      "role": "CB",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.8,
+      "weight": 81.5,
+      "skin_color": 1,
+      "hair_style": "bald",
+      "hair_color": "black",
+      "formation_order": 4,
+      "profile": {
+        "physical_balance": 0.68,
+        "physical_reaction": 0.6,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.48,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.7,
+        "technical_slidingtackle": 0.68,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.36,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.55,
+        "technical_header": 0.7,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.74,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.58
+      },
+      "id": 9004
+    },
+    {
+      "first_name": "Bruno",
+      "last_name": "",
+      "role": "RB",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.65,
+      "weight": 62.2,
+      "skin_color": 3,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 5,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.66,
+        "physical_velocity": 0.64,
+        "physical_stamina": 0.7,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.64,
+        "technical_slidingtackle": 0.62,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.55,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.61,
+        "technical_header": 0.5,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.64,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.58
+      },
+      "id": 9005
+    },
+    {
+      "first_name": "Manoel",
+      "last_name": "",
+      "role": "CM",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.65,
+      "weight": 61.5,
+      "skin_color": 2,
+      "hair_style": "short02",
+      "hair_color": "brown",
+      "formation_order": 6,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.56,
+        "physical_stamina": 0.68,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.66,
+        "technical_dribble": 0.55,
+        "technical_shortpass": 0.7,
+        "technical_highpass": 0.62,
+        "technical_header": 0.5,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.68,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.68
+      },
+      "id": 9006
+    },
+    {
+      "first_name": "Ronilton",
+      "last_name": "",
+      "role": "CM",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.7,
+      "weight": 66,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 7,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.56,
+        "physical_stamina": 0.68,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.66,
+        "technical_dribble": 0.55,
+        "technical_shortpass": 0.7,
+        "technical_highpass": 0.62,
+        "technical_header": 0.5,
+        "technical_shot": 0.5,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.68,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.5,
+        "mental_vision": 0.68
+      },
+      "id": 9007
+    },
+    {
+      "first_name": "Luciano",
+      "last_name": "",
+      "role": "AM",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.75,
+      "weight": 69.9,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 8,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.56,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.66,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.72,
+        "technical_dribble": 0.7,
+        "technical_shortpass": 0.72,
+        "technical_highpass": 0.64,
+        "technical_header": 0.5,
+        "technical_shot": 0.62,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.66,
+        "mental_vision": 0.74
+      },
+      "id": 9008
+    },
+    {
+      "first_name": "Helio",
+      "last_name": "",
+      "role": "LM",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.7,
+      "weight": 65.3,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 9,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.7,
+        "physical_velocity": 0.7,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.68,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.68,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.64,
+        "technical_header": 0.5,
+        "technical_shot": 0.56,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.6,
+        "mental_vision": 0.58
+      },
+      "id": 9009
+    },
+    {
+      "first_name": "Bastiaozinho",
+      "last_name": "",
+      "role": "CF",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.8,
+      "weight": 78.5,
+      "skin_color": 2,
+      "hair_style": "short01",
+      "hair_color": "black",
+      "formation_order": 10,
+      "profile": {
+        "physical_balance": 0.64,
+        "physical_reaction": 0.66,
+        "physical_acceleration": 0.58,
+        "physical_velocity": 0.56,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.57,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.64,
+        "technical_dribble": 0.6,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.55,
+        "technical_header": 0.66,
+        "technical_shot": 0.72,
+        "technical_volley": 0.64,
+        "mental_calmness": 0.64,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.74,
+        "mental_vision": 0.58
+      },
+      "id": 9010
+    },
+    {
+      "first_name": "Ricardo",
+      "last_name": "",
+      "role": "RM",
+      "age": 25,
+      "base_stat": 0.72,
+      "height": 1.7,
+      "weight": 64.6,
+      "skin_color": 3,
+      "hair_style": "short02",
+      "hair_color": "brown",
+      "formation_order": 11,
+      "profile": {
+        "physical_balance": 0.56,
+        "physical_reaction": 0.58,
+        "physical_acceleration": 0.7,
+        "physical_velocity": 0.7,
+        "physical_stamina": 0.6,
+        "physical_agility": 0.68,
+        "physical_shotpower": 0.55,
+        "technical_standingtackle": 0.5,
+        "technical_slidingtackle": 0.47,
+        "technical_ballcontrol": 0.58,
+        "technical_dribble": 0.68,
+        "technical_shortpass": 0.6,
+        "technical_highpass": 0.64,
+        "technical_header": 0.5,
+        "technical_shot": 0.56,
+        "technical_volley": 0.48,
+        "mental_calmness": 0.58,
+        "mental_workrate": 0.6,
+        "mental_resilience": 0.58,
+        "mental_defensivepositioning": 0.5,
+        "mental_offensivepositioning": 0.6,
+        "mental_vision": 0.58
+      },
+      "id": 9011
+    }
+  ]
+}

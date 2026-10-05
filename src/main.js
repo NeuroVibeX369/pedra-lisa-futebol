@@ -1,4 +1,4 @@
-import { FRAME_TIME, TICK_RATE } from './constants.js';
+import { FRAME_TIME, TICK_RATE, BTN, SUB_TARGET_BITS, PLAYER_ROSTERS } from './constants.js';
 import {
   ACTIONS, ACTION_LABELS, InputDevices, PRESETS, findConflicts, keyLabel, loadBindings, saveBindings,
 } from './input.js';
@@ -43,6 +43,7 @@ audio.enabled = soundOn;
 const KEYS_STORAGE = 'websoccer.bindings';
 const bindings = loadBindings(KEYS_STORAGE);
 const devices = new InputDevices(bindings);
+devices.premiumManagement = true;
 devices.attach();
 
 const touch = new TouchControls();
@@ -111,6 +112,8 @@ const game = {
   acc: 0,
   last: performance.now(),
   ended: false,
+  matchCenterKind: '',
+  halftimeShown: false,
 };
 
 // --- Starting a match -------------------------------------------------------
@@ -120,12 +123,15 @@ function beginMatch(state, transport) {
   game.transport = transport;
   game.paused = false;
   game.ended = false;
+  game.matchCenterKind = '';
+  game.halftimeShown = false;
   game.acc = 0;
   game.last = performance.now();
   renderer.updateCamera(state, true);
 
   menu.classList.add('hidden');
   pauseBox.classList.add('hidden');
+  matchCenterBox?.classList.add('hidden');
   netendBox.classList.add('hidden');
   canvas.focus();
   if (onTouchDevice) {
@@ -143,6 +149,10 @@ function startLocal({ players, halfSeconds }) {
     humans: [true, players === 2],
     difficulty,
     offside,
+    premiumAI: false,
+    premiumManagement: true,
+    premiumRatings: true,
+    premiumStats: true,
     formations: [lineups[0].spots, lineups[1].spots],
   });
   beginMatch(state, new LocalTransport(devices, players === 2 ? [0, 1] : [0]));
@@ -153,7 +163,12 @@ function startOnline(opts) {
   // Both teams are "human": no CPU, and exactly the same simulation on both
   // sides. Only the seed and the team assignment come from the host.
   const state = createMatch({
-    seed, halfSeconds, humans: [true, true], offside: opts.offside, formations: opts.formations,
+    seed, halfSeconds, humans: [true, true], offside: opts.offside,
+    premiumAI: false,
+    premiumManagement: true,
+    premiumRatings: true,
+    premiumStats: true,
+    formations: opts.formations,
   });
   const transport = new OnlineTransport({ signal, devices, localTeam });
   beginMatch(state, transport);
@@ -210,7 +225,10 @@ function frame(now) {
       game.acc -= FRAME_TIME;
       guard++;
     }
-    if (events.length) sfx.play(events);
+    if (events.length) {
+      sfx.play(events);
+      handle2dUiEvents(events);
+    }
 
     // Do not let the backlog grow: after a hiccup we catch up a few ticks, but
     // we never fast-forward through ten seconds of football.
@@ -221,6 +239,7 @@ function frame(now) {
   checkNetEnd();
 
   if (game.state.phase === 'fulltime' && !game.transport.online) {
+    if (!document.getElementById('matchCenter').classList.contains('hidden')) return;
     // The table comes first: pressing Enter to leave must not skip past the one
     // moment you earned.
     if (offerHighscore()) return;
@@ -739,6 +758,189 @@ document.getElementById('start').addEventListener('click', () => {
 
 document.getElementById('resume').addEventListener('click', () => setPaused(false));
 
+const matchCenterBox = document.getElementById('matchCenter');
+const matchCenterTitle = document.getElementById('matchCenterTitle');
+const matchCenterScore = document.getElementById('matchCenterScore');
+const matchCenterMotm = document.getElementById('matchCenterMotm');
+const matchStats2d = document.getElementById('matchStats2d');
+const playerRatings2d = document.getElementById('playerRatings2d');
+const pauseMeta = document.getElementById('pauseMeta');
+
+function clampMatchRating(v) { return Math.max(4, Math.min(10, v)); }
+
+function ratingForPlayer(record) {
+  const s = record.matchStats || {};
+  let r = 6.0;
+  r += (s.goals || 0) * 1.25 + (s.assists || 0) * 0.72;
+  r += (s.shotsOnTarget || 0) * 0.13;
+  r -= Math.max(0, (s.shots || 0) - (s.shotsOnTarget || 0)) * 0.045;
+  r += (s.tackles || 0) * 0.11 + (s.saves || 0) * 0.18;
+  r -= (s.fouls || 0) * 0.07 + (s.yellow || 0) * 0.18 + (s.red || 0) * 0.70;
+  if ((s.passes || 0) >= 5) {
+    const acc = (s.passesCompleted || 0) / Math.max(1, s.passes || 0);
+    r += Math.max(-0.28, Math.min(0.34, (acc - 0.72) * 1.25));
+    r += Math.min(0.22, (s.passesCompleted || 0) * 0.008);
+  }
+  return clampMatchRating(r);
+}
+
+function all2dPlayers() {
+  if (!game.state) return [];
+  const out = [];
+  for (let t = 0; t < 2; t++) {
+    const team = game.state.teams[t];
+    for (const rec of team.subArchive || []) out.push({ ...rec, team: t, archived: true });
+    for (const p of team.players) out.push({
+      team: t,
+      archived: false,
+      displayName: p.displayName,
+      shirtNumber: p.shirtNumber,
+      position: p.position || p.role.toUpperCase(),
+      overall: p.overall,
+      matchStats: p.matchStats || {},
+    });
+  }
+  return out;
+}
+
+function matchLeaders2d() {
+  return all2dPlayers()
+    .map((p) => ({ ...p, note: ratingForPlayer(p) }))
+    .sort((a, b) => b.note - a.note
+      || (b.matchStats?.goals || 0) - (a.matchStats?.goals || 0)
+      || (b.matchStats?.assists || 0) - (a.matchStats?.assists || 0)
+      || (b.overall || 0) - (a.overall || 0));
+}
+
+function statRow2d(label, a, b, ta = String(a), tb = String(b)) {
+  const total = Number(a) + Number(b);
+  const ap = total > 0 ? Number(a) / total * 100 : 50;
+  const bp = 100 - ap;
+  return '<div class="stat2d"><span class="value">' + ta + '</span>'
+    + '<span class="statBar2d"><i style="width:' + ap.toFixed(1) + '%"></i></span>'
+    + '<span class="label">' + label + '</span>'
+    + '<span class="statBar2d away"><i style="width:' + bp.toFixed(1) + '%"></i></span>'
+    + '<span class="value">' + tb + '</span></div>';
+}
+
+function renderMatchCenter2d() {
+  if (!game.state) return;
+  const st = game.state.matchStats?.teams || [{}, {}];
+  const a = st[0], b = st[1];
+  const possTotal = (a.possessionTicks || 0) + (b.possessionTicks || 0);
+  const pa = possTotal ? Math.round((a.possessionTicks || 0) / possTotal * 100) : 50;
+  const pb = 100 - pa;
+  const passA = a.passes ? Math.round((a.passesCompleted || 0) / a.passes * 100) : 0;
+  const passB = b.passes ? Math.round((b.passesCompleted || 0) / b.passes * 100) : 0;
+
+  matchCenterScore.textContent = 'PEDRA LISA ' + game.state.score[0] + ' - ' + game.state.score[1] + ' INDEPENDÊNCIA';
+  matchStats2d.innerHTML =
+    statRow2d('POSSE', pa, pb, pa + '%', pb + '%')
+    + statRow2d('CHUTES', a.shots || 0, b.shots || 0)
+    + statRow2d('NO GOL', a.shotsOnTarget || 0, b.shotsOnTarget || 0)
+    + statRow2d('PASSES', a.passes || 0, b.passes || 0)
+    + statRow2d('PRECISÃO', passA, passB, passA + '%', passB + '%')
+    + statRow2d('FALTAS', a.fouls || 0, b.fouls || 0)
+    + statRow2d('ESCANTEIOS', a.corners || 0, b.corners || 0)
+    + statRow2d('IMPED.', a.offsides || 0, b.offsides || 0)
+    + statRow2d('DEFESAS', a.saves || 0, b.saves || 0);
+
+  const leaders = matchLeaders2d();
+  const motm = leaders[0];
+  matchCenterMotm.innerHTML = motm
+    ? '<b>MELHOR EM CAMPO · ' + motm.note.toFixed(1) + '</b><br>#' + motm.shirtNumber + ' ' + motm.displayName
+      + ' · ' + (motm.team === 0 ? 'PEDRA LISA' : 'INDEPENDÊNCIA')
+    : 'A partida ainda não tem destaque definido.';
+
+  playerRatings2d.innerHTML = leaders.slice(0, 14).map((p, i) =>
+    '<div class="rating2d ' + (i === 0 ? 'motm' : '') + '">'
+      + '<span class="num">' + p.shirtNumber + '</span>'
+      + '<span class="name">' + p.displayName + '<br><small>' + (p.team === 0 ? 'PEDRA LISA' : 'INDEPENDÊNCIA') + ' · ' + p.position + '</small></span>'
+      + '<span class="ovr">OVR ' + (p.overall ?? '--') + '</span>'
+      + '<span class="note">' + p.note.toFixed(1) + '</span>'
+    + '</div>'
+  ).join('');
+}
+
+function localManagedTeam() {
+  return game.transport?.online ? game.transport.localTeam : 0;
+}
+
+function updatePauseMeta() {
+  if (!game.state) return;
+  const t = game.state.teams[localManagedTeam()];
+  const label = t.mentality < 0 ? 'DEFENSIVO' : t.mentality > 0 ? 'OFENSIVO' : 'EQUILIBRADO';
+  pauseMeta.textContent = label + ' · SUB ' + t.subsUsed + '/3';
+  document.getElementById('pauseDef').classList.toggle('active', t.mentality < 0);
+  document.getElementById('pauseBal').classList.toggle('active', t.mentality === 0);
+  document.getElementById('pauseAtt').classList.toggle('active', t.mentality > 0);
+}
+
+function applyPausedManagement(bits) {
+  if (!game.state || game.transport?.online) return;
+  devices.pulse(0, bits);
+  const inputs = [devices.mask(0), 0];
+  step(game.state, inputs);
+  game.state.teams[0].prevMask &= ~bits;
+  updatePauseMeta();
+  renderMatchCenter2d();
+}
+
+function openMatchCenter2d(kind = 'live') {
+  if (!game.state) return;
+  game.matchCenterKind = kind;
+  matchCenterTitle.textContent = kind === 'full' ? 'FIM DE JOGO' : kind === 'half' ? 'INTERVALO' : 'CENTRAL DA PARTIDA';
+  document.getElementById('matchCenterContinue').textContent = kind === 'full' ? 'FINALIZAR PARTIDA' : 'CONTINUAR';
+  matchCenterBox.classList.remove('hidden');
+  pauseBox.classList.add('hidden');
+  if (!game.transport?.online) game.paused = true;
+  if (onTouchDevice) touch.show(false);
+  renderMatchCenter2d();
+}
+
+function closeMatchCenter2d() {
+  matchCenterBox.classList.add('hidden');
+  if (game.matchCenterKind !== 'full' && !game.transport?.online) {
+    game.paused = false;
+    if (onTouchDevice) touch.show(true);
+  }
+  game.acc = 0;
+  canvas.focus();
+}
+
+function handle2dUiEvents(events) {
+  for (const ev of events) {
+    if (ev.type === 'whistle' && ev.kind === 'half' && !game.transport?.online && !game.halftimeShown) {
+      game.halftimeShown = true;
+      openMatchCenter2d('half');
+    }
+    if (ev.type === 'whistle' && ev.kind === 'end') openMatchCenter2d('full');
+  }
+}
+
+document.getElementById('openMatchCenter').addEventListener('click', () => openMatchCenter2d('live'));
+document.getElementById('closeMatchCenter').addEventListener('click', closeMatchCenter2d);
+document.getElementById('matchCenterContinue').addEventListener('click', () => {
+  if (game.matchCenterKind === 'full') {
+    matchCenterBox.classList.add('hidden');
+    game.paused = false;
+    if (!game.transport?.online && offerHighscore()) return;
+    toMenu();
+    return;
+  }
+  closeMatchCenter2d();
+});
+document.getElementById('matchCenterMenu').addEventListener('click', toMenu);
+document.getElementById('pauseDef').addEventListener('click', () => applyPausedManagement(BTN.MENTALITY_DEF));
+document.getElementById('pauseBal').addEventListener('click', () => applyPausedManagement(BTN.MENTALITY_BAL));
+document.getElementById('pauseAtt').addEventListener('click', () => applyPausedManagement(BTN.MENTALITY_ATT));
+document.getElementById('pauseSub').addEventListener('click', () => {
+  if (!game.state || game.transport?.online) return;
+  const team = game.state.teams[0];
+  const idx = team.controlled;
+  if (idx > 0 && SUB_TARGET_BITS[idx]) applyPausedManagement(SUB_TARGET_BITS[idx]);
+});
+
 document.getElementById('quit').addEventListener('click', toMenu);
 document.getElementById('netendQuit').addEventListener('click', toMenu);
 
@@ -875,6 +1077,13 @@ function setPaused(on) {
   if (!game.state || game.transport.online) return;
   game.paused = on;
   pauseBox.classList.toggle('hidden', !game.paused);
+  if (on) {
+    matchCenterBox.classList.add('hidden');
+    updatePauseMeta();
+    if (onTouchDevice) touch.show(false);
+  } else if (onTouchDevice) {
+    touch.show(true);
+  }
   game.acc = 0;
 }
 

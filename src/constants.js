@@ -231,7 +231,20 @@ export const AI_LEVELS = {
   },
 };
 
-export const BTN = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, FIRE: 16, SWITCH: 32 };
+export const BTN = {
+  UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8,
+  FIRE: 16, SWITCH: 32,
+  // Extra face-button actions used by Pedra Lisa PS2 Web. The classic 2D game
+  // keeps using FIRE/SWITCH, so its controls and deterministic replays remain
+  // compatible.
+  PASS: 64, SHOOT: 128, CROSS: 256, THROUGH: 512,
+  // Premium-only team-management actions. Classic 2D never emits these bits.
+  TACTIC_DOWN: 1024, TACTIC_UP: 2048, SUB: 4096,
+  MENTALITY_DEF: 8192, MENTALITY_BAL: 16384, MENTALITY_ATT: 32768,
+  FORMATION_PREV: 65536, FORMATION_NEXT: 131072,
+};
+
+export const SUB_TARGET_BITS = Array.from({ length: 11 }, (_, i) => 1 << (18 + i));
 
 export const TEAM_PRESETS = [
   { name: 'PEDRA LISA', shirt: '#178a3c', shorts: '#ffffff', trim: '#178a3c', skin: '#e8b98a', hair: '#3a2415' },
@@ -285,10 +298,10 @@ export const PLAYER_ROSTERS = [
     { name: 'Djha',             number: 2,  position: 'ZAG', skinTone: 1, hair: '#2a1a10', height: 0.96, build: 1.05 },
     { name: 'Bastiaozão Rei',   number: 4,  position: 'ZAG', skinTone: 0, hair: null, bald: true, height: 1.06, build: 1.08 },
     { name: 'Bruno',            number: 2,  position: 'LD',  skinTone: 3, hair: '#1d1109', height: 0.93, build: 0.98 },
-    { name: 'Manoel',           number: 6,  position: 'VOL', skinTone: 1, hair: '#5a3924', height: 0.93, build: 0.97 },
-    { name: 'Ronilton',         number: 8,  position: 'MEI', skinTone: 1, hair: '#2b1d16', height: 0.96, build: 0.98 },
+    { name: 'Manoel',           number: 6,  position: 'VOL', skinTone: 4, hair: '#221109', height: 0.93, build: 0.97 },
+    { name: 'Ronilton',         number: 8,  position: 'MEI', skinTone: 5, hair: '#1a0e06', height: 0.96, build: 0.98 },
     { name: 'Luciano',          number: 10, position: 'MEI', skinTone: 1, hair: '#2a1a10', height: 1.00, build: 0.98 },
-    { name: 'Helio',            number: 11, position: 'PE',  skinTone: 1, hair: '#201712', height: 0.96, build: 0.97 },
+    { name: 'Helio',            number: 11, position: 'PE',  skinTone: 0, hair: '#8a5a2b', height: 0.96, build: 0.97 },
     { name: 'Bastiaozinho',     number: 9,  position: 'ATA', skinTone: 1, hair: '#2a1a10', height: 1.06, build: 1.04 },
     { name: 'Ricardo',          number: 7,  position: 'PD',  skinTone: 2, hair: '#241811', height: 0.96, build: 0.96 },
   ],
@@ -306,6 +319,67 @@ export const PLAYER_ROSTERS = [
     { name: 'Clodoaldo',        number: 11, position: 'SA',  skinTone: 5, hair: '#1a0e06', height: 1.00, build: 0.99 },
   ],
 ];
+
+// FC Mukeka Premium player ratings. These first values are deliberately
+// provisional/balanced: they create different football profiles without claiming
+// to measure the real-life ability of the people represented by the roster.
+// VEL speed, FIN finishing, PAS passing, DRI ball control, DEF defending, FIS physical.
+// Goalkeepers additionally use DEFESA, REFLEXO, POSICIONAMENTO, SAÍDA and PÉS.
+export const PLAYER_RATINGS = [
+  [
+    { vel:62, fin:22, pas:70, dri:64, def:77, fis:76, gk:{ defesa:78, reflexo:77, pos:76, saida:74, pes:70 } },
+    { vel:80, fin:58, pas:73, dri:76, def:72, fis:69 },
+    { vel:71, fin:48, pas:70, dri:65, def:77, fis:78 },
+    { vel:68, fin:54, pas:69, dri:64, def:79, fis:82 },
+    { vel:78, fin:60, pas:72, dri:74, def:73, fis:70 },
+    { vel:70, fin:62, pas:76, dri:72, def:77, fis:76 },
+    { vel:74, fin:72, pas:79, dri:78, def:64, fis:71 },
+    { vel:72, fin:74, pas:80, dri:79, def:62, fis:72 },
+    { vel:82, fin:75, pas:73, dri:80, def:49, fis:69 },
+    { vel:76, fin:81, pas:68, dri:74, def:48, fis:80 },
+    { vel:83, fin:74, pas:72, dri:81, def:48, fis:68 },
+  ],
+  [
+    { vel:61, fin:21, pas:69, dri:63, def:77, fis:77, gk:{ defesa:77, reflexo:78, pos:75, saida:75, pes:69 } },
+    { vel:79, fin:62, pas:72, dri:75, def:73, fis:70 },
+    { vel:69, fin:50, pas:68, dri:64, def:78, fis:80 },
+    { vel:67, fin:52, pas:70, dri:63, def:79, fis:81 },
+    { vel:81, fin:59, pas:70, dri:75, def:72, fis:69 },
+    { vel:70, fin:63, pas:75, dri:71, def:77, fis:78 },
+    { vel:72, fin:64, pas:76, dri:73, def:76, fis:75 },
+    { vel:73, fin:73, pas:79, dri:78, def:63, fis:70 },
+    { vel:75, fin:72, pas:78, dri:77, def:62, fis:71 },
+    { vel:75, fin:80, pas:67, dri:73, def:47, fis:81 },
+    { vel:79, fin:76, pas:75, dri:78, def:50, fis:72 },
+  ],
+];
+
+export function overallFor(position, r) {
+  if (!r) return 70;
+  if (position === 'GOL' && r.gk) {
+    const g = r.gk;
+    return Math.round(
+      g.defesa * .24 + g.reflexo * .25 + g.pos * .21 + g.saida * .16 + g.pes * .14
+    );
+  }
+
+  const weights = {
+    ZAG: { vel:.13, fin:.03, pas:.10, dri:.06, def:.40, fis:.28 },
+    LE:  { vel:.24, fin:.07, pas:.17, dri:.13, def:.24, fis:.15 },
+    LD:  { vel:.24, fin:.07, pas:.17, dri:.13, def:.24, fis:.15 },
+    VOL: { vel:.12, fin:.07, pas:.24, dri:.13, def:.25, fis:.19 },
+    MEI: { vel:.12, fin:.16, pas:.30, dri:.24, def:.07, fis:.11 },
+    PE:  { vel:.28, fin:.20, pas:.15, dri:.27, def:.03, fis:.07 },
+    PD:  { vel:.28, fin:.20, pas:.15, dri:.27, def:.03, fis:.07 },
+    ATA: { vel:.22, fin:.35, pas:.08, dri:.16, def:.03, fis:.16 },
+    SA:  { vel:.20, fin:.28, pas:.16, dri:.22, def:.04, fis:.10 },
+  };
+  const w = weights[position] || { vel:.16, fin:.16, pas:.18, dri:.18, def:.16, fis:.16 };
+  return Math.round(
+    r.vel*w.vel + r.fin*w.fin + r.pas*w.pas +
+    r.dri*w.dri + r.def*w.def + r.fis*w.fis
+  );
+}
 
 export function kitFor(teamIdx, playerIdx) {
   const base = playerIdx === 0 ? KEEPER_KIT[teamIdx] : TEAM_PRESETS[teamIdx];

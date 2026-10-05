@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>FC Mukeka</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#12331d">
+  <!-- Installed to the home screen, the page opens without any browser chrome.
+       On an iPhone that is the only way to be rid of Safari's bars. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FC Mukeka">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="900" height="620" tabindex="0"></canvas>
+
+    <div id="touch" class="hidden">
+      <button id="btnPause" type="button" aria-label="Pause">II</button>
+      <div id="stick"><div id="knob"></div></div>
+      <div id="touchButtons">
+        <button id="btnSwap" type="button">SWITCH</button>
+        <button id="btnKick" type="button">KICK</button>
+      </div>
+    </div>
+
+    <div id="rotate">Turn your phone sideways to play</div>
+
+    <div id="menu" class="overlay">
+      <div class="panel">
+        <h1>FC <span>MUKEKA</span></h1>
+        <p class="tag">Mukeka Games &middot; futebol 2D &middot; local &amp; online</p>
+
+        <div class="row">
+          <label>Mode</label>
+          <div class="btns">
+            <button data-mode="1" class="active">Contra Máquina</button>
+            <button data-mode="2">2 no mesmo PC</button>
+            <button data-mode="online">Online contra amigo</button>
+          </div>
+        </div>
+
+        <div class="row" id="difficultyRow">
+          <label>Dificuldade</label>
+          <div class="btns">
+            <button data-difficulty="easy">Fácil</button>
+            <button data-difficulty="normal" class="active">Normal</button>
+            <button data-difficulty="hard">Difícil</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Sound</label>
+          <div class="btns">
+            <button data-music="on" class="active">On</button>
+            <button data-music="off">Off</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Commentary</label>
+          <div class="btns">
+            <button data-commentary="on" class="active">On</button>
+            <button data-commentary="off">Off</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Offside</label>
+          <div class="btns">
+            <button data-offside="on" class="active">On</button>
+            <button data-offside="off">Off</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="duration">Match length</label>
+          <select id="duration">
+            <option value="60">Short (2 &times; 1 min)</option>
+            <option value="120" selected>Normal (2 &times; 2 min)</option>
+            <option value="240">Long (2 &times; 4 min)</option>
+          </select>
+        </div>
+
+        <details id="controlsBox">
+        <summary>Controls</summary>
+        <table class="keys" id="keysTable">
+          <thead>
+            <tr><th></th><th>Jogador 1 (Pedra Lisa)</th><th id="p2head">Jogador 2 (Independência)</th></tr>
+          </thead>
+          <tbody id="keysBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>Presets</td>
+              <td><select data-preset="0" class="preset"></select></td>
+              <td><select data-preset="1" class="preset"></select></td>
+            </tr>
+          </tfoot>
+        </table>
+        <p id="bindHint" class="status">Click a key to change it.</p>
+        </details>
+
+        <details id="lineupBox">
+          <summary>Line-up <span id="lineupShape" class="shape">4-3-3</span></summary>
+          <div class="row" id="lineupTeamRow">
+            <label>Team</label>
+            <div class="btns">
+              <button data-lineupteam="0" class="active">Pedra Lisa</button>
+              <button data-lineupteam="1">Independência</button>
+            </div>
+          </div>
+          <div class="btns wrap" id="lineupPresets"></div>
+          <div class="pitchWrap">
+            <canvas id="lineupPitch" width="220" height="300"></canvas>
+          </div>
+          <p id="lineupNote" class="status"></p>
+          <p class="fineprint">
+            Drag anyone but the keeper. How far up the pitch you put a player is
+            what decides how he plays: push a midfielder forward and he stops
+            tracking back and starts hanging off the strikers.
+          </p>
+        </details>
+
+        <details id="scoresBox">
+          <summary>High scores <span id="scoresLevel" class="shape"></span></summary>
+          <table class="scores">
+            <tbody id="scoresBody"></tbody>
+          </table>
+          <p id="scoresNote" class="fineprint"></p>
+        </details>
+
+        <p id="iosHint" class="fineprint hidden"></p>
+
+        <div id="localSetup">
+
+          <details>
+          <summary>How it plays</summary>
+          <ul class="hints">
+            <li><b>Tap</b> for a pass along the ground, <b>hold</b> for a harder or lofted ball.</li>
+            <li><b>Aftertouch:</b> keep steering after the shot to bend the ball; forwards lifts it, backwards makes it dip.</li>
+            <li>The button <b>without the ball</b> is a slide tackle.</li>
+            <li>You automatically control whoever is nearest the ball.</li>
+            <li>Gamepads também funcionam (controle 1 &rarr; Pedra Lisa, controle 2 &rarr; Independência).</li>
+            <li><b>Esc</b> pausa e abre táticas, substituição e Central da Partida.</li>
+            <li><b>Z/X</b> alteram mentalidade; <b>C</b> prepara substituição do jogador atual.</li>
+          </ul>
+          </details>
+
+        </div>
+
+        <div id="onlineSetup" class="hidden">
+          <p class="explain">
+            One player opens a match and passes on the code; the other enters it.
+            Quem cria a sala joga com <b>Pedra Lisa</b>; quem entra pelo código joga com <b>Independência</b>.
+            You control your own team with either set of keys from the table above.
+          </p>
+
+          <div id="roomCode" class="code hidden"></div>
+          <p id="onlineStatus" class="status"></p>
+
+          <div class="joinrow">
+            <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+            <button id="join">JOIN</button>
+          </div>
+
+          <p class="fineprint">
+            Works between two browser tabs, between computers on the same network,
+            and across the internet once you host <code>server/relay.js</code> somewhere.
+          </p>
+        </div>
+        <div class="panelFooter">
+          <button id="start" class="primary">KICK OFF</button>
+          <button id="host" class="primary hidden">OPEN A NEW MATCH</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="hiscore" class="overlay hidden">
+      <div class="panel small">
+        <h2>HIGH SCORE</h2>
+        <p id="hiscoreLine" class="status"></p>
+        <div class="picker">
+          <div id="hiscoreUp" class="letterRow"></div>
+          <div id="hiscoreLetters" class="letters"></div>
+          <div id="hiscoreDown" class="letterRow"></div>
+        </div>
+        <button id="hiscoreOk" class="primary">OK</button>
+        <p class="fineprint">
+          Tap the arrows, or use the stick: up and down for the letter, left
+          and right to move along, kick to confirm. Typing works too.
+        </p>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="panel small">
+        <h2>PAUSADO</h2>
+        <div class="pauseMeta" id="pauseMeta">EQUILIBRADO · SUB 0/3</div>
+        <div class="pauseActions">
+          <button id="pauseDef">DEFENSIVO</button>
+          <button id="pauseBal">EQUILIBRADO</button>
+          <button id="pauseAtt">OFENSIVO</button>
+        </div>
+        <button id="pauseSub">SUBSTITUIR JOGADOR ATUAL</button>
+        <button id="openMatchCenter">CENTRAL DA PARTIDA</button>
+        <button id="resume" class="primary">CONTINUAR</button>
+        <button id="quit">Voltar ao menu</button>
+      </div>
+    </div>
+
+    <div id="matchCenter" class="overlay hidden">
+      <div class="panel matchCenterPanel">
+        <div class="matchCenterHead">
+          <div>
+            <div class="tag">FC MUKEKA · CENTRAL DA PARTIDA</div>
+            <h2 id="matchCenterTitle">INTERVALO</h2>
+          </div>
+          <button id="closeMatchCenter">FECHAR</button>
+        </div>
+        <div id="matchCenterScore" class="matchCenterScore">PEDRA LISA 0 - 0 INDEPENDÊNCIA</div>
+        <div id="matchCenterMotm" class="matchCenterMotm"></div>
+        <div class="matchCenterGrid">
+          <div>
+            <h3>ESTATÍSTICAS</h3>
+            <div id="matchStats2d" class="matchStats2d"></div>
+          </div>
+          <div>
+            <h3>NOTAS DOS JOGADORES</h3>
+            <div id="playerRatings2d" class="playerRatings2d"></div>
+          </div>
+        </div>
+        <div class="matchCenterFooter">
+          <button id="matchCenterContinue" class="primary">CONTINUAR</button>
+          <button id="matchCenterMenu">VOLTAR AO MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="netend" class="overlay hidden">
+      <div class="panel small">
+        <h2 id="netendTitle">CONNECTION LOST</h2>
+        <p id="netendText" class="status"></p>
+        <button id="netendQuit" class="primary">Back to menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
