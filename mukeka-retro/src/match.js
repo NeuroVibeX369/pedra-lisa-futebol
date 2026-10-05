@@ -1113,6 +1113,7 @@ export class Match {
   startShootout() {
     this.state = 'shootout';
     this.stateTimer = 0;
+    this.score = [0, 0];
     this.restart = null;
     this.pendingFoul = null;
     this.advantage = null;
@@ -1128,7 +1129,9 @@ export class Match {
       taker: null,
       keeper: null,
     };
-    this._showRefereeNotice('DISPUTA DE PÊNALTIS', 2.2);
+    if (this.hud.matchcard) this.hud.matchcard.classList.remove('show');
+    if (this.hud.statsCard) this.hud.statsCard.classList.remove('show');
+    this._showRefereeNotice('DISPUTA DE PÊNALTIS', 2.2, 'penalty');
     this._prepareShootoutKick();
   }
 
@@ -1789,7 +1792,7 @@ export class Match {
         // banco, expulsos e titulares originais sem reciclar objetos já trocados.
         const next = new URL(location.href);
         for (const key of ['start','mode','home','away','side','masterMatch',
-          'masterStage','online','room']) next.searchParams.delete(key);
+          'masterStage','cupRound','online','room']) next.searchParams.delete(key);
         location.href = next.toString();
         return;
       }
@@ -3411,6 +3414,18 @@ export class Match {
     const card = this.hud.statsCard;
     const body = this.hud.statsBody;
     if (!card || !body) return;
+    if (this.shootoutResult) {
+      const names = this._teamNames || ['', ''];
+      const p = this.shootoutResult;
+      body.innerHTML =
+        '<div class="st-row"><span class="st-a">' + p.home + '</span>' +
+        '<span class="st-label">PÊNALTIS</span><span class="st-b">' + p.away + '</span></div>';
+      const title = document.getElementById('stats-title');
+      if (title) title.textContent = `${names[0]} × ${names[1]}`;
+      card.classList.add('show');
+      return;
+    }
+
     const mark = this._statsMark || {}; // первого матча метка не нужна: нули
     const d = (k, i) => this.stats[k][i] - ((mark[k] && mark[k][i]) || 0);
     const live = this._possFrames[0] + this._possFrames[1];
