@@ -40,7 +40,7 @@ export class Signal {
       this.emit('close', {});
     };
     // transport: true means the socket itself failed, not the server rejecting us.
-    this.ws.onerror = () => this.emit('error', { msg: 'No connection to the server', transport: true });
+    this.ws.onerror = () => this.emit('error', { msg: 'Sem conexão com o servidor', transport: true });
   }
 
   on(type, fn) {
