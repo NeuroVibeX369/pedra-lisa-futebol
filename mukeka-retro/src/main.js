@@ -15,8 +15,8 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
-import { setupRetroOnlineTest } from './online.js?v=20261005e';
-import { setupPregame } from './pregame.js?v=20261005b';
+import { setupRetroOnlineTest } from './online.js?v=20261005f';
+import { setupPregame } from './pregame.js?v=20261005c';
 import { setupMasterLeague } from './master-league.js?v=20261005a';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
@@ -478,7 +478,8 @@ const retroOnline = setupRetroOnlineTest({
     const next = new URL(location.href);
     next.searchParams.set('side', localTeam === 1 ? 'away' : 'home');
     history.replaceState(null, '', next);
-    console.info('[Mukeka Retro online]', role, code, localTeam === 1 ? 'Independência' : 'Pedra Lisa');
+    const clubName = match?.teams?.[localTeam]?.data?.name || `TIME ${localTeam + 1}`;
+    console.info('[Mukeka Retro online]', role, code, clubName);
   },
   onExitOnline: () => pregame.openMenu(),
 });
