@@ -7,6 +7,7 @@ import {
 } from './clubs.js';
 
 const SAVE_KEY = 'mukeka.masterLiga.v1';
+const PENDING_KEY = 'mukeka.masterLiga.pendingMatch.v1';
 
 const TEAM_BY_ID = new Map(CLUBS.map((t) => [t.id, t]));
 
@@ -313,19 +314,24 @@ function payForUserMatch(state, home, away, hg, ag, stage) {
   state.notice = `Receita da partida: ${money(income)}.`;
 }
 
+function applyFixtureScore(state, fixture, table, stage, hg, ag) {
+  if (!fixture || fixture.played) return fixture;
+  fixture.played = true;
+  fixture.homeGoals = Math.max(0, Number(hg) || 0);
+  fixture.awayGoals = Math.max(0, Number(ag) || 0);
+  if (table) updateTable(table, fixture.home, fixture.away, fixture.homeGoals, fixture.awayGoals);
+  recordPlayerMatch(state, fixture.home, fixture.homeGoals, fixture.homeGoals > fixture.awayGoals,
+    `${fixture.id}-home-${state.season}`);
+  recordPlayerMatch(state, fixture.away, fixture.awayGoals, fixture.awayGoals > fixture.homeGoals,
+    `${fixture.id}-away-${state.season}`);
+  payForUserMatch(state, fixture.home, fixture.away, fixture.homeGoals, fixture.awayGoals, stage);
+  return fixture;
+}
+
 function simulateFixture(state, fixture, table, stage) {
   const [hg, ag] = simulateScore(state, fixture.home, fixture.away,
     `${state.season}-${stage}-${fixture.id}`);
-  fixture.played = true;
-  fixture.homeGoals = hg;
-  fixture.awayGoals = ag;
-  if (table) updateTable(table, fixture.home, fixture.away, hg, ag);
-  recordPlayerMatch(state, fixture.home, hg, hg > ag,
-    `${fixture.id}-home-${state.season}`);
-  recordPlayerMatch(state, fixture.away, ag, ag > hg,
-    `${fixture.id}-away-${state.season}`);
-  payForUserMatch(state, fixture.home, fixture.away, hg, ag, stage);
-  return fixture;
+  return applyFixtureScore(state, fixture, table, stage, hg, ag);
 }
 
 function currentLocalRound(state) {
@@ -478,7 +484,7 @@ function simulateGroupRound(state) {
 }
 
 function knockoutWinner(state, game, stage) {
-  simulateFixture(state, game, null, stage);
+  if (!game.played) simulateFixture(state, game, null, stage);
   if (game.homeGoals === game.awayGoals) {
     const hs = teamStrength(state, game.home);
     const as = teamStrength(state, game.away);
@@ -577,6 +583,79 @@ function nextUserFixture(state) {
   return list.find((f) => f.home === state.clubId || f.away === state.clubId) || null;
 }
 
+function pendingMatch() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingMatch(state, fixture) {
+  const pending = {
+    version: 1,
+    season: state.season,
+    stage: state.stage,
+    fixtureId: fixture.id,
+    group: fixture.group || null,
+    home: fixture.home,
+    away: fixture.away,
+  };
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify(pending)); } catch {}
+  return pending;
+}
+
+function clearPendingMatch() {
+  try { localStorage.removeItem(PENDING_KEY); } catch {}
+}
+
+function findPendingFixture(state, pending) {
+  if (!pending || pending.season !== state.season || pending.stage !== state.stage) return null;
+  let pool = [];
+  if (state.stage === 'local') pool = state.fixtures;
+  else if (state.stage === 'regional-groups') pool = state.groupFixtures;
+  else if (state.knockout) pool = state.knockout.fixtures;
+  return pool.find((f) => f.id === pending.fixtureId &&
+    f.home === pending.home && f.away === pending.away) || null;
+}
+
+function completePlayedMatch(state, score) {
+  const pending = pendingMatch();
+  const fixture = findPendingFixture(state, pending);
+  if (!fixture || fixture.played || !Array.isArray(score) || score.length < 2) {
+    clearPendingMatch();
+    return null;
+  }
+
+  const hg = Math.max(0, Number(score[0]) || 0);
+  const ag = Math.max(0, Number(score[1]) || 0);
+  let table = null;
+  if (state.stage === 'local') table = state.table;
+  else if (state.stage === 'regional-groups') table = state.groupTables[fixture.group];
+
+  applyFixtureScore(state, fixture, table, state.stage, hg, ag);
+
+  // Depois do jogo real, os demais confrontos da mesma rodada continuam
+  // sendo simulados pelo motor da carreira. O confronto do usuário já está
+  // marcado como jogado, então não é sobrescrito.
+  if (state.stage === 'local') simulateLocalRound(state);
+  else if (state.stage === 'regional-groups') simulateGroupRound(state);
+  else if (state.stage.startsWith('knockout-')) advanceKnockout(state);
+  else if (state.stage === 'champions') simulateChampions(state);
+
+  clearPendingMatch();
+  saveState(state);
+  return {
+    home: pending.home,
+    away: pending.away,
+    homeName: teamName(pending.home),
+    awayName: teamName(pending.away),
+    homeGoals: hg,
+    awayGoals: ag,
+  };
+}
+
 function topPlayers(state, key) {
   return Object.values(state.squads).flat().sort((a, b) =>
     (b[key] || 0) - (a[key] || 0) || b.overall - a.overall).slice(0, 10);
@@ -618,8 +697,9 @@ export function setupMasterLeague() {
         <h3>PRÓXIMO COMPROMISSO</h3>
         <p>${fixture ? `${teamName(fixture.home)} × ${teamName(fixture.away)}` : 'Aguardando definição da próxima fase.'}</p>
         <small>${currentStageLabel(state)}</small>
+        ${fixture ? '<button id="ml-play" class="ml-main" type="button">JOGAR PARTIDA 3D</button>' : ''}
         <button id="ml-next" class="ml-main" type="button">SIMULAR PRÓXIMA RODADA</button>
-        <p class="ml-note">Nesta primeira base da Master Liga, o motor de temporada já funciona por simulação. O próximo passo é ligar “JOGAR PARTIDA” ao campo 3D.</p>
+        <p class="ml-note">Você pode jogar o confronto do Pedra Lisa no campo 3D ou simular a rodada completa.</p>
       </div>
       <div class="ml-card">
         <h3>OBJETIVO DA TEMPORADA</h3>
@@ -761,7 +841,26 @@ export function setupMasterLeague() {
       });
     });
 
+    document.getElementById('ml-play')?.addEventListener('click', () => {
+      const fixture = nextUserFixture(state);
+      if (!fixture) return;
+      savePendingMatch(state, fixture);
+      persist();
+
+      const next = new URL(location.href);
+      next.searchParams.delete('online');
+      next.searchParams.delete('room');
+      next.searchParams.set('mode', 'master');
+      next.searchParams.set('home', fixture.home);
+      next.searchParams.set('away', fixture.away);
+      next.searchParams.set('side', fixture.home === state.clubId ? 'home' : 'away');
+      next.searchParams.set('start', '1');
+      next.searchParams.set('masterMatch', fixture.id);
+      location.href = next.toString();
+    });
+
     document.getElementById('ml-next')?.addEventListener('click', () => {
+      clearPendingMatch();
       simulateNext(state);
       render();
     });
@@ -839,5 +938,14 @@ export function setupMasterLeague() {
     openHub,
     closeHub,
     get state() { return state; },
+    completePlayedMatch(score) {
+      if (!state) return null;
+      const result = completePlayedMatch(state, score);
+      if (result) {
+        state = loadState() || state;
+        tab = 'overview';
+      }
+      return result;
+    },
   };
 }
