@@ -275,19 +275,20 @@ export const SKIN_TONES = [
  * `id` is the sprite cache key: players sharing a kit and a tone share sprites,
  * so this costs a dozen little canvases, not twenty-two sets of them.
  */
-// Dados visuais dos atletas. Não alteram física, velocidade, colisões, chute,
-// IA nem a simulação determinística do modo online.
+// Visual player data only. These values do not change physics, speed,
+// collisions, kicking, AI, or deterministic online simulation.
+// skinTone indexes SKIN_TONES. height/build are render-only multipliers.
 export const PLAYER_ROSTERS = [
   [
     { name: 'Olavo Lobão',      number: 1,  position: 'GOL', skinTone: 1, hair: '#2a1a10', height: 1.06, build: 1.03 },
     { name: 'Neto Bode',        number: 6,  position: 'LE',  skinTone: 2, hair: '#241811', height: 0.90, build: 0.96 },
-    { name: 'Djha',             number: 3,  position: 'ZAG', skinTone: 1, hair: '#2a1a10', height: 0.96, build: 1.05 },
+    { name: 'Djha',             number: 2,  position: 'ZAG', skinTone: 1, hair: '#2a1a10', height: 0.96, build: 1.05 },
     { name: 'Bastiaozão Rei',   number: 4,  position: 'ZAG', skinTone: 0, hair: null, bald: true, height: 1.06, build: 1.08 },
     { name: 'Bruno',            number: 2,  position: 'LD',  skinTone: 3, hair: '#1d1109', height: 0.93, build: 0.98 },
-    { name: 'Manoel',           number: 5,  position: 'VOL', skinTone: 1, hair: '#5a3924', height: 0.93, build: 0.97 },
+    { name: 'Manoel',           number: 6,  position: 'VOL', skinTone: 1, hair: '#5a3924', height: 0.93, build: 0.97 },
     { name: 'Ronilton',         number: 8,  position: 'MEI', skinTone: 1, hair: '#2b1d16', height: 0.96, build: 0.98 },
     { name: 'Luciano',          number: 10, position: 'MEI', skinTone: 1, hair: '#2a1a10', height: 1.00, build: 0.98 },
-    { name: 'Hélio',            number: 11, position: 'PE',  skinTone: 1, hair: '#201712', height: 0.96, build: 0.97 },
+    { name: 'Helio',            number: 11, position: 'PE',  skinTone: 1, hair: '#201712', height: 0.96, build: 0.97 },
     { name: 'Bastiaozinho',     number: 9,  position: 'ATA', skinTone: 1, hair: '#2a1a10', height: 1.06, build: 1.04 },
     { name: 'Ricardo',          number: 7,  position: 'PD',  skinTone: 2, hair: '#241811', height: 0.96, build: 0.96 },
   ],

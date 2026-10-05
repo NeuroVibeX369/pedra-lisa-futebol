@@ -77,8 +77,8 @@ const installed = globalThis.navigator?.standalone === true
 if (onIOS && !installed) {
   const hint = document.getElementById('iosHint');
   if (hint) {
-    hint.textContent = 'iPhone: o Safari mantém as barras na tela. Compartilhar → Adicionar à Tela de Início, '
-      + 'e o jogo abrirá usando a tela inteira.';
+    hint.textContent = 'iPhone: Safari always keeps its bars. Share → Add to Home Screen, '
+      + 'and it opens with the whole screen to itself.';
     hint.classList.remove('hidden');
   }
 }
@@ -335,7 +335,7 @@ function offerHighscore() {
   pending.difficulty = difficulty;
   pending.open = true;
   document.getElementById('hiscoreLine').textContent
-    = `${game.state.score[0]} - ${game.state.score[1]} contra ${difficultyLabel(difficulty).toUpperCase()}: posição ${place}`;
+    = `${game.state.score[0]} - ${game.state.score[1]} against ${difficulty.toUpperCase()}: number ${place}`;
   hiscoreBox.classList.remove('hidden');
   // Out of the way while the picker is up. They sit under this panel and
   // cannot be reached anyway, and a control showing through an overlay that
@@ -384,7 +384,7 @@ async function syncScores() {
 
 function renderScores(level, freshPlace = 0) {
   const body = document.getElementById('scoresBody');
-  document.getElementById('scoresLevel').textContent = difficultyLabel(level).toUpperCase();
+  document.getElementById('scoresLevel').textContent = level.toUpperCase();
   body.innerHTML = '';
   const rows = highscores.table(level);
   for (let i = 0; i < rows.length; i++) {
@@ -406,8 +406,8 @@ function renderScores(level, freshPlace = 0) {
     body.appendChild(tr);
   }
   document.getElementById('scoresNote').textContent = rows.length
-    ? 'As maiores vitórias aparecem primeiro. Vença a CPU para entrar no ranking; empate conta, derrota não.'
-    : 'Ainda não há resultados. Enfrente a CPU nesta dificuldade e conquiste seu lugar no ranking.';
+    ? 'Biggest win first. Beat the CPU to get on the board - a draw counts, a defeat does not.'
+    : 'Nothing here yet. Beat the CPU at this level and the board is yours.';
 }
 
 function netInfo() {
@@ -433,13 +433,13 @@ function checkNetEnd() {
   let title;
   let text;
   if (t.desync) {
-    title = 'DESSINCRONIZAÇÃO';
-    text = 'Os dois jogadores chegaram a estados diferentes da partida. O jogo foi interrompido.';
+    title = 'DESYNC';
+    text = 'The two players computed a different match state. The match has been stopped.';
   } else if (t.peerLeft) {
-    title = 'ADVERSÁRIO DESCONECTADO';
-    text = 'A conexão com o adversário foi perdida.';
+    title = 'OPPONENT GONE';
+    text = 'The connection to your opponent has been lost.';
   } else {
-    title = 'FIM DE JOGO';
+    title = 'FULL TIME';
     text = `${game.state.teams[0].name} ${game.state.score[0]} - ${game.state.score[1]} ${game.state.teams[1].name}`;
   }
 
@@ -481,9 +481,9 @@ function renderBindings() {
       button.className = 'bind';
       button.dataset.bind = id;
       button.textContent = listeningFor && listeningFor.slot === slot && listeningFor.action === action
-        ? 'pressione uma tecla'
+        ? 'press a key'
         : keyLabel(bindings[slot][action]);
-      if (listeningFor && button.textContent === 'pressione uma tecla') button.classList.add('listening');
+      if (listeningFor && button.textContent === 'press a key') button.classList.add('listening');
       if (clashing.has(id)) button.classList.add('clash');
       button.addEventListener('click', () => startListening(slot, action));
       cell.appendChild(button);
@@ -506,22 +506,22 @@ function renderBindings() {
     if (!current) {
       const option = document.createElement('option');
       option.value = 'custom';
-      option.textContent = 'Personalizado';
+      option.textContent = 'Custom';
       option.selected = true;
       select.appendChild(option);
     }
   }
 
   if (clashing.size) {
-    setBindHint('Essas teclas estão repetidas. Para dois jogadores, cada um precisa usar teclas diferentes.', true);
+    setBindHint('Those keys overlap. Fine for one player, but two players need separate keys.', true);
   } else if (!listeningFor) {
-    setBindHint('Clique em uma tecla para alterá-la.');
+    setBindHint('Click a key to change it.');
   }
 }
 
 function startListening(slot, action) {
   listeningFor = { slot, action };
-  setBindHint('Pressione a tecla desejada ou Esc para cancelar.');
+  setBindHint('Press the key you want to use, or Escape to cancel.');
   renderBindings();
 }
 
@@ -567,11 +567,6 @@ renderBindings();
 let mode = '1';
 let difficulty = 'normal';
 let offside = true;
-
-const DIFFICULTY_LABELS = { easy: 'Fácil', normal: 'Normal', hard: 'Difícil' };
-function difficultyLabel(level) {
-  return DIFFICULTY_LABELS[level] || String(level);
-}
 
 // --- Line-ups ---------------------------------------------------------------
 //
@@ -640,7 +635,7 @@ function renderLineup() {
   editor.set(current.spots, KITS[editing]);
   lineupShape.textContent = shapeOf(current.spots);
   lineupNote.textContent = current.key === 'custom'
-    ? 'Sua formação personalizada. Escolha uma predefinição acima para recomeçar.'
+    ? 'Your own line-up. Pick a preset above to start again.'
     : presetFor(current.key).note;
   lineupPresets.querySelectorAll('button').forEach((b) => {
     b.classList.toggle('active', b.dataset.lineup === current.key);
@@ -736,7 +731,7 @@ document.getElementById('start').addEventListener('click', () => {
   const players = Number(mode);
   // Sharing keys is fine for one player, impossible for two.
   if (players === 2 && findConflicts(bindings).length) {
-    setBindHint('Os dois jogadores estão usando as mesmas teclas. Defina teclas diferentes para cada um.', true);
+    setBindHint('Both players are using the same keys. Give them separate ones first.', true);
     return;
   }
   startLocal({ players, halfSeconds: halfSeconds() });
@@ -765,15 +760,16 @@ function relayUrl() {
   return relayFor(location);
 }
 
-const NO_RELAY_HINT = 'Não foi possível acessar o servidor da partida online. '
-  + 'O modo local continua disponível normalmente. Para jogar online, é necessário configurar o servidor relay.';
+const NO_RELAY_HINT = 'Could not reach a relay server. This page is hosted as static files, '
+  + 'so online play needs a relay running somewhere: start one with "npm start" and add '
+  + '?relay=wss://your-relay to this URL. One and two player modes work without it.';
 
 function connect() {
   // An earlier attempt (say a room nobody ever joined) must not linger.
   if (game.signal) game.signal.close();
   const signal = new Signal(relayUrl());
   game.signal = signal;
-  signal.on('error', (m) => setOnlineStatus(m.transport ? NO_RELAY_HINT : (m.msg || 'Erro de conexão')));
+  signal.on('error', (m) => setOnlineStatus(m.transport ? NO_RELAY_HINT : (m.msg || 'Connection error')));
   signal.on('close', () => {
     if (!game.state) setOnlineStatus(NO_RELAY_HINT);
   });
@@ -789,7 +785,7 @@ document.getElementById('host').addEventListener('click', () => {
   signal.on('room', (m) => {
     roomCode.textContent = m.code;
     roomCode.classList.remove('hidden');
-    setOnlineStatus('Compartilhe este código e aguarde o adversário...');
+    setOnlineStatus('Share this code and wait for your opponent...');
   });
 
   // The guest sends his line-up the moment he joins. We wait a moment for it,
@@ -833,13 +829,13 @@ document.getElementById('join').addEventListener('click', () => {
   goFullscreen();
   const code = document.getElementById('joinCode').value.toUpperCase().trim();
   if (code.length < 4) {
-    setOnlineStatus('Digite o código de quatro caracteres.');
+    setOnlineStatus('Enter the four-character code.');
     return;
   }
   const signal = connect();
 
   signal.on('room', () => {
-    setOnlineStatus('Conectado. Aguardando o início da partida...');
+    setOnlineStatus('Connected. Waiting for kickoff...');
     // Ours to declare, before the host decides what the match looks like.
     signal.send({ t: 'lineup', spots: lineups[0].spots.map(({ x, y }) => ({ x, y })) });
   });
@@ -856,7 +852,7 @@ document.getElementById('join').addEventListener('click', () => {
     });
   });
 
-  setOnlineStatus('Conectando...');
+  setOnlineStatus('Connecting...');
   signal.join(code);
 });
 

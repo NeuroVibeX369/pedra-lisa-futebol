@@ -162,7 +162,7 @@ export class Renderer {
       ctx.closePath();
       ctx.fill();
 
-      // Nome e número do atleta controlado.
+      // Name/number only for the controlled player; cosmetic only.
       if (appearance.name) {
         const label = `${appearance.number ?? ''} ${appearance.name}`.trim();
         const nameAt = this.toScreen(p.x, p.y - PLAYER_R - 16);
@@ -226,8 +226,8 @@ export class Renderer {
     for (let t = 0; t < 2; t++) {
       const team = state.teams[t];
       let who;
-      if (net) who = t === net.team ? 'VOCÊ' : 'ADVERSÁRIO';
-      else who = team.human ? `JOGADOR ${t + 1}` : 'CPU';
+      if (net) who = t === net.team ? 'YOU' : 'OPPONENT';
+      else who = team.human ? `PLAYER ${t + 1}` : 'CPU';
       ctx.fillStyle = TEAM_PRESETS[t].shirt;
       ctx.fillRect(12, y - 6, 10, 10);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -250,7 +250,7 @@ export class Renderer {
 
     if (net.stalling && !net.peerLeft && !net.desync) {
       const W = this.canvas.width;
-      const text = 'AGUARDANDO ADVERSÁRIO';
+      const text = 'WAITING FOR OPPONENT';
       ctx.font = 'bold 15px "Courier New", monospace';
       ctx.textAlign = 'center';
       const w = ctx.measureText(text).width + 24;
@@ -303,20 +303,11 @@ export class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const DISPLAY_MESSAGES = {
-      'HALF TIME': 'INTERVALO',
-      OFFSIDE: 'IMPEDIMENTO',
-      'THROW-IN': 'LATERAL',
-      CORNER: 'ESCANTEIO',
-      'GOAL KICK': 'TIRO DE META',
-      'GOAL!': 'GOL!',
-      'FULL TIME': 'FIM DE JOGO',
-    };
-    let text = DISPLAY_MESSAGES[state.message] || state.message;
+    let text = state.message;
     if (state.phase === 'goal') {
-      text = `GOL DO ${state.teams[state.lastGoalTeam].name}!`;
+      text = `${state.teams[state.lastGoalTeam].name} SCORES!`;
     } else if (state.phase === 'fulltime') {
-      text = `FIM DE JOGO  ${state.score[0]} - ${state.score[1]}`;
+      text = `FULL TIME  ${state.score[0]} - ${state.score[1]}`;
     }
 
     ctx.font = 'bold 44px "Courier New", monospace';
@@ -330,7 +321,7 @@ export class Renderer {
       // Online gets its own overlay with a button instead.
       ctx.font = 'bold 16px "Courier New", monospace';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('Pressione ENTER para voltar ao menu', W / 2, H / 2 + 16);
+      ctx.fillText('Press ENTER for the menu', W / 2, H / 2 + 16);
     }
   }
 }
