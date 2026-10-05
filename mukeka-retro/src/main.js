@@ -17,7 +17,7 @@ import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
 import { setupRetroOnlineTest } from './online.js?v=20261005f';
 import { setupPregame } from './pregame.js?v=20261005c';
-import { setupMasterLeague } from './master-league.js?v=20261005a';
+import { setupMasterLeague } from './master-league.js?v=20261005b';
 import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
@@ -484,6 +484,41 @@ const retroOnline = setupRetroOnlineTest({
   onExitOnline: () => pregame.openMenu(),
 });
 
+const startupParams = new URLSearchParams(location.search);
+if (startupParams.get('masterHub') === '1') {
+  pregame.close();
+  masterLeague.openHub();
+  const clean = new URL(location.href);
+  clean.searchParams.delete('masterHub');
+  history.replaceState(null, '', clean);
+}
+
+let masterResultCommitted = false;
+function showMasterResult(result) {
+  if (!result || document.getElementById('master-result-return')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'master-result-return';
+  overlay.innerHTML = `
+    <div class="mrr-card">
+      <h2>MASTER LIGA · RESULTADO REGISTRADO</h2>
+      <div>${result.homeName} × ${result.awayName}</div>
+      <div class="mrr-score">${result.homeGoals} × ${result.awayGoals}</div>
+      <button type="button">VOLTAR À MASTER LIGA</button>
+    </div>
+  `;
+  overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
+  overlay.querySelector('button')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const next = new URL(location.href);
+    for (const key of ['start', 'mode', 'home', 'away', 'side', 'masterMatch', 'online', 'room']) {
+      next.searchParams.delete(key);
+    }
+    next.searchParams.set('masterHub', '1');
+    location.href = next.toString();
+  });
+  document.body.appendChild(overlay);
+}
+
 function closeGate() {
   if (!gateOpen) return;
   gateOpen = false;
@@ -749,6 +784,16 @@ function frame() {
   // o segundo jogador humano sem substituir a IA dos outros dez atletas.
   retroOnline.beforeSimulation?.(performance.now());
   if (match) match.update(gdt); // 22 jogadores: humano(s) + IA
+
+  // Em partidas iniciadas pela Master Liga, o placar final volta para a
+  // carreira uma única vez. A rodada/tabela/receita são atualizadas pelo
+  // mesmo motor usado na simulação, sem sobrescrever o jogo que o usuário fez.
+  if (!masterResultCommitted && match?.state === 'fulltime' &&
+      new URLSearchParams(location.search).get('mode') === 'master') {
+    masterResultCommitted = true;
+    const result = masterLeague.completePlayedMatch?.(match.score);
+    if (result) showMasterResult(result);
+  }
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
   const replaying = !!(match && (match.state === 'replay' || match.state === 'celebration'));
