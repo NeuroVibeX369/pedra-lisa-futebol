@@ -217,12 +217,35 @@ function syncPedraLisaBase(state) {
   return state;
 }
 
+function syncOpponentBalance(state) {
+  if (!state?.squads) return state;
+  for (const team of [...LOCAL_TEAMS, ...REGIONAL_TEAMS, FINAL_BOSS]) {
+    if (team.id === 'pedra-lisa') continue;
+    const fresh = generatedSquad(team);
+    const current = state.squads[team.id] || [];
+    state.squads[team.id] = fresh.map((base) => {
+      const old = current.find((p) => p.id === base.id);
+      if (!old) return base;
+      return {
+        ...base,
+        goals: old.goals || 0,
+        mvp: old.mvp || 0,
+        appearances: old.appearances || 0,
+      };
+    });
+  }
+  return state;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const state = JSON.parse(raw);
-    return state && state.version === 1 ? syncPedraLisaBase(state) : null;
+    if (!state || state.version !== 1) return null;
+    syncPedraLisaBase(state);
+    syncOpponentBalance(state);
+    return state;
   } catch {
     return null;
   }
