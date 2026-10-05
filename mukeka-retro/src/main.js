@@ -15,7 +15,8 @@ import { updateCrowd } from './sfx.js';
 import { setCrowdVolume } from './crowd.js';
 import { Radar } from './radar.js';
 import { forceAudio, denyAudio } from './audioctx.js';
-import { setupRetroOnlineTest } from './online.js';
+import { setupRetroOnlineTest } from './online.js?v=20261005c';
+import { RetroCommentator } from './commentator.js?v=20261005c';
 import {
   LEVELS, DEFAULT_LEVEL, applyDifficulty, askedLevel, currentLevel,
 } from './difficulty.js';
@@ -56,6 +57,7 @@ const goals = scene.userData.goals;
 const ball = new Ball(scene, goals);
 const input = new Input();
 const crt = new CRTPipeline(renderer);
+const commentator = new RetroCommentator();
 
 // Матч 11×11: команды приходят из пака атрибутики (см. src/pack.js).
 // Пак уже загружен к этому моменту — модуль ждёт его на верхнем уровне.
@@ -442,6 +444,17 @@ crowdSlider.addEventListener('input', () => {
   if (Number(crowdSlider.value) > 0) forceAudio();
 });
 
+// Narração em português: usa o mesmo AudioContext do estádio e fica salva
+// separadamente da torcida, para o jogador poder ouvir ambiente sem locutor.
+const commentarySelect = document.getElementById('set-commentary');
+if (commentarySelect) {
+  commentarySelect.value = commentator.enabled ? '1' : '0';
+  commentarySelect.addEventListener('change', () => {
+    commentator.setEnabled(commentarySelect.value === '1');
+    if (commentarySelect.value === '1') forceAudio();
+  });
+}
+
 // --- Стартовый вопрос про звук ---
 // Разрешение на звук живёт РОВНО ОДИН документ: после F5 браузер снова ждёт
 // жеста, и запомнить ответ в localStorage нельзя — жест нужен каждый запуск.
@@ -728,7 +741,7 @@ function frame() {
   input.update(gdt);
   // O convidado envia os comandos antes da simulação; no host eles alimentam
   // o segundo jogador humano sem substituir a IA dos outros dez atletas.
-  retroOnline.beforeSimulation(performance.now());
+  retroOnline.beforeSimulation?.(performance.now());
   if (match) match.update(gdt); // 22 jogadores: humano(s) + IA
   // На повторе физика молчит: тела и мяч расставляет запись (src/replay.js).
   // В празднование мяч уже в сетке — его физику тоже не трогаем.
@@ -756,7 +769,8 @@ function frame() {
   if (event === 'goal' && match) match.onGoal();
   // O host publica o estado autoritativo depois de física/gol. No convidado,
   // o snapshot corrige a previsão local e limita divergências causadas pela IA.
-  retroOnline.afterSimulation(performance.now());
+  retroOnline.afterSimulation?.(performance.now());
+  commentator.update(match);
   radar.draw(match, dt); // mini-mapa: 23 pontos em canvas 2D
 
   // Шкала замаха видна, пока держится любая кнопка действия.
