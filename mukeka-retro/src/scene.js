@@ -592,12 +592,12 @@ function createBoardTexture() {
   c.height = 32;
   const ctx = c.getContext('2d');
   const ads = [
-    ['#c0341d', '#fff', 'СПОРТ·ТВ'],
-    ['#f2f2f2', '#1a2a6b', 'КИНЕСКОП'],
-    ['#12507a', '#ffd23f', 'ВОЛНА'],
-    ['#1f2d1a', '#7fd642', 'ЭФИР 98'],
-    ['#e8b21a', '#3a1a00', 'МЕТЕОР'],
-    ['#2a2a2a', '#e0e0e0', 'ОРБИТА·888'],
+    ['#f5d20a', '#171717', 'BELEZA NOTA 10'],
+    ['#123f24', '#ffffff', 'MUKEKA GAMES'],
+    ['#5b214f', '#ffffff', 'MELODIA PERSONALIZADA'],
+    ['#f1f1f1', '#14356b', 'COLÉGIO SANTANA'],
+    ['#173c7a', '#ffffff', 'JUNIOR GAMES'],
+    ['#7b1717', '#ffffff', 'TOICINHOS FC'],
   ];
   const secW = c.width / ads.length;
   ctx.textAlign = 'center';
