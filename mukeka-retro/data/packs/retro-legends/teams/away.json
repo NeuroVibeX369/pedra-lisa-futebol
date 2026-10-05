@@ -14,17 +14,23 @@
   "_состав": "Сборная Франции ЧМ-98 в схеме Жаке 4-3-2-1 «ёлочка». Порядок жёсткий: 0 — вратарь, 1–4 защита, 5–8 полузащита, 9–10 нападение. Пети, Дешам и Карамбё занимают слоты полузащиты и ролевой шириной сведены в узкий центр; Зидан стоит в слоте нападающего, но его роль опускает его между линиями — это и есть «десятка». В финале Блан отбывал дисквалификацию (его заменял Лебёф), мы оставляем Блана: он и есть узнаваемый защитник, начинавший атаки длинной диагональю.",
   "squad": [
     {
-      "name": "GOLEIRO",
+      "name": "JUNIOR PAREDÃO",
       "number": 1,
       "height": 181,
       "build": 0.98,
       "skin": "#c49b7c",
       "hair": "none",
       "hairColor": "#3a2a1c",
-      "overall": 63
+      "overall": 85,
+      "gk": {
+        "reflexes": 0.91,
+        "handling": 0.89,
+        "positioning": 0.9,
+        "vision": 0.84
+      }
     },
     {
-      "name": "LATERAL ESQ.",
+      "name": "NETO",
       "number": 6,
       "height": 169,
       "build": 1.05,
@@ -35,10 +41,10 @@
       "depth": 6,
       "runOverlap": 0.7,
       "work": 0.85,
-      "overall": 62
+      "overall": 84
     },
     {
-      "name": "ZAGUEIRO 1",
+      "name": "ABERLADO",
       "number": 3,
       "height": 186,
       "build": 1.1,
@@ -48,10 +54,10 @@
       "role": "stopper",
       "press": 1,
       "composure": 0.6,
-      "overall": 65
+      "overall": 85
     },
     {
-      "name": "ZAGUEIRO 2",
+      "name": "ZÉ NETO",
       "number": 4,
       "height": 192,
       "build": 1.02,
@@ -62,10 +68,10 @@
       "vision": 0.9,
       "composure": 0.85,
       "runBox": 0.35,
-      "overall": 64
+      "overall": 84
     },
     {
-      "name": "LATERAL DIR.",
+      "name": "EDIMAR",
       "number": 2,
       "height": 183,
       "build": 1.06,
@@ -77,10 +83,10 @@
       "runOverlap": 0.3,
       "trackBack": 1,
       "shoot": 0.9,
-      "overall": 62
+      "overall": 83
     },
     {
-      "name": "MEIA 1",
+      "name": "AURISTÊNIO",
       "number": 8,
       "height": 185,
       "build": 1,
@@ -92,10 +98,10 @@
       "runBox": 0.7,
       "shoot": 1.1,
       "vision": 0.7,
-      "overall": 64
+      "overall": 85
     },
     {
-      "name": "VOLANTE",
+      "name": "MANINHO",
       "number": 5,
       "height": 174,
       "build": 0.98,
@@ -107,10 +113,10 @@
       "vision": 0.55,
       "risk": 0.15,
       "composure": 0.9,
-      "overall": 63
+      "overall": 84
     },
     {
-      "name": "MEIA 2",
+      "name": "CHICO BAIÃO",
       "number": 10,
       "height": 174,
       "build": 1.02,
@@ -122,10 +128,13 @@
       "press": 1,
       "work": 0.9,
       "runShort": 0.7,
-      "overall": 63
+      "overall": 86,
+      "vision": 0.97,
+      "touch": 0.95,
+      "composure": 0.94
     },
     {
-      "name": "PONTA",
+      "name": "CLODOALDO",
       "number": 11,
       "height": 175,
       "build": 1,
@@ -135,42 +144,47 @@
       "role": "insideFwd",
       "width": -0.5,
       "depth": 4,
-      "touch": 0.8,
-      "shoot": 1.15,
-      "overall": 65
+      "touch": 0.93,
+      "shoot": 1.24,
+      "overall": 85,
+      "runBehind": 0.86
     },
     {
-      "name": "ATACANTE 1",
+      "name": "VALDEKE MATTOS",
       "number": 9,
       "height": 185,
       "build": 1.02,
       "skin": "#b98a63",
       "hair": "none",
       "hairColor": "#241812",
-      "role": "playmaker10",
+      "role": "poacher",
       "depth": -7,
       "vision": 0.95,
-      "touch": 0.95,
-      "risk": 0.7,
+      "touch": 0.99,
+      "risk": 0.82,
       "runShort": 0.9,
       "runBox": 0.55,
-      "overall": 66
+      "overall": 95,
+      "shoot": 1.4,
+      "composure": 0.99,
+      "runBehind": 1
     },
     {
-      "name": "ATACANTE 2",
+      "name": "ALEX",
       "number": 7,
       "height": 178,
       "build": 1,
       "skin": "#c49b7c",
       "hair": "short",
       "hairColor": "#4a3520",
-      "role": "target",
-      "shoot": 0.7,
+      "role": "insideFwd",
+      "shoot": 1.28,
       "runShort": 0.7,
-      "touch": 0.4,
-      "overall": 64
+      "touch": 0.96,
+      "overall": 86,
+      "runBehind": 0.88
     }
   ],
   "style": "france98",
-  "_comentario_mukeka": "Elenco provisório do Independência; nomes podem ser trocados no catálogo."
+  "_comentario_mukeka": "Elenco do Independência com Valdeke Mattos como principal estrela."
 }
