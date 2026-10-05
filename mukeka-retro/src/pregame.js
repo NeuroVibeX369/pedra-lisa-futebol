@@ -34,6 +34,7 @@ export function setupPregame({ match } = {}) {
 
   function hideFriendlySetup() {
     gate.querySelector('.pg-friendly-setup')?.remove();
+    gate.querySelector('.pg-online-setup')?.remove();
     if (grid) grid.style.display = '';
     if (title) title.textContent = 'ESCOLHA COMO JOGAR';
     if (footer) footer.style.display = '';
@@ -126,12 +127,74 @@ export function setupPregame({ match } = {}) {
     });
   }
 
-  friendly?.addEventListener('click', showFriendlySetup);
+  function showOnlineSetup() {
+    hideFriendlySetup();
+    if (grid) grid.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (title) title.textContent = 'ONLINE 1×1 · ESCOLHA OS TIMES';
 
-  online?.addEventListener('click', () => {
-    close();
-    document.getElementById('key-online')?.click();
-  });
+    const box = document.createElement('div');
+    box.className = 'pg-online-setup';
+    box.innerHTML = `
+      <div class="pg-versus">
+        <label>
+          <span>SEU TIME · QUEM CRIA A SALA</span>
+          <select id="pg-online-home">${clubOptions(params.get('home') || 'pedra-lisa')}</select>
+        </label>
+        <b>×</b>
+        <label>
+          <span>TIME DO AMIGO</span>
+          <select id="pg-online-away">${clubOptions(params.get('away') || 'independencia')}</select>
+        </label>
+      </div>
+      <div id="pg-online-preview" class="pg-match-preview"></div>
+      <div class="pg-setup-actions">
+        <button id="pg-online-back" type="button">← VOLTAR</button>
+        <button id="pg-online-next" class="primary" type="button">IR PARA A SALA ONLINE</button>
+      </div>
+      <div class="pg-setup-note">O convite leva os mesmos dois clubes para o aparelho do seu amigo. Depois podemos evoluir para cada jogador escolher o próprio time dentro da sala.</div>
+    `;
+    footer?.before(box);
+
+    const home = box.querySelector('#pg-online-home');
+    const away = box.querySelector('#pg-online-away');
+    const preview = box.querySelector('#pg-online-preview');
+
+    const sync = (changed) => {
+      if (home.value === away.value) {
+        const fallback = CLUBS.find((club) => club.id !== home.value);
+        if (changed === home && fallback) away.value = fallback.id;
+        else if (fallback) home.value = fallback.id;
+      }
+      const h = CLUBS.find((club) => club.id === home.value);
+      const a = CLUBS.find((club) => club.id === away.value);
+      if (preview && h && a) {
+        preview.innerHTML =
+          `<span style="border-color:${h.primary}"><b>${h.short}</b> OVR ${h.strength}</span>` +
+          '<strong>×</strong>' +
+          `<span style="border-color:${a.primary}"><b>${a.short}</b> OVR ${a.strength}</span>`;
+      }
+    };
+    home.addEventListener('change', () => sync(home));
+    away.addEventListener('change', () => sync(away));
+    sync();
+
+    box.querySelector('#pg-online-back')?.addEventListener('click', openMenu);
+    box.querySelector('#pg-online-next')?.addEventListener('click', () => {
+      const next = new URL(location.href);
+      next.searchParams.set('online', '1');
+      next.searchParams.delete('room');
+      next.searchParams.delete('start');
+      next.searchParams.set('mode', 'online');
+      next.searchParams.set('home', home.value);
+      next.searchParams.set('away', away.value);
+      next.searchParams.set('side', 'home');
+      location.href = next.toString();
+    });
+  }
+
+  friendly?.addEventListener('click', showFriendlySetup);
+  online?.addEventListener('click', showOnlineSetup);
 
   master?.addEventListener('click', () => {
     close();
