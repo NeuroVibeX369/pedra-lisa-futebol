@@ -3,7 +3,9 @@ import {
   LOCAL_CLUBS as LOCAL_TEAMS,
   REGIONAL_CLUBS as REGIONAL_TEAMS,
   FINAL_CLUB as FINAL_BOSS,
+  FORMATION_POSITIONS,
   buildClubCareerSquad,
+  defaultLineupIds,
 } from './clubs.js';
 
 const SAVE_KEY = 'mukeka.masterLiga.v1';
@@ -184,6 +186,7 @@ function newState() {
     localRound: 1,
     money: 80000,
     squads,
+    lineup: defaultLineupIds(squads['pedra-lisa']),
     market: createMarket(),
     fixtures: roundRobin(ids),
     table: emptyTable(ids),
@@ -197,6 +200,37 @@ function newState() {
     history: [],
     notice: 'A Master Liga começou. O objetivo inicial é terminar entre os 2 primeiros.',
   };
+}
+
+function ensureLineup(state) {
+  if (!state?.squads?.[state.clubId]) return state;
+  const squad = state.squads[state.clubId];
+  const valid = new Set(squad.map((p) => p.id));
+  const next = [];
+  const current = Array.isArray(state.lineup) ? state.lineup : [];
+
+  for (let slot = 0; slot < 11; slot++) {
+    const wanted = current[slot];
+    if (wanted && valid.has(wanted) && !next.includes(wanted)) {
+      next.push(wanted);
+      continue;
+    }
+
+    const pos = FORMATION_POSITIONS[slot];
+    let pick = squad
+      .filter((p) => !next.includes(p.id) && p.position === pos)
+      .sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
+    if (!pick) {
+      pick = squad
+        .filter((p) => !next.includes(p.id) && (pos === 'GOL' ? p.position === 'GOL' : p.position !== 'GOL'))
+        .sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
+    }
+    if (!pick) pick = squad.find((p) => !next.includes(p.id));
+    if (pick) next.push(pick.id);
+  }
+
+  state.lineup = next;
+  return state;
 }
 
 function syncPedraLisaBase(state) {
@@ -245,6 +279,7 @@ function loadState() {
     if (!state || state.version !== 1) return null;
     syncPedraLisaBase(state);
     syncOpponentBalance(state);
+    ensureLineup(state);
     return state;
   } catch {
     return null;
@@ -800,6 +835,52 @@ export function setupMasterLeague() {
       ]);
   }
 
+  function renderLineup() {
+    ensureLineup(state);
+    const squad = userSquad(state);
+    const starters = new Set(state.lineup || []);
+    const optionsFor = (slot) => {
+      const selected = state.lineup[slot];
+      const ordered = [...squad].sort((a, b) => {
+        const pa = a.position === FORMATION_POSITIONS[slot] ? 0 : 1;
+        const pb = b.position === FORMATION_POSITIONS[slot] ? 0 : 1;
+        return pa - pb || (b.overall || 0) - (a.overall || 0);
+      });
+      return ordered.map((p) =>
+        `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name} · ${p.position} · OVR ${p.overall}</option>`
+      ).join('');
+    };
+
+    const rows = FORMATION_POSITIONS.map((pos, slot) => {
+      const p = squad.find((x) => x.id === state.lineup[slot]);
+      const out = p && p.position !== pos;
+      return `
+        <div class="ml-lineup-row">
+          <span><b>${slot + 1}</b> ${pos}</span>
+          <select class="ml-lineup-select" data-slot="${slot}">${optionsFor(slot)}</select>
+          <span class="${out ? 'ml-outpos' : ''}">${out ? 'FORA DA POSIÇÃO' : 'TITULAR'}</span>
+        </div>`;
+    }).join('');
+
+    const bench = squad
+      .filter((p) => !starters.has(p.id))
+      .sort((a, b) => (b.overall || 0) - (a.overall || 0))
+      .map((p) => `<span>${p.name} · ${p.position} · <b>${p.overall}</b></span>`).join('');
+
+    return `
+      <div class="ml-card">
+        <h3>ESCALAÇÃO TITULAR</h3>
+        <p class="ml-note">Os 11 escolhidos aqui são exatamente os jogadores carregados no campo 3D.</p>
+        <div class="ml-lineup-grid">${rows}</div>
+        <button id="ml-auto-lineup" class="ml-main" type="button">AUTO ESCALAR MELHOR TIME</button>
+      </div>
+      <div class="ml-card">
+        <h3>BANCO / RESTANTE DO ELENCO</h3>
+        <div class="ml-bench">${bench || '<span>Sem reservas disponíveis.</span>'}</div>
+      </div>
+    `;
+  }
+
   function renderMarket() {
     return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>OVR</span><span>PREÇO</span></div>` +
       renderRows(state.market, (p) => [
@@ -857,6 +938,7 @@ export function setupMasterLeague() {
     const tabs = {
       overview: 'VISÃO GERAL',
       table: 'COMPETIÇÃO',
+      lineup: 'ESCALAÇÃO',
       squad: 'ELENCO',
       market: 'MERCADO',
       scorers: 'RANKINGS',
@@ -868,6 +950,7 @@ export function setupMasterLeague() {
     let content = '';
     if (tab === 'overview') content = renderOverview();
     else if (tab === 'table') content = renderTable();
+    else if (tab === 'lineup') content = renderLineup();
     else if (tab === 'squad') content = renderSquad();
     else if (tab === 'market') content = renderMarket();
     else if (tab === 'scorers') content = renderScorers();
@@ -880,6 +963,26 @@ export function setupMasterLeague() {
         tab = btn.dataset.tab;
         render();
       });
+    });
+
+    body.querySelectorAll('.ml-lineup-select').forEach((select) => {
+      select.addEventListener('change', () => {
+        const slot = Number(select.dataset.slot);
+        const incoming = select.value;
+        const previous = state.lineup[slot];
+        const otherSlot = state.lineup.findIndex((id, i) => id === incoming && i !== slot);
+        if (otherSlot >= 0) state.lineup[otherSlot] = previous;
+        state.lineup[slot] = incoming;
+        ensureLineup(state);
+        persist();
+        render();
+      });
+    });
+
+    document.getElementById('ml-auto-lineup')?.addEventListener('click', () => {
+      state.lineup = defaultLineupIds(userSquad(state));
+      persist();
+      render();
     });
 
     document.getElementById('ml-play')?.addEventListener('click', () => {
@@ -927,6 +1030,7 @@ export function setupMasterLeague() {
         userSquad(state).push(p);
         state.market = state.market.filter((x) => x.id !== p.id);
         state.notice = `${p.name} contratado por ${money(p.price)}.`;
+        ensureLineup(state);
         persist();
         render();
       });
@@ -953,6 +1057,7 @@ export function setupMasterLeague() {
         p.appearances = 0;
         state.market.push(p);
         state.notice = `${p.name} vendido por ${money(value)}. Ele volta ao mercado e continua no universo da Master Liga.`;
+        ensureLineup(state);
         persist();
         render();
       });
