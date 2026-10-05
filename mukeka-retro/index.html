@@ -396,6 +396,7 @@
     /* Заставка перед матчем: кто с кем, где и когда — как титр в начале эфира */
     #matchcard {
       position: fixed; left: 50%; bottom: 12%;
+      width: min(900px, 88%);
       transform: translateX(-50%) translateY(18px);
       font-family: var(--tv-font); text-align: center;
       opacity: 0; pointer-events: none; z-index: 10;
@@ -403,12 +404,18 @@
     }
     #matchcard.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     #mc-teams {
-      display: flex; align-items: stretch; justify-content: center;
+      display: flex; align-items: center; justify-content: center;
+      gap: clamp(8px, 1.4vw, 20px);
+      width: 100%; box-sizing: border-box;
+      padding: 11px 18px 9px;
       transform: skewX(var(--tv-skew));
       background: var(--tv-slab);
-      color: #fff; font-size: clamp(18px, 3.1vw, 34px); font-weight: 700;
-      letter-spacing: 6px;
+      color: #fff; font-size: clamp(16px, 2.2vw, 28px); font-weight: 700;
+      letter-spacing: clamp(2px, .45vw, 6px);
+      white-space: nowrap;
     }
+    #mc-home, #mc-away { white-space: nowrap; flex: 0 1 auto; }
+    #mc-teams .mc-dash { flex: 0 0 auto; }
     #mc-venue {
       margin-top: 7px; color: rgba(255,255,255,0.82);
       font-size: clamp(11px, 1.5vw, 16px); letter-spacing: 4px;
@@ -804,6 +811,13 @@
       Som da torcida:
       <input id="set-crowd" type="range" min="0" max="100" step="5" style="vertical-align:middle;width:180px">
       <span id="set-crowd-val"></span>
+    </div>
+    <div class="row">
+      <label for="set-commentary">Narração em português:</label>
+      <select id="set-commentary" aria-label="Narração em português">
+        <option value="1">LIGADA</option>
+        <option value="0">DESLIGADA</option>
+      </select>
     </div>
     <div class="row">
       Pirotecnia:
