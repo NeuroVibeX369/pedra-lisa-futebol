@@ -1264,6 +1264,7 @@ export function setupMasterLeague() {
       next.searchParams.set('side', fixture.home === state.clubId ? 'home' : 'away');
       next.searchParams.set('start', '1');
       next.searchParams.set('masterMatch', fixture.id);
+      next.searchParams.set('masterStage', state.stage);
       location.href = next.toString();
     });
 
