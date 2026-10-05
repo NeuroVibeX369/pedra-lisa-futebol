@@ -61,6 +61,25 @@ function createControlArrow(color) {
   return group;
 }
 
+function createSupportArrow(color = 0xb9ffc2) {
+  // Indicador quase transparente para opções de passe próximas.
+  // Sem contorno/sombra para não poluir o campo.
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.16, 0.28, 3),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false,
+      depthTest: false,
+    }),
+  );
+  arrow.rotation.z = Math.PI;
+  arrow.renderOrder = 4;
+  arrow.visible = false;
+  return arrow;
+}
+
 export class Match {
   // teamsData: [home.json, away.json]. Человек — команда 0, атакует +X.
   constructor(scene, ball, goals, input, teamsData, humanTeamIndex = 0) {
@@ -200,7 +219,12 @@ export class Match {
     this.controlledMarker = createControlArrow(0x46f56a);
     this.opponentMarker = createControlArrow(0xff4f4f);
     this.opponentMarker.visible = false;
-    scene.add(this.controlledMarker, this.opponentMarker);
+    this.supportMarkers = [
+      createSupportArrow(),
+      createSupportArrow(),
+      createSupportArrow(),
+    ];
+    scene.add(this.controlledMarker, this.opponentMarker, ...this.supportMarkers);
 
     // Табло-телеграфика
     this.hud = {
@@ -969,6 +993,33 @@ export class Match {
       this.opponentMarker.visible = true;
     } else {
       this.opponentMarker.visible = false;
+    }
+
+    // Com a bola dominada, mostramos só três companheiros próximos como
+    // opções de passe. As setas são pequenas e quase transparentes.
+    for (const m of this.supportMarkers) m.visible = false;
+    const controlledOwns = this.controlled && !markerQuiet &&
+      this.controlled.team === this.humanTeam &&
+      (this.toucher === this.controlled || this.controlled.hasBall || this.controlled.controlling);
+    if (controlledOwns) {
+      const cp = this.controlled.group.position;
+      const mates = this.humanTeam.fieldPlayers
+        .filter((p) => p !== this.controlled && p.downT <= 0)
+        .map((p) => {
+          const pp = p.group.position;
+          return { p, d: Math.hypot(pp.x - cp.x, pp.z - cp.z) };
+        })
+        .filter((x) => x.d <= 20)
+        .sort((a, b) => a.d - b.d)
+        .slice(0, this.supportMarkers.length);
+
+      mates.forEach(({ p }, i) => {
+        const pp = p.group.position;
+        const h = p.look?.height ? p.look.height / 100 : 1.75;
+        const m = this.supportMarkers[i];
+        m.position.set(pp.x, pp.y + Math.max(1.98, h + 0.34), pp.z);
+        m.visible = true;
+      });
     }
 
     // Бригада арбитров живёт своей жизнью — на паузах тоже (они не замирают,
