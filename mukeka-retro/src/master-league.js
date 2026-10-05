@@ -237,15 +237,22 @@ function ensureLineup(state) {
 function syncPedraLisaBase(state) {
   if (!state?.squads?.['pedra-lisa']) return state;
   const squad = state.squads['pedra-lisa'];
+  const market = Array.isArray(state.market) ? state.market : [];
   const base = pedraLisaSquad();
+
   for (let i = 0; i < base.length; i++) {
     const current = squad.find((p) => p.id === base[i].id);
-    if (current) {
-      current.name = base[i].name;
-      current.position = base[i].position;
-      current.overall = base[i].overall;
-      current.teamId = 'pedra-lisa';
+    const listed = market.find((p) => p.id === base[i].id);
+    const target = current || listed;
+
+    if (target) {
+      target.name = base[i].name;
+      target.position = base[i].position;
+      target.overall = base[i].overall;
+      target.teamId = current ? 'pedra-lisa' : null;
     } else {
+      // Migração de saves antigos que ainda não tinham os 18 atletas-base.
+      // Se o jogador foi vendido e está no mercado, não o recriamos no clube.
       squad.push(base[i]);
     }
   }
