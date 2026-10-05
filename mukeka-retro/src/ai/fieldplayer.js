@@ -539,7 +539,10 @@ function pressBall(p, dt, ball, match) {
   // D.pressLine ровно 0, и умножать там нечего. Плюс личный press защитника:
   // стоппер лезет в отбор глубже в своей половине, страхующий отходит раньше
   const pressLine = D.pressLine + team.style.pressLine + p.mods.bPress;
-  const inOurHalf = team.side * bp.x < -pressLine;
+  // Se o humano ficar parado segurando a bola, não existe "zona segura" para
+  // gastar o relógio: depois de ~1,2 s o primeiro defensor fecha de verdade.
+  const antiStall = (team._stallPressureT || 0) >= 1.2;
+  const inOurHalf = team.side * bp.x < -pressLine && !antiStall;
   if (!inOurHalf) {
     // Высокий прессинг: на владельца с упреждением по его курсу (soccer.py)
     const ospd = Math.hypot(owner.vel.x, owner.vel.z);
