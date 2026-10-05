@@ -172,6 +172,7 @@ export class Match {
     this.stats = {
       pass: [0, 0], passOk: [0, 0], shot: [0, 0], cross: [0, 0],
       save: [0, 0], hold: [0, 0], parry: [0, 0], loose: [0, 0],
+      foul: [0, 0], yellow: [0, 0], red: [0, 0],
       // Финты: сколько исполнено и сколько провалено. Без этих двух чисел
       // разговор «не слишком ли дёшево даётся обыгрыш» снова превратился бы
       // в «мне показалось» — а автосимуляция считает именно по ним
@@ -675,6 +676,8 @@ export class Match {
     // Uma colisão pode ser detectada em mais de um frame; só vale a primeira.
     if (this.pendingFoul || this.advantage) return;
     const vp = victim.group.position;
+    const offenderIdx = this.teams.indexOf(offender.team);
+    if (offenderIdx >= 0) this.stats.foul[offenderIdx] += 1;
     this.pendingFoul = {
       offender,
       victim,
@@ -747,6 +750,11 @@ export class Match {
       card,
     };
     this.cardEvents.push(event);
+    const teamIdx = this.teams.indexOf(player.team);
+    if (teamIdx >= 0) {
+      if (card === 'red') this.stats.red[teamIdx] += 1;
+      else this.stats.yellow[teamIdx] += 1;
+    }
     if (card === 'red') this._dismissPlayer(player);
     this._showRefereeNotice(
       card === 'red'
@@ -2992,7 +3000,7 @@ export class Match {
   // Снимок статистики на начало матча: stats копятся сквозь рестарты (их
   // агрегирует автосимуляция), а плашка обязана показывать ЭТОТ матч
   _markStats() {
-    const keys = ['shot', 'pass', 'passOk', 'save'];
+    const keys = ['shot', 'pass', 'passOk', 'save', 'foul', 'yellow', 'red'];
     this._statsMark = {};
     for (const k of keys) this._statsMark[k] = [...this.stats[k]];
   }
@@ -3020,6 +3028,9 @@ export class Match {
       ['POSSE', `${poss[0]}%`, `${poss[1]}%`],
       ['PRECISÃO DE PASSE', `${acc(0)}%`, `${acc(1)}%`],
       ['DEFESAS', d('save', 0), d('save', 1)],
+      ['FALTAS', d('foul', 0), d('foul', 1)],
+      ['AMARELOS', d('yellow', 0), d('yellow', 1)],
+      ['VERMELHOS', d('red', 0), d('red', 1)],
     ];
     body.innerHTML = rows.map(([label, a, b]) =>
       `<div class="st-row"><span class="st-a">${a}</span>` +
