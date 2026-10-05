@@ -148,7 +148,7 @@ const FULLBACK = new Set(['LB', 'RB']);
 // нельзя: «покрутил, а эффекта нет» — самая дорогая ошибка в таких таблицах,
 // и в проекте она уже стоила дня на мёртвых полях конфига
 const LOOK_KEYS = new Set(['name', 'number', 'height', 'build', 'skin', 'hair',
-  'hairColor', 'beard', 'gloves', 'glovesCuff', 'gk', 'role', 'head', 'overall']);
+  'hairColor', 'beard', 'gloves', 'glovesCuff', 'gk', 'role', 'head', 'overall', 'position']);
 
 // Вес рывка (0…1) → МЕТРОВАЯ фора в конкурсе исполнителей. Метры выбраны
 // нарочно: рядом уже живут метровые гистерезисы (stickBonus 5 м, chaseHold
