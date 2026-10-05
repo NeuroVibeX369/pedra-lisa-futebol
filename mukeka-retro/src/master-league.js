@@ -79,8 +79,8 @@ function money(v) {
 }
 
 function playerValue(p) {
-  // Estilo Master Liga clássica: valor depende do OVR, não de idade.
-  // Os jogadores não envelhecem, não perdem OVR e não se aposentam.
+  // Estilo Master Liga clássica: valor depende do FORÇA, não de idade.
+  // Os jogadores não envelhecem, não perdem FORÇA e não se aposentam.
   return Math.max(3500, Math.round((p.overall ** 2) * 18 / 1000) * 1000);
 }
 
@@ -496,7 +496,7 @@ function seasonAwards(state) {
 
 function resetSeasonStats(state) {
   // O elenco é atemporal: ninguém envelhece, se aposenta ou sofre queda
-  // automática de OVR entre temporadas. Apenas os números da temporada zeram.
+  // automática de FORÇA entre temporadas. Apenas os números da temporada zeram.
   for (const squad of Object.values(state.squads)) {
     for (const p of squad) {
       p.goals = 0;
@@ -517,7 +517,7 @@ function startNextSeason(state, summary) {
     season: state.season,
     summary,
     topScorer: awards.scorer ? `${awards.scorer.name} (${awards.scorer.goals})` : '—',
-    bestPlayer: awards.mvp ? `${awards.mvp.name} (OVR ${awards.mvp.overall})` : '—',
+    bestPlayer: awards.mvp ? `${awards.mvp.name} (FORÇA ${awards.mvp.overall})` : '—',
     money: state.money,
   });
   state.history = state.history.slice(0, 12);
@@ -862,17 +862,17 @@ export function setupMasterLeague() {
     return `
       <div class="ml-kpis">
         <div><b>${money(state.money)}</b><small>CAIXA</small></div>
-        <div><b>${str}</b><small>OVR DO TIME</small></div>
-        <div><b>${pos || '—'}º</b><small>LIGA LOCAL</small></div>
+        <div><b>${str}</b><small>FORÇA DO TIME</small></div>
+        <div><b>${pos || '—'}º</b><small>CLASSIFICAÇÃO</small></div>
         <div><b>${state.season}</b><small>TEMPORADA</small></div>
       </div>
       <div class="ml-card">
         <h3>PRÓXIMO COMPROMISSO</h3>
-        <p>${fixture ? `${teamName(fixture.home)} × ${teamName(fixture.away)}` : 'Aguardando definição da próxima fase.'}</p>
+        <p class="ml-next-match">${fixture ? `${teamName(fixture.home)} × ${teamName(fixture.away)}` : 'Próximo adversário em definição.'}</p>
         <small>${currentStageLabel(state)}</small>
-        ${fixture ? '<button id="ml-play" class="ml-main" type="button">JOGAR PARTIDA 3D</button>' : ''}
-        <button id="ml-next" class="ml-main" type="button">SIMULAR PRÓXIMA RODADA</button>
-        <p class="ml-note">Você pode jogar o confronto do Pedra Lisa no campo 3D ou simular a rodada completa.</p>
+        ${fixture ? '<button id="ml-play" class="ml-main" type="button">JOGAR PARTIDA</button>' : ''}
+        <button id="ml-next" class="ml-main" type="button">SIMULAR RODADA</button>
+        <p class="ml-note">Entre em campo com o Pedra Lisa ou simule a rodada completa.</p>
       </div>
       <div class="ml-card">
         <h3>OBJETIVO DA TEMPORADA</h3>
@@ -923,7 +923,7 @@ export function setupMasterLeague() {
 
   function renderSquad() {
     const squad = [...userSquad(state)].sort((a, b) => b.overall - a.overall);
-    return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>OVR</span><span>VALOR</span></div>` +
+    return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>FORÇA</span><span>VALOR</span></div>` +
       renderRows(squad, (p) => [
         p.name,
         p.position,
@@ -944,7 +944,7 @@ export function setupMasterLeague() {
         return pa - pb || (b.overall || 0) - (a.overall || 0);
       });
       return ordered.map((p) =>
-        `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name} · ${p.position} · OVR ${p.overall}</option>`
+        `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name} · ${p.position} · FORÇA ${p.overall}</option>`
       ).join('');
     };
 
@@ -967,9 +967,9 @@ export function setupMasterLeague() {
     return `
       <div class="ml-card">
         <h3>ESCALAÇÃO TITULAR</h3>
-        <p class="ml-note">Os 11 escolhidos aqui são exatamente os jogadores carregados no campo 3D.</p>
+        <p class="ml-note">Os 11 escolhidos aqui começam a próxima partida.</p>
         <div class="ml-lineup-grid">${rows}</div>
-        <button id="ml-auto-lineup" class="ml-main" type="button">AUTO ESCALAR MELHOR TIME</button>
+        <button id="ml-auto-lineup" class="ml-main" type="button">ESCALAÇÃO AUTOMÁTICA</button>
       </div>
       <div class="ml-card">
         <h3>BANCO / RESTANTE DO ELENCO</h3>
@@ -979,7 +979,7 @@ export function setupMasterLeague() {
   }
 
   function renderMarket() {
-    return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>OVR</span><span>PREÇO</span></div>` +
+    return `<div class="ml-row ml-head"><span>JOGADOR</span><span>POS</span><span>FORÇA</span><span>PREÇO</span></div>` +
       renderRows(state.market, (p) => [
         p.name,
         p.position,
@@ -993,10 +993,10 @@ export function setupMasterLeague() {
     const mvps = topPlayers(state, 'mvp');
     return `
       <h3>ARTILHARIA</h3>
-      <div class="ml-row ml-head"><span>JOGADOR</span><span>TIME</span><span>OVR</span><span>GOLS</span></div>
+      <div class="ml-row ml-head"><span>JOGADOR</span><span>TIME</span><span>FORÇA</span><span>GOLS</span></div>
       ${renderRows(scorers, (p) => [p.name, teamName(p.teamId || state.clubId), p.overall, `<b>${p.goals || 0}</b>`])}
       <h3 style="margin-top:20px">MELHOR JOGADOR DA TEMPORADA</h3>
-      <div class="ml-row ml-head"><span>JOGADOR</span><span>TIME</span><span>OVR</span><span>PONTOS</span></div>
+      <div class="ml-row ml-head"><span>JOGADOR</span><span>TIME</span><span>FORÇA</span><span>PONTOS</span></div>
       ${renderRows(mvps, (p) => [p.name, teamName(p.teamId || state.clubId), p.overall, `<b>${(p.mvp || 0).toFixed(1)}</b>`])}
     `;
   }
@@ -1021,7 +1021,7 @@ export function setupMasterLeague() {
         </div>`;
     }).join('');
 
-    return `<h3>PARTIDAS JOGADAS</h3>${matches || '<div class="ml-card">Nenhuma partida 3D registrada ainda.</div>'}
+    return `<h3>PARTIDAS JOGADAS</h3>${matches || '<div class="ml-card">Nenhuma partida disputada ainda.</div>'}
       <h3 style="margin-top:18px">TEMPORADAS</h3>${seasons}`;
   }
 
@@ -1052,7 +1052,7 @@ export function setupMasterLeague() {
       lineup: 'ESCALAÇÃO',
       squad: 'ELENCO',
       market: 'MERCADO',
-      scorers: 'RANKINGS',
+      scorers: 'DESTAQUES',
       history: 'HISTÓRICO',
     };
     const nav = `<div class="ml-tabs">${Object.entries(tabs).map(([id, label]) =>
