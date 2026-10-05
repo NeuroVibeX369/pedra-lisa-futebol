@@ -1236,13 +1236,19 @@ export class Match {
       return;
     }
 
-    // Мяч свободен или у соперника: сосед заметно ближе — переключаемся
+    // Míč solto ou com o rival: no celular a troca precisa ser praticamente
+    // automática, já que L1 saiu da tela. Em teclado/gamepad mantemos o limiar
+    // antigo para não mudar a sensação de quem prefere trocar manualmente.
     if (!this.toucher || this.toucher.team !== team) {
       const cur = this.controlled ? distToBall(this.controlled, this.ball) : Infinity;
       const near = this.nearestFieldPlayer(team, this.controlled);
       if (near) {
         const nd = distToBall(near, this.ball);
-        if (nd < cur * SW.advantage && cur - nd > 2.5) this.setControlled(near);
+        const mobileAuto = !!this.input?.touchDevice;
+        const shouldSwitch = mobileAuto
+          ? (nd + 0.9 < cur)
+          : (nd < cur * SW.advantage && cur - nd > 2.5);
+        if (shouldSwitch) this.setControlled(near, mobileAuto ? 0.18 : undefined);
       }
     }
   }
